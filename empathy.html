@@ -59,10 +59,16 @@
                 <p class="text-center mt-4">Don't have an account? <a href="#" id="show-register" class="text-blue-500">Register</a></p>
             </div>
             <div id="register-form" class="hidden">
-                <h2 class="text-2xl font-bold mb-4 text-center">Register</h2>
-                <input type="email" id="register-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
-                <input type="password" id="register-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
-                <button id="register-btn" class="w-full bg-green-500 text-white p-3 rounded">Register</button>
+                <div id="register-inputs">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Register</h2>
+                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
+                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
+                    <button id="register-btn" class="w-full bg-green-500 text-white p-3 rounded">Register</button>
+                </div>
+                <div id="register-success" class="hidden text-center mt-4 p-4 bg-green-100 border border-green-300 rounded-lg">
+                    <h3 class="font-bold text-green-800">Registration Successful!</h3>
+                    <p class="text-green-700">Please check your email for a confirmation link to activate your account before logging in.</p>
+                </div>
                 <p class="text-center mt-4">Already have an account? <a href="#" id="show-login" class="text-blue-500">Login</a></p>
             </div>
              <p id="auth-error" class="text-red-500 text-center mt-4"></p>
@@ -1567,25 +1573,37 @@
             e.preventDefault();
             loginForm.classList.add('hidden');
             registerForm.classList.remove('hidden');
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
         });
 
         document.getElementById('show-login').addEventListener('click', (e) => {
             e.preventDefault();
             registerForm.classList.add('hidden');
             loginForm.classList.remove('hidden');
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+            // Reset the registration form view for the next time it's opened
+            document.getElementById('register-inputs').classList.remove('hidden');
+            document.getElementById('register-success').classList.add('hidden');
         });
 
         document.getElementById('register-btn').addEventListener('click', async () => {
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
             authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
             const { data, error } = await db.auth.signUp({ email, password });
             if (error) {
                 authError.textContent = error.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
             } else {
                 // Also create a user record in the public users table for the admin
                 const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
                 if (insertError) console.error("Error creating public user record:", insertError.message);
+                
+                document.getElementById('register-inputs').classList.add('hidden');
+                document.getElementById('register-success').classList.remove('hidden');
             }
         });
 
@@ -1593,8 +1611,12 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
             const { error } = await db.auth.signInWithPassword({ email, password });
-            if (error) authError.textContent = error.message;
+            if (error) {
+                authError.textContent = error.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+            }
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -1613,6 +1635,12 @@
                     document.getElementById('admin-dashboard-btn').classList.remove('hidden');
                 }
                 
+                // When a user successfully signs in, clear any old state that might
+                // redirect them back to the login page.
+                if (event === 'SIGNED_IN') {
+                    clearAllState();
+                }
+
                 // DEBUGGING LOG: This should appear for ALL logged-in users, new or old.
                 console.log(`User ${user.email} authenticated. Preparing to show main menu.`);
 
@@ -1640,6 +1668,10 @@
     </script>
 </body>
 </html>
+
+
+
+
 
 
 
