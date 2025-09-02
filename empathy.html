@@ -180,6 +180,14 @@
                     <input type="text" id="email-category-input" placeholder="Category (e.g., Billing)" class="p-2 border rounded-md text-sm">
                     <button id="save-email-btn" class="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded text-sm transition-colors">Save to My Emails</button>
                  </div>
+                 <!-- NEW: Feedback section for recrafting -->
+                 <div id="recraft-feedback-container" class="hidden mt-4 p-4 bg-gray-100 rounded-lg border">
+                    <label for="recraft-feedback-input" class="block text-sm font-medium text-gray-700 mb-1">How should the AI improve this email?</label>
+                    <textarea id="recraft-feedback-input" class="w-full p-2 border border-gray-300 rounded-md" rows="2" placeholder="e.g., Be more apologetic, make it shorter, add details about the new tracking number..."></textarea>
+                    <div class="mt-2 flex justify-end">
+                        <button id="submit-recraft-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm">Submit & Recraft</button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -1180,7 +1188,7 @@
                 item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
                 item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">User: ${session.users ? session.users.email : session.user_id.substring(0,8)+'...'} | Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">Score: ${session.final_empathy_score}</div></div>`;
                 item.addEventListener('click', () => showHistoryDetail(session, true));
-                container.appendChild(item);
+                 container.appendChild(item);
             });
         }
         
@@ -1234,6 +1242,60 @@
                 outputContainer.classList.remove('hidden');
             } else {
                 alert("Sorry, the AI could not craft an email. Please try again.");
+            }
+        }
+
+        async function recraftEmail() {
+            const customerEmail = document.getElementById('customer-email-input').value.trim();
+            const resolution = document.getElementById('resolution-input').value.trim();
+            const alternatives = document.getElementById('alternatives-input').value.trim();
+            const previousDraft = document.getElementById('crafted-email-body').value;
+            const feedback = document.getElementById('recraft-feedback-input').value.trim();
+            const outputContainer = document.getElementById('crafted-email-container');
+            const feedbackContainer = document.getElementById('recraft-feedback-container');
+
+            if (!feedback) {
+                alert("Please provide feedback for the recraft.");
+                return;
+            }
+
+            feedbackContainer.classList.add('hidden'); // Hide feedback form while processing
+
+            const prompt = `You are a professional and empathetic customer support agent for Tempo.fit named Alex. You are revising an email draft based on feedback.
+
+            **Original Customer Email (for context):**
+            "${customerEmail}"
+
+            **Original Goal / Key Information to Convey:**
+            "${resolution}"
+
+            **Alternative Solutions or Extra Details (if any):**
+            "${alternatives}"
+
+            **Previous Draft You Wrote:**
+            "${previousDraft}"
+
+            **Feedback for Revision:**
+            "${feedback}"
+
+            **Your Task:**
+            Rewrite the email. Incorporate the feedback while maintaining the standard opening and closing, professional tone, and clear structure. Ensure the new draft directly addresses the points raised in the feedback.
+
+            Return the revised email as a JSON object with "subject" and "body" keys.`;
+            
+            const schema = { 
+                type: "OBJECT", 
+                properties: { "subject": { "type": "STRING" }, "body": { "type": "STRING" } }, 
+                required: ["subject", "body"] 
+            };
+
+            const result = await getFromAI(prompt, schema);
+            
+            if (result && result.subject && result.body) {
+                document.getElementById('crafted-email-subject').value = result.subject;
+                document.getElementById('crafted-email-body').value = result.body;
+            } else {
+                alert("Sorry, the AI could not recraft the email. Please try again.");
             }
         }
 
@@ -1515,7 +1577,10 @@
 
             document.getElementById('get-empathy-help-btn').addEventListener('click', getEmpathyHelpFromAI);
             document.getElementById('craft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
-            document.getElementById('recraft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
+            document.getElementById('recraft-email-btn').addEventListener('click', () => {
+                document.getElementById('recraft-feedback-container').classList.toggle('hidden');
+            });
+            document.getElementById('submit-recraft-btn').addEventListener('click', recraftEmail);
             document.getElementById('save-email-btn').addEventListener('click', saveCraftedEmail);
             document.getElementById('draft-email-btn').addEventListener('click', draftFollowUpEmail);
             document.getElementById('copy-email-btn').addEventListener('click', copyEmailToClipboard);
@@ -1668,6 +1733,7 @@
     </script>
 </body>
 </html>
+
 
 
 
