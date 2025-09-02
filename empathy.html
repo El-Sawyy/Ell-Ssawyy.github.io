@@ -377,6 +377,10 @@
         function showView(viewName) {
             Object.values(views).forEach(view => view && view.classList.add('hidden'));
             if (views[viewName]) views[viewName].classList.remove('hidden');
+            // Save the current view to session storage whenever it changes
+            if (viewName !== 'simulator') { // The simulator has its own saving logic
+                saveCurrentViewState(viewName);
+            }
         }
 
         async function getFromAI(prompt, schema = null) {
@@ -568,6 +572,63 @@
             sessionStorage.removeItem('inProgressSession');
             currentScenario = null;
         }
+
+        // --- New General State Saving Functions ---
+        function saveCurrentViewState(viewName) {
+             const state = { currentView: viewName, data: {} };
+             switch (viewName) {
+                case 'empathyAssistant':
+                    state.data.situation = document.getElementById('situation-description').value;
+                    break;
+                case 'emailCrafter':
+                    state.data.customerEmail = document.getElementById('customer-email-input').value;
+                    state.data.resolution = document.getElementById('resolution-input').value;
+                    state.data.alternatives = document.getElementById('alternatives-input').value;
+                    break;
+                case 'createScenario':
+                     state.data.topic = document.getElementById('scenario-topic').value;
+                     break;
+             }
+             sessionStorage.setItem('lastViewState', JSON.stringify(state));
+        }
+
+        function loadLastViewState() {
+            const savedStateJSON = sessionStorage.getItem('lastViewState');
+            if (!savedStateJSON) return false;
+
+            try {
+                const savedState = JSON.parse(savedStateJSON);
+                if (savedState && savedState.currentView && views[savedState.currentView]) {
+                    showView(savedState.currentView);
+                    // Restore data
+                    switch (savedState.currentView) {
+                        case 'empathyAssistant':
+                            document.getElementById('situation-description').value = savedState.data.situation || '';
+                            break;
+                        case 'emailCrafter':
+                            document.getElementById('customer-email-input').value = savedState.data.customerEmail || '';
+                            document.getElementById('resolution-input').value = savedState.data.resolution || '';
+                            document.getElementById('alternatives-input').value = savedState.data.alternatives || '';
+                            break;
+                        case 'createScenario':
+                            document.getElementById('scenario-topic').value = savedState.data.topic || '';
+                            break;
+                    }
+                    return true;
+                }
+            } catch (e) {
+                console.error("Failed to parse last view state:", e);
+                sessionStorage.removeItem('lastViewState');
+                return false;
+            }
+            return false;
+        }
+
+        function clearAllState() {
+            clearSessionState();
+            sessionStorage.removeItem('lastViewState');
+        }
+        // --- End of New Functions ---
 
         function loadSessionState() {
             const savedStateJSON = sessionStorage.getItem('inProgressSession');
@@ -1441,7 +1502,7 @@
             
             document.querySelectorAll('.back-to-menu-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    clearSessionState();
+                    clearAllState();
                     showView('mainMenu');
                 });
             });
@@ -1464,6 +1525,14 @@
             document.getElementById('get-suggestions-btn').addEventListener('click', getSuggestionsFromAI);
             document.getElementById('user-response').addEventListener('input', saveSessionState);
             
+            // Add listeners to save text as user types
+            document.getElementById('situation-description').addEventListener('input', () => saveCurrentViewState('empathyAssistant'));
+            document.getElementById('customer-email-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('resolution-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('alternatives-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('scenario-topic').addEventListener('input', () => saveCurrentViewState('createScenario'));
+
+
             document.getElementById('generate-scenario-btn').addEventListener('click', async () => {
                 const topic = document.getElementById('scenario-topic').value.trim();
                 if (!topic) return;
@@ -1529,7 +1598,7 @@
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            clearSessionState();
+            clearAllState();
             await db.auth.signOut();
         });
 
@@ -1547,14 +1616,19 @@
                 // DEBUGGING LOG: This should appear for ALL logged-in users, new or old.
                 console.log(`User ${user.email} authenticated. Preparing to show main menu.`);
 
-                if (!loadSessionState()) {
+                if (loadSessionState()) {
+                    // A simulator game is in progress, do nothing else.
+                } else if (loadLastViewState()) {
+                    // A different view was restored, do nothing else.
+                } else {
+                    // No saved state, show the main menu.
                     showView('mainMenu');
                 }
 
             } else {
                 userId = null;
                 isAdmin = false;
-                clearSessionState();
+                clearAllState();
                 document.getElementById('logout-btn').classList.add('hidden');
                 document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
                 document.getElementById('admin-dashboard-btn').classList.add('hidden');
@@ -1566,6 +1640,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 
