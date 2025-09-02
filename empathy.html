@@ -110,7 +110,7 @@
                     <p>Get intelligent, empathetic guidance for a tough customer situation you're facing now.</p>
                 </button>
             </div>
-             <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1/2 mx-auto">
+             <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1-2 mx-auto">
                 <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
             </button>
         </div>
@@ -857,13 +857,15 @@
             sessionData.interactions.forEach((interaction, index) => {
                 const stepDiv = document.createElement('div');
                 stepDiv.className = 'border-t pt-4';
-                let adminControls = fromAdmin ? `<button data-session-id="${sessionData.id}" data-interaction-index="${index}" class="edit-feedback-btn text-sm text-blue-500">Edit</button>` : '';
+                let adminControls = fromAdmin ? `<button data-session-id="${sessionData.id}" data-interaction-index="${index}" class="edit-feedback-btn text-sm text-blue-600 hover:text-blue-800 font-semibold">Edit Feedback</button>` : '';
                 stepDiv.innerHTML = `
                     <p class="mb-2"><strong class="text-gray-500">Customer said:</strong> "${interaction.customerSays}"</p>
-                    <p class="mb-2 p-2 bg-blue-50 rounded"><strong class="text-blue-700">Your response:</strong> "${interaction.userResponse}"</p>
+                    <p class="mb-2 p-2 bg-blue-50 rounded"><strong class="text-blue-700">User's response:</strong> "${interaction.userResponse}"</p>
                     <div class="mb-2 p-2 bg-gray-50 rounded">
                         <div class="flex justify-between items-start">
-                           <p id="feedback-text-${sessionData.id}-${index}"><strong class="text-gray-700">AI Feedback (Score: ${interaction.aiScore}):</strong> ${interaction.aiFeedback}</p>
+                           <div id="feedback-text-container-${sessionData.id}-${index}" class="flex-grow pr-4">
+                                <p><strong class="text-gray-700">AI Feedback (Score: ${interaction.aiScore}):</strong> ${interaction.aiFeedback}</p>
+                           </div>
                            ${adminControls}
                         </div>
                     </div>
@@ -875,24 +877,46 @@
              if(fromAdmin) {
                   container.querySelectorAll('.edit-feedback-btn').forEach(btn => {
                        btn.addEventListener('click', (e) => {
-                           const index = e.target.dataset.interactionIndex;
-                           const sessionId = e.target.dataset.sessionId;
-                           const feedbackP = document.getElementById(`feedback-text-${sessionId}-${index}`);
+                           const button = e.target;
+                           const index = button.dataset.interactionIndex;
+                           const sessionId = button.dataset.sessionId;
+                           const feedbackContainer = document.getElementById(`feedback-text-container-${sessionId}-${index}`);
                            const currentFeedback = sessionData.interactions[index].aiFeedback;
-                           feedbackP.innerHTML = `<textarea class="w-full border rounded p-1">${currentFeedback}</textarea><button data-save-index="${index}" data-session-id="${sessionId}" class="save-feedback-btn text-sm bg-green-500 text-white p-1 rounded mt-1">Save</button>`;
                            
-                           feedbackP.querySelector('.save-feedback-btn').addEventListener('click', async (saveEvent) => {
-                               const newFeedback = saveEvent.target.previousElementSibling.value;
+                           button.classList.add('hidden'); // Hide the edit button
+
+                           feedbackContainer.innerHTML = `
+                                <textarea class="w-full border rounded p-2 text-sm">${currentFeedback}</textarea>
+                                <div class="flex justify-end space-x-2 mt-2">
+                                    <button class="cancel-feedback-edit-btn text-sm bg-gray-200 px-3 py-1 rounded-md">Cancel</button>
+                                    <button class="save-feedback-btn text-sm bg-green-500 text-white px-3 py-1 rounded-md">Save</button>
+                                </div>
+                            `;
+                           
+                           feedbackContainer.querySelector('.save-feedback-btn').addEventListener('click', async (saveEvent) => {
+                               const saveButton = saveEvent.target;
+                               saveButton.textContent = 'Saving...';
+                               saveButton.disabled = true;
+
+                               const newFeedback = feedbackContainer.querySelector('textarea').value;
                                sessionData.interactions[index].aiFeedback = newFeedback;
                                
                                const { error } = await db.from('sessions').update({ interactions: sessionData.interactions }).eq('id', sessionId);
 
                                if (error) {
                                    console.error("Failed to save feedback:", error.message);
-                                   feedbackP.innerHTML = `<strong class="text-gray-700">AI Feedback (Score: ${sessionData.interactions[index].aiScore}):</strong> ${currentFeedback} <span class="text-red-500">(Save failed)</span>`;
+                                   alert("Failed to save feedback. Check console for details.");
+                                   feedbackContainer.innerHTML = `<p><strong class="text-gray-700">AI Feedback (Score: ${sessionData.interactions[index].aiScore}):</strong> ${currentFeedback}</p>`;
+                                   button.classList.remove('hidden');
                                } else {
-                                   feedbackP.innerHTML = `<strong class="text-gray-700">AI Feedback (Score: ${sessionData.interactions[index].aiScore}):</strong> ${newFeedback}`;
+                                   feedbackContainer.innerHTML = `<p><strong class="text-gray-700">AI Feedback (Score: ${sessionData.interactions[index].aiScore}):</strong> ${newFeedback}</p>`;
+                                   button.classList.remove('hidden');
                                }
+                           });
+
+                           feedbackContainer.querySelector('.cancel-feedback-edit-btn').addEventListener('click', () => {
+                                feedbackContainer.innerHTML = `<p><strong class="text-gray-700">AI Feedback (Score: ${sessionData.interactions[index].aiScore}):</strong> ${currentFeedback}</p>`;
+                                button.classList.remove('hidden');
                            });
                        });
                    });
@@ -1089,13 +1113,111 @@
             data.forEach(user => {
                 if (user.email === 'admin@tempo.fit') return;
                 const item = document.createElement('div');
-                item.className = 'bg-white p-3 rounded-lg shadow-sm flex justify-between items-center';
-                item.innerHTML = `<p>${user.email || user.id}</p><button data-uid="${user.id}" class="assign-scenario-btn bg-blue-500 text-white px-2 py-1 rounded text-sm">Assign Scenario</button>`;
+                item.className = 'bg-white p-3 rounded-lg shadow-sm flex items-center space-x-4';
+                item.dataset.userId = user.id;
+
+                item.innerHTML = `
+                    <div class="flex-grow" id="user-info-${user.id}">
+                        <p class="user-email font-semibold">${user.email || user.id}</p>
+                    </div>
+                    <div class="flex-grow hidden" id="user-edit-${user.id}">
+                        <input type="email" value="${user.email || ''}" class="w-full p-2 border rounded-md">
+                    </div>
+                    <div class="flex space-x-2" id="user-actions-${user.id}">
+                        <button data-uid="${user.id}" class="edit-user-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md">Edit</button>
+                        <button data-uid="${user.id}" class="delete-user-btn text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md">Delete</button>
+                        <button data-uid="${user.id}" class="assign-scenario-btn text-sm bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md">Assign Scenario</button>
+                    </div>
+                    <div class="flex space-x-2 hidden" id="user-edit-actions-${user.id}">
+                        <button data-uid="${user.id}" data-original-email="${user.email}" class="save-user-btn text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md">Save</button>
+                        <button data-uid="${user.id}" class="cancel-edit-user-btn text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md">Cancel</button>
+                    </div>
+                `;
                 container.appendChild(item);
             });
-            container.querySelectorAll('.assign-scenario-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid));
-            });
+
+            // Add event listeners for new buttons
+            container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
+            container.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', handleEditUser));
+            container.querySelectorAll('.cancel-edit-user-btn').forEach(btn => btn.addEventListener('click', handleCancelEditUser));
+            container.querySelectorAll('.save-user-btn').forEach(btn => btn.addEventListener('click', handleSaveUserChanges));
+            container.querySelectorAll('.delete-user-btn').forEach(btn => btn.addEventListener('click', handleDeleteUser));
+        }
+
+        function handleEditUser(e) {
+            const userId = e.target.dataset.uid;
+            document.getElementById(`user-info-${userId}`).classList.add('hidden');
+            document.getElementById(`user-actions-${userId}`).classList.add('hidden');
+            document.getElementById(`user-edit-${userId}`).classList.remove('hidden');
+            document.getElementById(`user-edit-actions-${userId}`).classList.remove('hidden');
+        }
+
+        function handleCancelEditUser(e) {
+            const userId = e.target.dataset.uid;
+            document.getElementById(`user-info-${userId}`).classList.remove('hidden');
+            document.getElementById(`user-actions-${userId}`).classList.remove('hidden');
+            document.getElementById(`user-edit-${userId}`).classList.add('hidden');
+            document.getElementById(`user-edit-actions-${userId}`).classList.add('hidden');
+        }
+
+        async function handleSaveUserChanges(e) {
+            const button = e.target;
+            const userId = button.dataset.uid;
+            const editContainer = document.getElementById(`user-edit-${userId}`);
+            const newEmail = editContainer.querySelector('input').value.trim();
+            const originalEmail = button.dataset.originalEmail;
+
+            if (newEmail === originalEmail) {
+                handleCancelEditUser(e);
+                return;
+            }
+
+            button.textContent = 'Saving...';
+            button.disabled = true;
+
+            // This requires the SQL policies to be in place.
+            const { data, error } = await db.from('users')
+                .update({ email: newEmail })
+                .eq('id', userId)
+                .select()
+                .single();
+
+            if (error) {
+                console.error("Error updating user:", error.message);
+                alert(`Failed to update user: ${error.message}`);
+                button.textContent = 'Save';
+                button.disabled = false;
+            } else {
+                // Update the UI to reflect the change
+                const infoContainer = document.getElementById(`user-info-${userId}`);
+                infoContainer.querySelector('.user-email').textContent = data.email;
+                handleCancelEditUser(e); // Switch back to view mode
+            }
+        }
+
+        async function handleDeleteUser(e) {
+            const button = e.target;
+            const userId = button.dataset.uid;
+
+            if (button.textContent !== 'Confirm Delete?') {
+                button.textContent = 'Confirm Delete?';
+                setTimeout(() => {
+                   if(button) button.textContent = 'Delete';
+                }, 3000);
+                return;
+            }
+
+            // This requires the SQL policies to be in place.
+            const { error } = await db.from('users').delete().eq('id', userId);
+
+            if (error) {
+                console.error("Error deleting user:", error.message);
+                alert(`Failed to delete user: ${error.message}`);
+            } else {
+                const userRow = button.closest('[data-user-id]');
+                userRow.style.opacity = '0';
+                setTimeout(() => userRow.remove(), 300);
+            }
         }
 
         async function openAssignScenarioModal(targetUserId) {
@@ -1680,18 +1802,6 @@
         });
 
         document.getElementById('login-btn').addEventListener('click', async () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            authError.textContent = '';
-            authError.className = 'text-red-500 text-center mt-4';
-            const { error } = await db.auth.signInWithPassword({ email, password });
-            if (error) {
-                authError.textContent = error.message;
-                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
-            }
-        });
-
-        document.getElementById('login-btn').addEventListener('click', async () => {
             // Clear any lingering state (like 'auth-view') before attempting login
             clearAllState();
             const email = document.getElementById('login-email').value;
@@ -1752,4 +1862,5 @@
     </script>
 </body>
 </html>
+
 
