@@ -1544,6 +1544,9 @@
                     document.getElementById('admin-dashboard-btn').classList.remove('hidden');
                 }
                 
+                // DEBUGGING LOG: This should appear for ALL logged-in users, new or old.
+                console.log(`User ${user.email} authenticated. Preparing to show main menu.`);
+
                 if (!loadSessionState()) {
                     showView('mainMenu');
                 }
@@ -1563,9 +1566,6 @@
     </script>
 </body>
 </html>
-
-
-
 
 
 
