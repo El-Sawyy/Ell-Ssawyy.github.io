@@ -370,7 +370,6 @@
         let currentStep = 0;
         let empathyScore = 50;
         let sessionInteractions = [];
-        let isInitialAuthCheckComplete = false;
 
         const views = {
             auth: document.getElementById('auth-view'),
@@ -1692,47 +1691,53 @@
             }
         });
 
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            // Clear any lingering state (like 'auth-view') before attempting login
+            clearAllState();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+            const { error } = await db.auth.signInWithPassword({ email, password });
+            if (error) {
+                authError.textContent = error.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+            }
+        });
+
         document.getElementById('logout-btn').addEventListener('click', async () => {
             clearAllState();
             await db.auth.signOut();
         });
 
-        db.auth.onAuthStateChange((event, session) => {
+        db.auth.onAuthStateChange((_event, session) => {
             if (session && session.user) {
-                const user = session.user;
-                userId = user.id;
-                isAdmin = user.email === 'admin@tempo.fit';
-                document.getElementById('logout-btn').classList.remove('hidden');
-                document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
-                if (isAdmin) {
-                    document.getElementById('admin-dashboard-btn').classList.remove('hidden');
-                }
+                // This block runs if a user is logged in.
 
-                // If this is the SIGNED_IN event, the user just actively logged in.
-                // We MUST clear any old state and go directly to the main menu.
-                if (event === 'SIGNED_IN') {
-                    clearAllState();
-                    showView('mainMenu');
-                    isInitialAuthCheckComplete = true; // Mark as complete
-                    return; // We are done.
-                }
+                // If userId is not set, it's the first authentication check for this session (login or page refresh).
+                // We'll use this as our cue to set up the initial view.
+                if (!userId) {
+                    const user = session.user;
+                    userId = user.id;
+                    isAdmin = user.email === 'admin@tempo.fit';
+                    document.getElementById('logout-btn').classList.remove('hidden');
+                    document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
+                    if (isAdmin) {
+                        document.getElementById('admin-dashboard-btn').classList.remove('hidden');
+                    }
+                    
+                    console.log(`User ${user.email} session detected. Performing initial view setup.`);
 
-                // If it's not a new sign-in, it's a session restoration (e.g., page refresh).
-                // We only want to run this restoration logic ONCE.
-                if (!isInitialAuthCheckComplete) {
-                    isInitialAuthCheckComplete = true;
-                    console.log(`User ${user.email} session restored. Performing view restoration.`);
-
-                    // Try to restore a simulator session first, then any other view.
+                    // An active login clears state, so this will default to mainMenu.
+                    // A page refresh will try to restore the last saved state.
                     if (!loadSessionState() && !loadLastViewState()) {
-                        // If there's no state to restore, default to the main menu.
                         showView('mainMenu');
                     }
                 }
+                // If userId is already set, this is a subsequent event (like tab focus) and we do nothing.
 
             } else {
-                // User is logged out, so reset the flag for the next login session.
-                isInitialAuthCheckComplete = false;
+                // This block runs if user is logged out.
                 userId = null;
                 isAdmin = false;
                 clearAllState();
