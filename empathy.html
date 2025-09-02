@@ -370,6 +370,7 @@
         let currentStep = 0;
         let empathyScore = 50;
         let sessionInteractions = [];
+        let isInitialAuthCheckComplete = false;
 
         const views = {
             auth: document.getElementById('auth-view'),
@@ -1279,9 +1280,16 @@
             "${feedback}"
 
             **Your Task:**
-            Rewrite the email. Incorporate the feedback while maintaining the standard opening and closing, professional tone, and clear structure. Ensure the new draft directly addresses the points raised in the feedback.
+            Rewrite the email. Incorporate the feedback while strictly following all instructions below.
 
-            Return the revised email as a JSON object with "subject" and "body" keys.`;
+            **Instructions for the email body:**
+            1.  **Structure:** Organize the email into clear paragraphs with proper spacing. It must not be one block of text.
+            2.  **Tone:** Analyze the customer's original email and your previous draft to set the correct tone. Apply the user's feedback (e.g., "be more apologetic").
+            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is Alex."
+            4.  **Content:** Address their issue directly, provide the resolution, and include any alternatives clearly.
+            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Tempo Support Team".
+
+            Return the revised email as a JSON object with "subject" and "body" keys. The body must be plain text, well-formatted with line breaks for paragraphs.`;
             
             const schema = { 
                 type: "OBJECT", 
@@ -1699,26 +1707,32 @@
                 if (isAdmin) {
                     document.getElementById('admin-dashboard-btn').classList.remove('hidden');
                 }
-                
-                // When a user successfully signs in, clear any old state that might
-                // redirect them back to the login page.
+
+                // If this is the SIGNED_IN event, the user just actively logged in.
+                // We MUST clear any old state and go directly to the main menu.
                 if (event === 'SIGNED_IN') {
                     clearAllState();
+                    showView('mainMenu');
+                    isInitialAuthCheckComplete = true; // Mark as complete
+                    return; // We are done.
                 }
 
-                // DEBUGGING LOG: This should appear for ALL logged-in users, new or old.
-                console.log(`User ${user.email} authenticated. Preparing to show main menu.`);
+                // If it's not a new sign-in, it's a session restoration (e.g., page refresh).
+                // We only want to run this restoration logic ONCE.
+                if (!isInitialAuthCheckComplete) {
+                    isInitialAuthCheckComplete = true;
+                    console.log(`User ${user.email} session restored. Performing view restoration.`);
 
-                if (loadSessionState()) {
-                    // A simulator game is in progress, do nothing else.
-                } else if (loadLastViewState()) {
-                    // A different view was restored, do nothing else.
-                } else {
-                    // No saved state, show the main menu.
-                    showView('mainMenu');
+                    // Try to restore a simulator session first, then any other view.
+                    if (!loadSessionState() && !loadLastViewState()) {
+                        // If there's no state to restore, default to the main menu.
+                        showView('mainMenu');
+                    }
                 }
 
             } else {
+                // User is logged out, so reset the flag for the next login session.
+                isInitialAuthCheckComplete = false;
                 userId = null;
                 isAdmin = false;
                 clearAllState();
@@ -1733,13 +1747,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
 
