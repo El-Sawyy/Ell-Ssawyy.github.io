@@ -836,7 +836,7 @@
             const feedbackSchema = { type: "OBJECT", properties: { "score": { "type": "INTEGER" }, "feedback": { "type": "STRING" } }, required: ["score", "feedback"] };
             const bestAnswerPrompt = `You are a customer service expert for Tempo.fit. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
             const bestAnswerSchema = { type: "OBJECT", properties: { "ideal_responses": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["ideal_responses"] };
-            const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(feedbackPrompt, feedbackSchema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
+            const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(prompt, schema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
             handleAIResponse(responseText, feedbackResult, bestAnswerResult);
         }
 
@@ -2142,6 +2142,8 @@
                     document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
                     if (isAdmin) {
                         document.getElementById('admin-dashboard-btn').classList.remove('hidden');
+                    } else {
+                        listenForLiveSessionInvites();
                     }
                     
                     if (!loadSessionState() && !loadLastViewState()) {
@@ -2151,6 +2153,8 @@
             } else {
                 userId = null;
                 isAdmin = false;
+                if(liveSessionSubscription) liveSessionSubscription.unsubscribe();
+                if(liveMessagesSubscription) liveMessagesSubscription.unsubscribe();
                 clearAllState();
                 document.getElementById('logout-btn').classList.add('hidden');
                 document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
