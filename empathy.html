@@ -93,13 +93,9 @@
                     <h3 class="text-xl font-bold mb-2 text-gray-800">✍️ Create a Scenario</h3>
                     <p class="text-gray-600">Design a new custom scenario for your own practice.</p>
                 </button>
-                 <button data-action="history" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                 <button data-action="history" class="card bg-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
                     <h3 class="text-xl font-bold mb-2 text-gray-800">📈 View My History</h3>
                     <p class="text-gray-600">Review your past performance, feedback, and ideal responses.</p>
-                </button>
-                <button data-action="rephrase-tool" class="card bg-green-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2">✍️ Help Me Rephrase</h3>
-                    <p>Get AI-powered suggestions to make your response more empathetic and professional.</p>
                 </button>
                  <button data-action="email-crafter" class="card bg-orange-500 text-white p-6 rounded-lg cursor-pointer text-left">
                     <h3 class="text-xl font-bold mb-2">✉️ AI Email Crafter</h3>
@@ -117,35 +113,6 @@
              <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1-2 mx-auto">
                 <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
             </button>
-        </div>
-
-        <!-- Rephrase Tool View -->
-        <div id="rephrase-tool-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-2xl font-bold mb-4">✍️ AI Rephrasing Tool</h2>
-            <p class="text-gray-600 mb-6">Enter the customer's message and your draft response. The AI will provide alternative, more empathetic phrasings.</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label for="rephrase-customer-statement" class="block text-sm font-medium text-gray-700">Customer's Statement</label>
-                    <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Tempo stopped working mid-workout and I'm really frustrated!"></textarea>
-                </div>
-                <div>
-                    <label for="rephrase-agent-draft" class="block text-sm font-medium text-gray-700">Your Draft Response</label>
-                    <textarea id="rephrase-agent-draft" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., Sorry about that. Did you try restarting it?"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button id="get-rephrase-tool-suggestions-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Get Suggestions</button>
-            </div>
-            
-            <div id="rephrase-tool-loading" class="hidden flex-col items-center justify-center mt-4">
-                 <div class="loader"></div>
-                 <p class="text-gray-600 mt-2">AI is thinking of new phrases...</p>
-             </div>
-
-            <div id="rephrase-tool-suggestions-container" class="hidden mt-6"></div>
         </div>
 
         <!-- Empathy Assistant View -->
@@ -356,10 +323,6 @@
              <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
             <h2 class="text-3xl font-bold mb-4 text-center">👑 Admin Dashboard</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <button data-action="admin-live-session" class="card bg-red-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2">🔴 Start Live Role-Play</h3>
-                    <p>Initiate a real-time training session with an agent.</p>
-                </button>
                 <button data-action="admin-users" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
                     <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Users</h3>
                     <p class="text-gray-600">View all users and assign scenarios to them.</p>
@@ -368,41 +331,6 @@
                     <h3 class="text-xl font-bold mb-2 text-gray-800">Audit Sessions</h3>
                     <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
                 </button>
-            </div>
-        </div>
-
-        <!-- Admin Live Session Setup View -->
-        <div id="admin-live-session-setup-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button id="back-to-admin-dash-btn3" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">Start Live Role-Play Session</h2>
-            <p class="text-center mb-4 text-gray-600">Select an agent to invite for a real-time session.</p>
-            <div id="live-session-agent-list" class="space-y-2"></div>
-        </div>
-        
-        <!-- Live Session Invite Modal (for agent) -->
-        <div id="live-session-invite-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-            <div class="bg-white p-8 rounded-lg text-center shadow-xl">
-                <h3 class="text-2xl font-bold mb-4">Live Session Invitation</h3>
-                <p class="mb-6">An admin has invited you to a live role-playing session.</p>
-                <div class="space-x-4">
-                    <button id="decline-invite-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-6 rounded-lg">Decline</button>
-                    <button id="accept-invite-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg">Accept</button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Live Session View -->
-        <div id="live-session-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-             <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">🔴 Live Role-Play Session</h2>
-                <button id="end-live-session-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded-lg">End Session</button>
-            </div>
-            <div id="live-chat-box" class="h-96 border rounded-lg p-4 overflow-y-auto bg-gray-50 mb-4">
-                <!-- Live chat messages will appear here -->
-            </div>
-            <div class="flex">
-                <input type="text" id="live-chat-input" class="flex-grow border rounded-l-lg p-3" placeholder="Type your message...">
-                <button id="send-live-chat-btn" class="bg-blue-500 text-white p-3 rounded-r-lg">Send</button>
             </div>
         </div>
 
@@ -430,10 +358,6 @@
 
         let userId;
         let isAdmin = false;
-        let liveSessionSubscription = null;
-        let liveMessagesSubscription = null;
-        let currentLiveSessionId = null;
-
 
         const defaultScenarios = [
             { id: 'default-0', title: "Tempo Move Connection Issue", isDefault: true, description: "A customer is frustrated because their Tempo Move won't connect to their TV.", persona: "Customer: Mark, a new user who was excited to start his first class. He's now annoyed and feels like the product is too complicated.", dialogue_tree: [{ customer: "I've been trying for 30 minutes and my Tempo Move just won't show up on my TV! I'm about to miss my scheduled class. This is so frustrating." }, { customer: "I've tried restarting everything already. My iPhone is plugged into the Core, and the HDMI is in the TV. What else could it be?" }, { customer: "Okay, I checked and the TV is on the right HDMI input. It's working now! Thank you for walking me through that." }] },
@@ -458,19 +382,17 @@
             adminDashboard: document.getElementById('admin-dashboard-view'),
             adminUserList: document.getElementById('admin-user-list-view'),
             adminSessionList: document.getElementById('admin-session-list-view'),
-            adminLiveSessionSetup: document.getElementById('admin-live-session-setup-view'),
             assignedScenarios: document.getElementById('assigned-scenarios-view'),
             empathyAssistant: document.getElementById('empathy-assistant-view'),
             emailCrafter: document.getElementById('email-crafter-view'),
             savedEmails: document.getElementById('saved-emails-view'),
-            rephraseTool: document.getElementById('rephrase-tool-view'),
-            liveSession: document.getElementById('live-session-view'),
         };
 
         function showView(viewName) {
             Object.values(views).forEach(view => view && view.classList.add('hidden'));
             if (views[viewName]) views[viewName].classList.remove('hidden');
-            if (viewName !== 'simulator') {
+            // Save the current view to session storage whenever it changes
+            if (viewName !== 'simulator') { // The simulator has its own saving logic
                 saveCurrentViewState(viewName);
             }
         }
@@ -480,13 +402,11 @@
             const modalLoading = document.getElementById('modal-loading');
             const empathyHelpLoading = document.getElementById('empathy-help-loading');
             const emailCraftLoading = document.getElementById('email-craft-loading');
-            const rephraseToolLoading = document.getElementById('rephrase-tool-loading');
             
             if(loadingIndicator) loadingIndicator.classList.remove('hidden');
             if (modalLoading) modalLoading.classList.remove('hidden');
             if (empathyHelpLoading) empathyHelpLoading.classList.remove('hidden');
             if (emailCraftLoading) emailCraftLoading.classList.remove('hidden');
-            if (rephraseToolLoading) rephraseToolLoading.classList.remove('hidden');
             
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }]
@@ -534,7 +454,6 @@
                 if (modalLoading) modalLoading.classList.add('hidden');
                 if (empathyHelpLoading) empathyHelpLoading.classList.add('hidden');
                 if (emailCraftLoading) emailCraftLoading.classList.add('hidden');
-                if (rephraseToolLoading) rephraseToolLoading.classList.add('hidden');
             }
         }
 
@@ -683,10 +602,6 @@
                  case 'createScenario':
                       state.data.topic = document.getElementById('scenario-topic').value;
                       break;
-                 case 'rephraseTool':
-                    state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
-                    state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
-                    break;
              }
              sessionStorage.setItem('lastViewState', JSON.stringify(state));
         }
@@ -711,10 +626,6 @@
                             break;
                         case 'createScenario':
                             document.getElementById('scenario-topic').value = savedState.data.topic || '';
-                            break;
-                        case 'rephraseTool':
-                            document.getElementById('rephrase-customer-statement').value = savedState.data.customerStatement || '';
-                            document.getElementById('rephrase-agent-draft').value = savedState.data.agentDraft || '';
                             break;
                     }
                     return true;
@@ -836,7 +747,7 @@
             const feedbackSchema = { type: "OBJECT", properties: { "score": { "type": "INTEGER" }, "feedback": { "type": "STRING" } }, required: ["score", "feedback"] };
             const bestAnswerPrompt = `You are a customer service expert for Tempo.fit. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
             const bestAnswerSchema = { type: "OBJECT", properties: { "ideal_responses": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["ideal_responses"] };
-            const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(prompt, schema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
+            const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(feedbackPrompt, feedbackSchema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
             handleAIResponse(responseText, feedbackResult, bestAnswerResult);
         }
 
@@ -961,10 +872,12 @@
                 const stepDiv = document.createElement('div');
                 stepDiv.className = 'border-t pt-4';
 
+                // Coach feedback section logic
                 let coachFeedbackHTML = '';
                 const coachFeedback = interaction.coach_feedback || '';
 
                 if (fromAdmin) {
+                    // Admin View: Show edit/add controls
                     coachFeedbackHTML = `
                         <div id="coach-feedback-container-${sessionData.id}-${index}" class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                             <div id="coach-feedback-view-${sessionData.id}-${index}">
@@ -979,6 +892,7 @@
                         </div>
                     `;
                 } else {
+                    // User View: Always show the section
                      coachFeedbackHTML = `
                         <div class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                             <strong class="text-yellow-800">Coach Feedback:</strong>
@@ -1023,23 +937,30 @@
                             const saveButton = feedbackContainer.querySelector('.save-coach-feedback-btn');
                             saveButton.textContent = 'Saving...';
                             saveButton.disabled = true;
+
                             const newFeedback = feedbackContainer.querySelector('textarea').value;
+
+                            // Create a fresh copy of the interactions array to ensure immutability
                             const newInteractions = [...sessionData.interactions];
+                            // Update the specific interaction object
                             newInteractions[index] = { ...newInteractions[index], coach_feedback: newFeedback };
+
                             const { error } = await db.from('sessions')
                                 .update({ interactions: newInteractions })
                                 .eq('id', sessionId);
+
                             if (error) {
                                 console.error("Failed to save coach feedback:", error.message);
                                 alert(`Save Failed:\n\n${error.message}\n\nThis is likely a database security rule issue. Please ensure your 'sessions' table has an RLS policy that allows admins to UPDATE rows.`);
-                                showHistoryDetail(sessionId, true);
+                                showHistoryDetail(sessionId, true); // Re-render to reset UI
                             } else {
+                                // On success, re-fetch and re-render to show the updated, persisted data
                                 showHistoryDetail(sessionId, true);
                             }
                         });
                         
                         feedbackContainer.querySelector('.cancel-coach-feedback-btn').addEventListener('click', () => {
-                             showHistoryDetail(sessionId, true);
+                             showHistoryDetail(sessionId, true); // Re-render to cancel
                         });
                     });
                 });
@@ -1106,55 +1027,6 @@
             summaryContainer.innerHTML = result ? `<p><strong>Summary:</strong> ${result.summary}</p><p><strong>Actionable Tip:</strong> ${result.tip}</p>` : `<p class="text-red-500">Could not generate a summary.</p>`;
         }
 
-        async function getRephraseSuggestionsFromTool() {
-            const customerStatement = document.getElementById('rephrase-customer-statement').value.trim();
-            const agentDraft = document.getElementById('rephrase-agent-draft').value.trim();
-            const suggestionsContainer = document.getElementById('rephrase-tool-suggestions-container');
-            const loading = document.getElementById('rephrase-tool-loading');
-
-            if (!customerStatement || !agentDraft) {
-                alert("Please fill in both the customer's statement and your draft response.");
-                return;
-            }
-
-            loading.classList.remove('hidden');
-            suggestionsContainer.classList.add('hidden');
-
-            const prompt = `You are an expert customer service writing coach for Tempo.fit. An agent needs help rephrasing their response.
-            Customer's statement: "${customerStatement}"
-            Agent's current draft: "${agentDraft}"
-            Provide three distinct, improved versions of the agent's response. The new versions should be more empathetic and professional. Focus on improving the phrasing, not adding new information. Return a JSON object: { "rephrased_suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"] }`;
-            
-            const schema = { type: "OBJECT", properties: { "rephrased_suggestions": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["rephrased_suggestions"] };
-            
-            const result = await getFromAI(prompt, schema);
-            
-            loading.classList.add('hidden');
-            suggestionsContainer.classList.remove('hidden');
-
-            if (result && result.rephrased_suggestions) {
-                 suggestionsContainer.innerHTML = `<div class="p-4 bg-green-50 border border-green-200 rounded-md text-sm">
-                       <strong class="text-green-800">Rephrasing Suggestions:</strong>
-                       <ul class="mt-2 space-y-2">
-                           ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
-                       </ul>
-                   </div>`;
-                
-                suggestionsContainer.querySelectorAll('.copy-rephrase-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const textToCopy = e.target.previousElementSibling.textContent;
-                        navigator.clipboard.writeText(textToCopy).then(() => {
-                            e.target.textContent = 'Copied!';
-                            setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
-                        });
-                    });
-                });
-
-            } else {
-                suggestionsContainer.innerHTML = `<p class="text-sm text-red-500 p-2">Could not get rephrasing suggestions at this time.</p>`;
-            }
-        }
-
         async function getEmpathyHelpFromAI() {
             const situationDescription = document.getElementById('situation-description').value.trim();
             const responseContainer = document.getElementById('empathy-response-container');
@@ -1166,7 +1038,9 @@
             responseContainer.classList.add('hidden');
 
             const prompt = `You are an expert empathy coach for customer service agents at Tempo.fit. An agent is facing a tough situation: "${situationDescription}".
+
             Your task is to provide a detailed, intelligence-powered empathy report to help the agent handle this with maximum emotional intelligence. Do not provide solutions.
+
             Analyze the situation and return a JSON object with the following structure:
             1.  "key_emotion": A single word or short phrase identifying the customer's core emotion (e.g., "Frustration", "Feeling unheard", "Disappointment").
             2.  "empathetic_phrases": An array of three distinct, professional, and highly empathetic phrases the agent can use throughout the conversation to validate the customer's feelings.
@@ -1190,20 +1064,24 @@
                 responseContainer.innerHTML = `
                     <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
                         <h3 class="text-lg font-bold text-purple-800 mb-3">AI Empathy Coach Report</h3>
+
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Core Customer Emotion:</p>
                             <p class="text-purple-700 italic">${result.key_emotion}</p>
                         </div>
+
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Ways to Show Empathy:</p>
                             <ul class="list-disc list-inside text-purple-700 space-y-1 mt-1">
                                 ${result.empathetic_phrases.map(line => `<li>${line}</li>`).join('')}
                             </ul>
                         </div>
+
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Core Assurance Statement:</p>
                             <p class="text-purple-700">"${result.assurance_statement}"</p>
                         </div>
+
                         <div class="p-3 bg-indigo-100 rounded">
                             <p class="font-semibold text-indigo-800">💡 Coach's Tip for You:</p>
                             <p class="text-indigo-700">${result.coach_tip}</p>
@@ -1302,6 +1180,7 @@
                 container.appendChild(item);
             });
 
+            // Add event listeners for new buttons
             container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
             container.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', handleEditUser));
             container.querySelectorAll('.cancel-edit-user-btn').forEach(btn => btn.addEventListener('click', handleCancelEditUser));
@@ -1340,6 +1219,7 @@
             button.textContent = 'Saving...';
             button.disabled = true;
 
+            // This requires the SQL policies to be in place.
             const { data, error } = await db.from('users')
                 .update({ email: newEmail })
                 .eq('id', userId)
@@ -1352,9 +1232,10 @@
                 button.textContent = 'Save';
                 button.disabled = false;
             } else {
+                // Update the UI to reflect the change
                 const infoContainer = document.getElementById(`user-info-${userId}`);
                 infoContainer.querySelector('.user-email').textContent = data.email;
-                handleCancelEditUser(e);
+                handleCancelEditUser(e); // Switch back to view mode
             }
         }
 
@@ -1370,6 +1251,7 @@
                 return;
             }
 
+            // This requires the SQL policies to be in place.
             const { error } = await db.from('users').delete().eq('id', userId);
 
             if (error) {
@@ -1466,163 +1348,52 @@
                 container.innerHTML = '<p class="text-center">No user sessions found.</p>'; 
                 return; 
             }
-            data.forEach(session => {
-                const item = document.createElement('div');
-                item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
-                item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">User: ${session.users ? session.users.email : session.user_id.substring(0,8)+'...'} | Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">Score: ${session.final_empathy_score}</div></div>`;
-                item.addEventListener('click', () => showHistoryDetail(session.id, true));
-                 container.appendChild(item);
-            });
-        }
 
-        async function showAdminLiveSessionSetup() {
-            showView('adminLiveSessionSetup');
-            const container = document.getElementById('live-session-agent-list');
-            container.innerHTML = '<div class="loader mx-auto"></div>';
-            
-            const { data, error } = await db.from('users').select('id, email');
-            
-            if (error) {
-                console.error('Error fetching users for live session:', error);
-                container.innerHTML = '<p class="text-red-500">Could not load users.</p>';
-                return;
-            }
-
-            container.innerHTML = '';
-            const agents = data.filter(u => u.email !== 'admin@tempo.fit');
-
-            if (agents.length === 0) {
-                container.innerHTML = '<p class="text-center text-gray-500">No agents available for a live session.</p>';
-                return;
-            }
-
-            agents.forEach(agent => {
-                const item = document.createElement('div');
-                item.className = 'bg-white p-3 rounded-lg shadow-sm flex justify-between items-center';
-                item.innerHTML = `
-                    <p class="font-semibold">${agent.email}</p>
-                    <button data-agent-id="${agent.id}" class="invite-agent-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">Invite</button>
-                `;
-                container.appendChild(item);
-            });
-
-            container.querySelectorAll('.invite-agent-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const agentId = e.target.dataset.agentId;
-                    e.target.textContent = 'Inviting...';
-                    e.target.disabled = true;
-                    await startLiveSession(agentId);
-                });
-            });
-        }
-        
-        async function startLiveSession(agentId) {
-            const { data, error } = await db.from('live_sessions').insert({
-                admin_id: userId,
-                agent_id: agentId,
-                status: 'pending'
-            }).select().single();
-
-            if (error) {
-                console.error('Error starting live session:', error);
-                alert('Could not start live session.');
-                return;
-            }
-            
-            const sessionId = data.id;
-            currentLiveSessionId = sessionId;
-
-            const agentListContainer = document.getElementById('live-session-agent-list');
-            agentListContainer.innerHTML = `<p class="text-center p-4">Waiting for agent to accept the invitation...</p>`;
-
-            // Listen for the agent's response
-            liveSessionSubscription = db.channel(`live-session-response-${sessionId}`)
-                .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'live_sessions', filter: `id=eq.${sessionId}` }, payload => {
-                    const newStatus = payload.new.status;
-                    if (newStatus === 'active') {
-                        joinLiveSession(sessionId);
-                    } else if (newStatus === 'declined') {
-                        alert('Agent declined the invitation.');
-                        showAdminLiveSessionSetup();
-                    }
-                })
-                .subscribe();
-        }
-
-        function listenForLiveSessionInvites() {
-            liveSessionSubscription = db.channel('live-session-invites')
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_sessions', filter: `agent_id=eq.${userId}` }, payload => {
-                    const session = payload.new;
-                    if (session.status === 'pending') {
-                        const modal = document.getElementById('live-session-invite-modal');
-                        modal.classList.remove('hidden');
-
-                        const acceptBtn = document.getElementById('accept-invite-btn');
-                        const declineBtn = document.getElementById('decline-invite-btn');
-
-                        acceptBtn.onclick = async () => {
-                            modal.classList.add('hidden');
-                            await db.from('live_sessions').update({ status: 'active' }).eq('id', session.id);
-                            joinLiveSession(session.id);
-                        };
-
-                        declineBtn.onclick = async () => {
-                            modal.classList.add('hidden');
-                            await db.from('live_sessions').update({ status: 'declined' }).eq('id', session.id);
-                        };
-                    }
-                })
-                .subscribe();
-        }
-
-        async function joinLiveSession(sessionId) {
-            if (liveSessionSubscription) {
-                liveSessionSubscription.unsubscribe();
-                liveSessionSubscription = null;
-            }
-            currentLiveSessionId = sessionId;
-            showView('liveSession');
-
-            const chatBox = document.getElementById('live-chat-box');
-            chatBox.innerHTML = ''; 
-
-            const { data: pastMessages, error } = await db.from('live_messages').select('*').eq('session_id', sessionId).order('created_at');
-            if (error) console.error('Error fetching past messages:', error);
-            else pastMessages.forEach(msg => renderMessage(msg));
-
-            liveMessagesSubscription = db.channel(`live-messages-${sessionId}`)
-                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_messages', filter: `session_id=eq.${sessionId}` }, payload => {
-                    renderMessage(payload.new);
-                })
-                .subscribe();
-
-            document.getElementById('send-live-chat-btn').onclick = async () => {
-                const input = document.getElementById('live-chat-input');
-                const message_text = input.value.trim();
-                if (message_text) {
-                    await db.from('live_messages').insert({ session_id: sessionId, sender_id: userId, message_text });
-                    input.value = '';
+            const sessionsByAgent = data.reduce((acc, session) => {
+                const email = session.users?.email || 'Unknown Agent';
+                if (!acc[email]) {
+                    acc[email] = [];
                 }
-            };
+                acc[email].push(session);
+                return acc;
+            }, {});
 
-            document.getElementById('end-live-session-btn').onclick = async () => {
-                await db.from('live_sessions').update({ status: 'ended' }).eq('id', sessionId);
-                if (liveMessagesSubscription) liveMessagesSubscription.unsubscribe();
-                currentLiveSessionId = null;
-                showView(isAdmin ? 'adminDashboard' : 'mainMenu');
-            };
+            const sortedAgents = Object.keys(sessionsByAgent).sort();
+
+            sortedAgents.forEach(email => {
+                const agentSessions = sessionsByAgent[email];
+                
+                const details = document.createElement('details');
+                details.className = 'bg-white rounded-lg shadow-sm mb-4';
+                details.open = true; // Open by default
+
+                const summary = document.createElement('summary');
+                summary.className = 'p-4 font-bold text-lg cursor-pointer hover:bg-gray-50';
+                summary.textContent = `${email} (${agentSessions.length} sessions)`;
+                
+                const sessionList = document.createElement('div');
+                sessionList.className = 'p-4 border-t border-gray-200 space-y-3';
+
+                agentSessions.forEach(session => {
+                    const item = document.createElement('div');
+                    item.className = 'history-item bg-gray-50 p-3 rounded-md cursor-pointer hover:shadow-md hover:bg-gray-100';
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <div>
+                                <h4 class="font-bold text-gray-800">${session.scenario_title}</h4>
+                                <p class="text-sm text-gray-500">Completed: ${new Date(session.completed_at).toLocaleString()}</p>
+                            </div>
+                            <div class="text-lg font-bold text-blue-600">Score: ${session.final_empathy_score}</div>
+                        </div>`;
+                    item.addEventListener('click', () => showHistoryDetail(session.id, true));
+                    sessionList.appendChild(item);
+                });
+
+                details.appendChild(summary);
+                details.appendChild(sessionList);
+                container.appendChild(details);
+            });
         }
-
-        function renderMessage(message) {
-            const chatBox = document.getElementById('live-chat-box');
-            const msgDiv = document.createElement('div');
-            const isMe = message.sender_id === userId;
-            msgDiv.className = `p-2 my-1 rounded-lg max-w-xs ${isMe ? 'bg-blue-500 text-white ml-auto' : 'bg-gray-200 text-gray-800'}`;
-            msgDiv.textContent = message.message_text;
-            chatBox.appendChild(msgDiv);
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }
-
         
         async function craftFollowUpEmailFromTool() {
             const customerEmail = document.getElementById('customer-email-input').value.trim();
@@ -2004,8 +1775,6 @@
                     else if (action === 'empathy-help') showView('empathyAssistant');
                     else if (action === 'email-crafter') showView('emailCrafter');
                     else if (action === 'saved-emails') showSavedEmails();
-                    else if (action === 'rephrase-tool') showView('rephraseTool');
-                    else if (action === 'admin-live-session') showAdminLiveSessionSetup();
                 });
             });
             
@@ -2017,7 +1786,6 @@
             });
 
             document.getElementById('get-empathy-help-btn').addEventListener('click', getEmpathyHelpFromAI);
-            document.getElementById('get-rephrase-tool-suggestions-btn').addEventListener('click', getRephraseSuggestionsFromTool);
             document.getElementById('craft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
             document.getElementById('recraft-email-btn').addEventListener('click', () => {
                 document.getElementById('recraft-feedback-container').classList.toggle('hidden');
@@ -2029,7 +1797,6 @@
             document.getElementById('admin-dashboard-btn').addEventListener('click', () => showView('adminDashboard'));
             document.getElementById('back-to-admin-dash-btn')?.addEventListener('click', () => showView('adminDashboard'));
             document.getElementById('back-to-admin-dash-btn2')?.addEventListener('click', () => showView('adminDashboard'));
-             document.getElementById('back-to-admin-dash-btn3')?.addEventListener('click', () => showView('adminDashboard'));
             document.getElementById('back-to-history-list-btn').addEventListener('click', showHistoryList);
             document.getElementById('restart-scenario-btn').addEventListener('click', () => startScenario(currentScenario));
             document.getElementById('choose-another-scenario-btn').addEventListener('click', startRandomScenario);
@@ -2039,13 +1806,12 @@
             document.getElementById('get-suggestions-btn').addEventListener('click', getSuggestionsFromAI);
             document.getElementById('user-response').addEventListener('input', saveSessionState);
             
+            // Add listeners to save text as user types
             document.getElementById('situation-description').addEventListener('input', () => saveCurrentViewState('empathyAssistant'));
             document.getElementById('customer-email-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
             document.getElementById('resolution-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
             document.getElementById('alternatives-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
             document.getElementById('scenario-topic').addEventListener('input', () => saveCurrentViewState('createScenario'));
-            document.getElementById('rephrase-customer-statement').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
-            document.getElementById('rephrase-agent-draft').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
 
 
             document.getElementById('generate-scenario-btn').addEventListener('click', async () => {
@@ -2092,6 +1858,7 @@
             loginForm.classList.remove('hidden');
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
+            // Reset the registration form view for the next time it's opened
             document.getElementById('register-inputs').classList.remove('hidden');
             document.getElementById('register-success').classList.add('hidden');
         });
@@ -2106,6 +1873,7 @@
                 authError.textContent = error.message;
                 authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
             } else {
+                // Also create a user record in the public users table for the admin
                 const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
                 if (insertError) console.error("Error creating public user record:", insertError.message);
                 
@@ -2115,6 +1883,7 @@
         });
 
         document.getElementById('login-btn').addEventListener('click', async () => {
+            // Clear any lingering state (like 'auth-view') before attempting login
             clearAllState();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
@@ -2134,6 +1903,10 @@
 
         db.auth.onAuthStateChange((_event, session) => {
             if (session && session.user) {
+                // This block runs if a user is logged in.
+
+                // If userId is not set, it's the first authentication check for this session (login or page refresh).
+                // We'll use this as our cue to set up the initial view.
                 if (!userId) {
                     const user = session.user;
                     userId = user.id;
@@ -2142,19 +1915,22 @@
                     document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
                     if (isAdmin) {
                         document.getElementById('admin-dashboard-btn').classList.remove('hidden');
-                    } else {
-                        listenForLiveSessionInvites();
                     }
                     
+                    console.log(`User ${user.email} session detected. Performing initial view setup.`);
+
+                    // An active login clears state, so this will default to mainMenu.
+                    // A page refresh will try to restore the last saved state.
                     if (!loadSessionState() && !loadLastViewState()) {
                         showView('mainMenu');
                     }
                 }
+                // If userId is already set, this is a subsequent event (like tab focus) and we do nothing.
+
             } else {
+                // This block runs if user is logged out.
                 userId = null;
                 isAdmin = false;
-                if(liveSessionSubscription) liveSessionSubscription.unsubscribe();
-                if(liveMessagesSubscription) liveMessagesSubscription.unsubscribe();
                 clearAllState();
                 document.getElementById('logout-btn').classList.add('hidden');
                 document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
@@ -2167,4 +1943,5 @@
     </script>
 </body>
 </html>
+
 
