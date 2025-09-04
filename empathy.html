@@ -2076,21 +2076,37 @@
         });
 
         document.getElementById('login-btn').addEventListener('click', async () => {
+            const loginBtn = document.getElementById('login-btn');
+            const originalBtnText = loginBtn.textContent;
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+
             clearAllState();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
+            
             const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+            
             if (signInError) {
                 authError.textContent = signInError.message;
                 authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+                loginBtn.textContent = originalBtnText;
+                loginBtn.disabled = false;
             }
+            // On success, onAuthStateChange will handle the rest.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
             clearAllState();
-            await db.auth.signOut();
+            const { error: signOutError } = await db.auth.signOut();
+            if (signOutError) {
+                console.error('Error signing out:', signOutError);
+                showModal('Logout Error', 'Could not log you out. Please try again.');
+            } else {
+                window.location.reload(); // Force a reload to clear state and show login page
+            }
         });
 
         db.auth.onAuthStateChange(async (_event, session) => {
@@ -2403,4 +2419,5 @@
     </script>
 </body>
 </html>
+
 
