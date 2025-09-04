@@ -2081,7 +2081,6 @@
             loginBtn.textContent = 'Logging in...';
             loginBtn.disabled = true;
 
-            clearAllState();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             authError.textContent = '';
@@ -2095,18 +2094,16 @@
                 loginBtn.textContent = originalBtnText;
                 loginBtn.disabled = false;
             }
-            // On success, onAuthStateChange will handle the rest.
+            // On success, onAuthStateChange will handle the view change and reset the button.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            clearAllState();
             const { error: signOutError } = await db.auth.signOut();
             if (signOutError) {
                 console.error('Error signing out:', signOutError);
                 showModal('Logout Error', 'Could not log you out. Please try again.');
-            } else {
-                window.location.reload(); // Force a reload to clear state and show login page
             }
+            // onAuthStateChange will handle the UI transition to the login page.
         });
 
         db.auth.onAuthStateChange(async (_event, session) => {
@@ -2114,20 +2111,35 @@
                 const user = session.user;
                 userId = user.id;
 
-                // Fetch user role from the public.users table
-                const { data: userData, error: roleError } = await db.from('users')
-                    .select('role')
-                    .eq('id', userId)
+                // On login, ensure a public profile exists. If not, create one.
+                const { data: userData, error: profileError } = await db.from('users')
+                    .select('id, role')
+                    .eq('id', user.id)
                     .single();
-                
-                if (roleError && roleError.code !== 'PGRST116') { // Ignore "No rows found" error for new users
-                    console.error("Error fetching user role:", roleError);
+
+                if (profileError && profileError.code === 'PGRST116') { // This code means no user profile was found
+                    // Profile doesn't exist, so create it.
+                    const { error: createProfileError } = await db.from('users').insert({
+                        id: user.id,
+                        email: user.email,
+                        role: 'agent' // Default role for new users
+                    });
+                    if (createProfileError) {
+                        console.error("Critical error creating user profile:", createProfileError);
+                        // This is a more serious issue, so signing out is safer.
+                        await db.auth.signOut();
+                        return;
+                    }
+                    isAdmin = user.email === 'admin@tempo.fit'; // New user, check for bootstrap admin
+                } else if (profileError) {
+                    // Another unexpected error occurred.
+                    console.error("Critical error fetching user profile:", profileError);
                     await db.auth.signOut();
                     return;
+                } else {
+                    // Profile exists, set admin status from DB, with email as fallback.
+                    isAdmin = (userData && userData.role === 'admin') || user.email === 'admin@tempo.fit';
                 }
-                
-                // An admin is someone with the 'admin' role OR the specific admin email (for fallback/bootstrap).
-                isAdmin = (userData && userData.role === 'admin') || user.email === 'admin@tempo.fit';
 
                 document.getElementById('logout-btn').classList.remove('hidden');
                 document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
@@ -2140,8 +2152,13 @@
                 if (!loadSessionState() && !loadLastViewState()) {
                     showView('mainMenu');
                 }
+                
+                // Ensure login button is reset after successful login
+                const loginBtn = document.getElementById('login-btn');
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
 
-            } else {
+            } else { // This block runs on logout or if there's no session
                 userId = null;
                 isAdmin = false;
                 clearAllState();
@@ -2419,5 +2436,6 @@
     </script>
 </body>
 </html>
+
 
 
