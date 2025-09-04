@@ -41,448 +41,454 @@
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
+    <!-- App Loader -->
+    <div id="app-loader" class="flex justify-center items-center h-screen">
+        <div class="loader"></div>
+    </div>
 
-    <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI-Powered Empathy Simulator</h1>
-            <p id="header-subtitle" class="text-md text-gray-600 mt-2">Practice real-world Tempo.fit customer scenarios.</p>
-            <button id="logout-btn" class="hidden mt-2 text-sm text-red-600 hover:text-red-800 font-semibold">Logout</button>
-        </header>
+    <!-- Main App Content (hidden by default) -->
+    <div id="app-content" class="hidden">
+        <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
+            <header class="text-center mb-8">
+                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI-Powered Empathy Simulator</h1>
+                <p id="header-subtitle" class="text-md text-gray-600 mt-2">Practice real-world Tempo.fit customer scenarios.</p>
+                <button id="logout-btn" class="hidden mt-2 text-sm text-red-600 hover:text-red-800 font-semibold">Logout</button>
+            </header>
 
-        <!-- Auth View -->
-        <div id="auth-view" class="bg-white p-8 rounded-2xl shadow-lg max-w-md mx-auto">
-            <div id="login-form">
-                <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
-                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
-                <input type="password" id="login-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
-                <button id="login-btn" class="w-full bg-blue-500 text-white p-3 rounded">Login</button>
-                <p class="text-center mt-4">Don't have an account? <a href="#" id="show-register" class="text-blue-500">Register</a></p>
-            </div>
-            <div id="register-form" class="hidden">
-                <div id="register-inputs">
-                    <h2 class="text-2xl font-bold mb-4 text-center">Register</h2>
-                    <input type="email" id="register-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
-                    <input type="password" id="register-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
-                    <button id="register-btn" class="w-full bg-green-500 text-white p-3 rounded">Register</button>
+            <!-- Auth View -->
+            <div id="auth-view" class="bg-white p-8 rounded-2xl shadow-lg max-w-md mx-auto">
+                <div id="login-form">
+                    <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
+                    <input type="email" id="login-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
+                    <input type="password" id="login-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
+                    <button id="login-btn" class="w-full bg-blue-500 text-white p-3 rounded">Login</button>
+                    <p class="text-center mt-4">Don't have an account? <a href="#" id="show-register" class="text-blue-500">Register</a></p>
                 </div>
-                <div id="register-success" class="hidden text-center mt-4 p-4 bg-green-100 border border-green-300 rounded-lg">
-                    <h3 class="font-bold text-green-800">Registration Successful!</h3>
-                    <p class="text-green-700">Please check your email for a confirmation link to activate your account before logging in.</p>
-                </div>
-                <p class="text-center mt-4">Already have an account? <a href="#" id="show-login" class="text-blue-500">Login</a></p>
-            </div>
-             <p id="auth-error" class="text-red-500 text-center mt-4"></p>
-        </div>
-
-        <!-- Main Menu View -->
-        <div id="main-menu" class="hidden text-center">
-            <div id="user-dashboard" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <button data-action="weekly-challenge" class="card bg-yellow-500 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
-                    <h3 class="text-xl font-bold mb-2">🏆 Weekly Challenge Scenario</h3>
-                    <p>Compete with other agents for the top score on this week's featured scenario!</p>
-                </button>
-                 <button data-action="assigned" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">📝 My Assigned Scenarios</h3>
-                    <p class="text-gray-600">Practice scenarios assigned to you by an admin.</p>
-                </button>
-                <button data-action="practice" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">🚀 Practice Random Scenarios</h3>
-                    <p class="text-gray-600">Jump into a random multi-step simulation.</p>
-                </button>
-                <button data-action="quick-fire" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">⚡ AI Quick-Fire Round</h3>
-                    <p class="text-gray-600">Face unique, AI-generated single-step problems.</p>
-                </button>
-                <button data-action="create" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">✍️ Create a Scenario</h3>
-                    <p class="text-gray-600">Design a new custom scenario for your own practice.</p>
-                </button>
-                 <button data-action="history" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">📈 View My History</h3>
-                    <p class="text-gray-600">Review your past performance, feedback, and ideal responses.</p>
-                </button>
-                <button data-action="rephrase-tool" class="card bg-green-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2">✍️ Help Me Rephrase</h3>
-                    <p>Get AI-powered suggestions to make your response more empathetic and professional.</p>
-                </button>
-                 <button data-action="email-crafter" class="card bg-orange-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2">✉️ AI Email Crafter</h3>
-                    <p>Craft the perfect customer response email based on the situation and desired resolution.</p>
-                </button>
-                <button data-action="saved-emails" class="card bg-teal-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2">📚 My Saved Emails</h3>
-                    <p>Access your personal collection of saved, highly effective email templates.</p>
-                </button>
-                <button data-action="empathy-help" class="card bg-purple-600 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
-                    <h3 class="text-xl font-bold mb-2">🧠 AI Empathy Coach</h3>
-                    <p>Get intelligent, empathetic guidance for a tough customer situation you're facing now.</p>
-                </button>
-            </div>
-             <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1-2 mx-auto">
-                <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
-            </button>
-        </div>
-
-        <!-- Rephrase Tool View -->
-        <div id="rephrase-tool-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-2xl font-bold mb-4">✍️ AI Rephrasing Tool</h2>
-            <p class="text-gray-600 mb-6">Enter the customer's message and your draft response. The AI will provide alternative, more empathetic phrasings.</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label for="rephrase-customer-statement" class="block text-sm font-medium text-gray-700">Customer's Statement</label>
-                    <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Tempo stopped working mid-workout and I'm really frustrated!"></textarea>
-                </div>
-                <div>
-                    <label for="rephrase-agent-draft" class="block text-sm font-medium text-gray-700">Your Draft Response</label>
-                    <textarea id="rephrase-agent-draft" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., Sorry about that. Did you try restarting it?"></textarea>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button id="get-rephrase-tool-suggestions-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Get Suggestions</button>
-            </div>
-            
-            <div id="rephrase-tool-loading" class="hidden flex-col items-center justify-center mt-4">
-                 <div class="loader"></div>
-                 <p class="text-gray-600 mt-2">AI is thinking of new phrases...</p>
-             </div>
-
-            <div id="rephrase-tool-suggestions-container" class="hidden mt-6"></div>
-        </div>
-
-        <!-- Empathy Assistant View -->
-        <div id="empathy-assistant-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-2xl font-bold mb-4">🧠 AI Empathy Coach</h2>
-            <p class="text-gray-600 mb-4">Describe the tough customer situation you're facing. The AI will analyze the core emotion and provide an intelligence-powered empathy report to help you respond effectively.</p>
-            <label for="situation-description" class="block text-sm font-medium text-gray-700">Customer Situation</label>
-            <textarea id="situation-description" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., The customer is angry because their delivery was delayed and missed a birthday."></textarea>
-            <div class="mt-6 flex justify-end">
-                <button id="get-empathy-help-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">Get Empathy Report</button>
-            </div>
-            <div id="empathy-help-loading" class="hidden flex-col items-center justify-center mt-4">
-                 <div class="loader"></div>
-                 <p class="text-gray-600 mt-2">Your empathy coach is thinking...</p>
-             </div>
-            <div id="empathy-response-container" class="mt-6 hidden"></div>
-        </div>
-        
-        <!-- AI Email Crafter View -->
-        <div id="email-crafter-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-2xl font-bold mb-4">✉️ AI Email Crafter</h2>
-            <p class="text-gray-600 mb-6">Provide the necessary details, and the AI will generate a professional, empathetic email ready to be sent to your customer.</p>
-            
-            <div class="space-y-4">
-                <div>
-                    <label for="customer-email-input" class="block text-sm font-medium text-gray-700">Original Customer Email</label>
-                    <textarea id="customer-email-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="5" placeholder="Paste the customer's full email here..."></textarea>
-                </div>
-                <div>
-                    <label for="resolution-input" class="block text-sm font-medium text-gray-700">Resolution / Key Information to Convey</label>
-                    <textarea id="resolution-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="3" placeholder="e.g., The replacement order has been shipped via overnight delivery. Tracking number is X."></textarea>
-                </div>
-                <div>
-                    <label for="alternatives-input" class="block text-sm font-medium text-gray-700">Alternatives or Extra Details (Optional)</label>
-                    <textarea id="alternatives-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="2" placeholder="e.g., We've also added a $20 credit to their account for the inconvenience."></textarea>
-                </div>
-            </div>
-
-            <div class="mt-6 flex justify-end">
-                <button id="craft-email-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">Craft Email</button>
-            </div>
-            
-            <div id="email-craft-loading" class="hidden flex-col items-center justify-center mt-4">
-                 <div class="loader"></div>
-                 <p class="text-gray-600 mt-2">AI is crafting your email...</p>
-             </div>
-
-            <div id="crafted-email-container" class="hidden mt-6 text-left p-4 bg-gray-50 border rounded-lg">
-                 <div class="flex justify-between items-center mb-2">
-                    <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
-                </div>
-                 <div class="bg-white p-2 border rounded">
-                     <p class="text-sm font-semibold text-gray-600">Subject:</p>
-                     <input id="crafted-email-subject" type="text" class="w-full p-1 border-0 focus:ring-0">
-                </div>
-                 <div class="bg-white p-2 border rounded mt-2">
-                     <p class="text-sm font-semibold text-gray-600">Body:</p>
-                    <textarea id="crafted-email-body" class="w-full p-1 border-0 focus:ring-0" rows="10"></textarea>
-                </div>
-                 <div class="mt-4 flex justify-end space-x-2">
-                    <button id="recraft-email-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors">Recraft</button>
-                    <div class="flex-grow"></div>
-                    <input type="text" id="email-category-input" placeholder="Category (e.g., Billing)" class="p-2 border rounded-md text-sm">
-                    <button id="save-email-btn" class="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded text-sm transition-colors">Save to My Emails</button>
-                </div>
-                <!-- NEW: Feedback section for recrafting -->
-                <div id="recraft-feedback-container" class="hidden mt-4 p-4 bg-gray-100 rounded-lg border">
-                    <label for="recraft-feedback-input" class="block text-sm font-medium text-gray-700 mb-1">How should the AI improve this email?</label>
-                    <textarea id="recraft-feedback-input" class="w-full p-2 border border-gray-300 rounded-md" rows="2" placeholder="e.g., Be more apologetic, make it shorter, add details about the new tracking number..."></textarea>
-                    <div class="mt-2 flex justify-end">
-                        <button id="submit-recraft-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm">Submit & Recraft</button>
+                <div id="register-form" class="hidden">
+                    <div id="register-inputs">
+                        <h2 class="text-2xl font-bold mb-4 text-center">Register</h2>
+                        <input type="email" id="register-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
+                        <input type="password" id="register-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
+                        <button id="register-btn" class="w-full bg-green-500 text-white p-3 rounded">Register</button>
                     </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Saved Emails View -->
-        <div id="saved-emails-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <div class="flex justify-between items-center mb-6">
-                 <h2 class="text-3xl font-bold">📚 My Saved Emails</h2>
-                 <div>
-                    <label for="category-filter" class="text-sm font-medium text-gray-700 mr-2">Filter by category:</label>
-                    <select id="category-filter" class="rounded-md border-gray-300 shadow-sm"></select>
-                </div>
-            </div>
-            <div id="saved-emails-container" class="space-y-4"></div>
-        </div>
-
-        <!-- Assigned Scenarios View -->
-        <div id="assigned-scenarios-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">My Assigned Scenarios</h2>
-            <div id="assigned-scenarios-container" class="space-y-4"></div>
-        </div>
-
-        <!-- Create Scenario View -->
-        <div id="create-scenario-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-2xl font-bold mb-4">✨ Create a Custom Scenario</h2>
-            <p class="text-gray-600 mb-4">Describe a customer service situation. The AI will generate a title, description, persona, and a 3-step dialogue tree for it.</p>
-            <label for="scenario-topic" class="block text-sm font-medium text-gray-700">Scenario Topic</label>
-            <input type="text" id="scenario-topic" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" placeholder="e.g., A customer's weights are not being recognized by the AI">
-            <div id="modal-loading" class="hidden flex-col items-center justify-center mt-4">
-                <div class="loader"></div>
-                <p class="text-gray-600 mt-2">Generating your custom scenario...</p>
-            </div>
-            <div class="mt-6 flex justify-end">
-                <button id="generate-scenario-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">Generate & Save</button>
-            </div>
-        </div>
-
-        <!-- History List View -->
-        <div id="history-list-view" class="hidden">
-             <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">My Session History</h2>
-            <div id="history-list-container" class="space-y-4"></div>
-        </div>
-
-        <!-- History Detail View -->
-        <div id="history-detail-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button id="back-to-history-list-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to History</button>
-            <h2 id="history-detail-title" class="text-2xl font-bold mb-2"></h2>
-            <p class="text-lg font-semibold mb-4">Final Empathy Score: <span id="history-detail-score" class="text-blue-600"></span></p>
-            <button id="get-summary-btn" class="w-full mb-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg">✨ Get Summary & Tip</button>
-            <div id="history-summary-container" class="hidden mb-4 p-4 bg-indigo-50 rounded-lg"></div>
-            <div id="history-detail-interactions" class="space-y-6"></div>
-        </div>
-
-        <!-- Simulator View -->
-        <div id="simulator" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
-            <div id="scenario-title" class="text-2xl font-bold mb-2 text-gray-900"></div>
-            <div id="customer-persona" class="text-sm text-gray-500 mb-4 italic"></div>
-            <div class="h-4 bg-gray-200 rounded-full mb-4 overflow-hidden">
-                <div id="empathy-meter" class="h-full bg-green-500 rounded-full transition-all duration-500" style="width: 50%;"></div>
-            </div>
-            <p class="text-right text-sm text-gray-500 mb-4">Empathy Meter</p>
-            <div id="dialogue-container" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px]">
-                <p class="font-semibold text-gray-600 mb-2 flex items-center">
-                    Customer says:
-                    <button id="play-audio-btn" class="ml-2 text-xl cursor-pointer hover:scale-110 transition-transform">🔊</button>
-                    <span id="audio-loader" class="hidden ml-2 h-5 w-5 border-t-2 border-b-2 border-gray-900 rounded-full animate-spin"></span>
-                </p>
-                <p id="customer-dialogue" class="text-gray-800"></p>
-            </div>
-            <div id="response-area">
-                <div class="flex justify-between items-center mb-2">
-                    <label for="user-response" class="block font-semibold text-gray-700">Your Response:</label>
-                    <div>
-                        <button id="analyze-tone-btn" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold mr-4">✨ Analyze Tone</button>
-                        <button id="get-suggestions-btn" class="text-sm text-blue-600 hover:text-blue-800 font-semibold">✨ Get Suggestions</button>
+                    <div id="register-success" class="hidden text-center mt-4 p-4 bg-green-100 border border-green-300 rounded-lg">
+                        <h3 class="font-bold text-green-800">Registration Successful!</h3>
+                        <p class="text-green-700">Please check your email for a confirmation link to activate your account before logging in.</p>
                     </div>
+                    <p class="text-center mt-4">Already have an account? <a href="#" id="show-login" class="text-blue-500">Login</a></p>
                 </div>
-                <div id="tone-analysis-container" class="mb-4 hidden"></div>
-                <div id="suggestions-container" class="mb-4 hidden"></div>
-                <textarea id="user-response" class="w-full p-3 border border-gray-300 rounded-lg" rows="4" placeholder="Type your empathetic response here..."></textarea>
-                <button id="submit-response-btn" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Submit for Feedback</button>
+                 <p id="auth-error" class="text-red-500 text-center mt-4"></p>
             </div>
-            <div id="loading-indicator" class="hidden flex-col items-center justify-center mt-4">
-                <div class="loader"></div><p class="text-gray-600 mt-2">AI coach is thinking...</p>
-            </div>
-            <div id="feedback-container" class="mt-6 hidden"></div>
-            <div class="mt-6 flex justify-between items-center">
-                 <button class="back-to-menu-btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">Back to Menu</button>
-                 <button id="next-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg hidden">Next Step</button>
-            </div>
-        </div>
-        
-        <!-- Completion Screen -->
-        <div id="completion-screen" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
-            <h2 class="text-3xl font-bold text-green-600 mb-4">Scenario Complete!</h2>
-            <p id="final-feedback" class="text-lg text-gray-700 mb-6"></p>
-            <div class="flex justify-center space-x-4">
-                <button id="restart-scenario-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Try Again</button>
-                <button id="choose-another-scenario-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg">Another Random Scenario</button>
-            </div>
-             <!-- NEW FEATURE START -->
-            <div class="mt-8 border-t pt-6">
-                 <button id="draft-email-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">✨ Draft Follow-up Email</button>
-            </div>
-            <div id="email-draft-container" class="hidden mt-6 text-left p-4 bg-gray-50 border rounded-lg">
-                <div id="email-draft-loading" class="hidden flex flex-col items-center justify-center py-8">
-                    <div class="loader"></div>
-                    <p class="text-gray-600 mt-2">Drafting email...</p>
-                </div>
-                <div id="email-draft-content" class="hidden">
-                    <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
-                        <button id="copy-email-btn" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded text-sm transition-colors">Copy</button>
-                    </div>
-                    <div class="bg-white p-2 border rounded">
-                        <p class="text-sm font-semibold text-gray-600">Subject:</p>
-                        <input id="email-subject" type="text" class="w-full p-1 border-0 focus:ring-0" readonly>
-                    </div>
-                    <div class="bg-white p-2 border rounded mt-2">
-                         <p class="text-sm font-semibold text-gray-600">Body:</p>
-                        <textarea id="email-body" class="w-full p-1 border-0 focus:ring-0" rows="8" readonly></textarea>
-                    </div>
-                </div>
-            </div>
-            <!-- NEW FEATURE END -->
-        </div>
 
-        <!-- Admin Dashboard View -->
-        <div id="admin-dashboard-view" class="hidden">
-             <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">👑 Admin Dashboard</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button data-action="admin-users" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Users & Roles</h3>
-                    <p class="text-gray-600">Grant/revoke admin access and delete users.</p>
-                </button>
-                <button data-action="admin-assign-scenarios" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Assign Scenarios</h3>
-                    <p class="text-gray-600">Assign specific training scenarios to users.</p>
-                </button>
-                <button data-action="admin-sessions" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Audit Sessions</h3>
-                    <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
-                </button>
-                 <button data-action="admin-weekly-challenge" class="card bg-yellow-400 p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Weekly Challenge</h3>
-                    <p class="text-gray-700">Set or create a new challenge for the current week.</p>
+            <!-- Main Menu View -->
+            <div id="main-menu" class="hidden text-center">
+                <div id="user-dashboard" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <button data-action="weekly-challenge" class="card bg-yellow-500 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
+                        <h3 class="text-xl font-bold mb-2">🏆 Weekly Challenge Scenario</h3>
+                        <p>Compete with other agents for the top score on this week's featured scenario!</p>
+                    </button>
+                     <button data-action="assigned" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">📝 My Assigned Scenarios</h3>
+                        <p class="text-gray-600">Practice scenarios assigned to you by an admin.</p>
+                    </button>
+                    <button data-action="practice" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">🚀 Practice Random Scenarios</h3>
+                        <p class="text-gray-600">Jump into a random multi-step simulation.</p>
+                    </button>
+                    <button data-action="quick-fire" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">⚡ AI Quick-Fire Round</h3>
+                        <p class="text-gray-600">Face unique, AI-generated single-step problems.</p>
+                    </button>
+                    <button data-action="create" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">✍️ Create a Scenario</h3>
+                        <p class="text-gray-600">Design a new custom scenario for your own practice.</p>
+                    </button>
+                     <button data-action="history" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">📈 View My History</h3>
+                        <p class="text-gray-600">Review your past performance, feedback, and ideal responses.</p>
+                    </button>
+                    <button data-action="rephrase-tool" class="card bg-green-500 text-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2">✍️ Help Me Rephrase</h3>
+                        <p>Get AI-powered suggestions to make your response more empathetic and professional.</p>
+                    </button>
+                     <button data-action="email-crafter" class="card bg-orange-500 text-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2">✉️ AI Email Crafter</h3>
+                        <p>Craft the perfect customer response email based on the situation and desired resolution.</p>
+                    </button>
+                    <button data-action="saved-emails" class="card bg-teal-500 text-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2">📚 My Saved Emails</h3>
+                        <p>Access your personal collection of saved, highly effective email templates.</p>
+                    </button>
+                    <button data-action="empathy-help" class="card bg-purple-600 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
+                        <h3 class="text-xl font-bold mb-2">🧠 AI Empathy Coach</h3>
+                        <p>Get intelligent, empathetic guidance for a tough customer situation you're facing now.</p>
+                    </button>
+                </div>
+                 <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1-2 mx-auto">
+                    <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
                 </button>
             </div>
-        </div>
 
-        <!-- Weekly Challenge View -->
-        <div id="weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">🏆 Weekly Challenge</h2>
-            
-            <!-- Scenario Details -->
-            <div id="weekly-scenario-container" class="mb-6">
-                <!-- JS will render content here -->
-            </div>
-
-            <!-- Leaderboard -->
-            <hr class="my-6">
-            <h3 class="text-2xl font-bold mb-4 text-center">This Week's Leaderboard</h3>
-            <div id="weekly-leaderboard-container">
-                <!-- JS will render content here -->
-            </div>
-        </div>
-
-        <div id="admin-user-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-             <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
-             <h2 class="text-3xl font-bold mb-4 text-center">Manage Users</h2>
-             <div id="admin-user-list-container" class="space-y-2"></div>
-        </div>
-        
-        <!-- NEW VIEW for Assigning Scenarios -->
-        <div id="admin-assign-scenarios-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-             <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
-             <h2 class="text-3xl font-bold mb-4 text-center">Assign Scenario to User</h2>
-             <div id="admin-assign-list-container" class="space-y-2"></div>
-        </div>
-
-
-        <!-- Admin Weekly Challenge View -->
-        <div id="admin-weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">Manage Weekly Challenge</h2>
-        
-            <!-- Display current challenge -->
-            <div class="mb-6 border-b pb-6">
-                <h3 class="text-xl font-semibold mb-2">Current Active Challenge</h3>
-                <div id="current-weekly-challenge-container" class="p-4 bg-gray-50 rounded-lg">
-                    <!-- JS will populate this -->
-                </div>
-            </div>
-        
-            <!-- Form to create a new one -->
-            <div class="mb-6 border-b pb-6">
-                <h3 class="text-xl font-semibold mb-2">Set New Weekly Challenge</h3>
-                <p class="text-gray-600 mb-4">Fill out the details below. Saving will deactivate the current challenge and set this one as active for the current week.</p>
+            <!-- Rephrase Tool View -->
+            <div id="rephrase-tool-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-2xl font-bold mb-4">✍️ AI Rephrasing Tool</h2>
+                <p class="text-gray-600 mb-6">Enter the customer's message and your draft response. The AI will provide alternative, more empathetic phrasings.</p>
+                
                 <div class="space-y-4">
-                    <div><label for="new-challenge-title" class="block text-sm font-medium text-gray-700">Title</label><input id="new-challenge-title" type="text" class="w-full p-2 border rounded-md"></div>
-                    <div><label for="new-challenge-description" class="block text-sm font-medium text-gray-700">Description</label><input id="new-challenge-description" type="text" class="w-full p-2 border rounded-md"></div>
-                    <div><label for="new-challenge-persona" class="block text-sm font-medium text-gray-700">Persona</label><textarea id="new-challenge-persona" class="w-full p-2 border rounded-md" rows="2"></textarea></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 1</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 2</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
-                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 3</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                    <div>
+                        <label for="rephrase-customer-statement" class="block text-sm font-medium text-gray-700">Customer's Statement</label>
+                        <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Tempo stopped working mid-workout and I'm really frustrated!"></textarea>
+                    </div>
+                    <div>
+                        <label for="rephrase-agent-draft" class="block text-sm font-medium text-gray-700">Your Draft Response</label>
+                        <textarea id="rephrase-agent-draft" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., Sorry about that. Did you try restarting it?"></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="get-rephrase-tool-suggestions-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700">Get Suggestions</button>
+                </div>
+                
+                <div id="rephrase-tool-loading" class="hidden flex-col items-center justify-center mt-4">
+                     <div class="loader"></div>
+                     <p class="text-gray-600 mt-2">AI is thinking of new phrases...</p>
+                 </div>
+
+                <div id="rephrase-tool-suggestions-container" class="hidden mt-6"></div>
+            </div>
+
+            <!-- Empathy Assistant View -->
+            <div id="empathy-assistant-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-2xl font-bold mb-4">🧠 AI Empathy Coach</h2>
+                <p class="text-gray-600 mb-4">Describe the tough customer situation you're facing. The AI will analyze the core emotion and provide an intelligence-powered empathy report to help you respond effectively.</p>
+                <label for="situation-description" class="block text-sm font-medium text-gray-700">Customer Situation</label>
+                <textarea id="situation-description" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., The customer is angry because their delivery was delayed and missed a birthday."></textarea>
+                <div class="mt-6 flex justify-end">
+                    <button id="get-empathy-help-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700">Get Empathy Report</button>
+                </div>
+                <div id="empathy-help-loading" class="hidden flex-col items-center justify-center mt-4">
+                     <div class="loader"></div>
+                     <p class="text-gray-600 mt-2">Your empathy coach is thinking...</p>
+                 </div>
+                <div id="empathy-response-container" class="mt-6 hidden"></div>
+            </div>
+            
+            <!-- AI Email Crafter View -->
+            <div id="email-crafter-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-2xl font-bold mb-4">✉️ AI Email Crafter</h2>
+                <p class="text-gray-600 mb-6">Provide the necessary details, and the AI will generate a professional, empathetic email ready to be sent to your customer.</p>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="customer-email-input" class="block text-sm font-medium text-gray-700">Original Customer Email</label>
+                        <textarea id="customer-email-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="5" placeholder="Paste the customer's full email here..."></textarea>
+                    </div>
+                    <div>
+                        <label for="resolution-input" class="block text-sm font-medium text-gray-700">Resolution / Key Information to Convey</label>
+                        <textarea id="resolution-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="3" placeholder="e.g., The replacement order has been shipped via overnight delivery. Tracking number is X."></textarea>
+                    </div>
+                    <div>
+                        <label for="alternatives-input" class="block text-sm font-medium text-gray-700">Alternatives or Extra Details (Optional)</label>
+                        <textarea id="alternatives-input" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="2" placeholder="e.g., We've also added a $20 credit to their account for the inconvenience."></textarea>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button id="craft-email-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-orange-600 hover:bg-orange-700">Craft Email</button>
+                </div>
+                
+                <div id="email-craft-loading" class="hidden flex-col items-center justify-center mt-4">
+                     <div class="loader"></div>
+                     <p class="text-gray-600 mt-2">AI is crafting your email...</p>
+                 </div>
+
+                <div id="crafted-email-container" class="hidden mt-6 text-left p-4 bg-gray-50 border rounded-lg">
+                     <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
+                    </div>
+                     <div class="bg-white p-2 border rounded">
+                         <p class="text-sm font-semibold text-gray-600">Subject:</p>
+                         <input id="crafted-email-subject" type="text" class="w-full p-1 border-0 focus:ring-0">
+                    </div>
+                     <div class="bg-white p-2 border rounded mt-2">
+                         <p class="text-sm font-semibold text-gray-600">Body:</p>
+                        <textarea id="crafted-email-body" class="w-full p-1 border-0 focus:ring-0" rows="10"></textarea>
+                    </div>
+                     <div class="mt-4 flex justify-end space-x-2">
+                        <button id="recraft-email-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors">Recraft</button>
+                        <div class="flex-grow"></div>
+                        <input type="text" id="email-category-input" placeholder="Category (e.g., Billing)" class="p-2 border rounded-md text-sm">
+                        <button id="save-email-btn" class="bg-teal-500 hover:bg-teal-600 text-white px-4 py-2 rounded text-sm transition-colors">Save to My Emails</button>
+                    </div>
+                    <!-- NEW: Feedback section for recrafting -->
+                    <div id="recraft-feedback-container" class="hidden mt-4 p-4 bg-gray-100 rounded-lg border">
+                        <label for="recraft-feedback-input" class="block text-sm font-medium text-gray-700 mb-1">How should the AI improve this email?</label>
+                        <textarea id="recraft-feedback-input" class="w-full p-2 border border-gray-300 rounded-md" rows="2" placeholder="e.g., Be more apologetic, make it shorter, add details about the new tracking number..."></textarea>
+                        <div class="mt-2 flex justify-end">
+                            <button id="submit-recraft-btn" class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm">Submit & Recraft</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Emails View -->
+            <div id="saved-emails-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <div class="flex justify-between items-center mb-6">
+                     <h2 class="text-3xl font-bold">📚 My Saved Emails</h2>
+                     <div>
+                        <label for="category-filter" class="text-sm font-medium text-gray-700 mr-2">Filter by category:</label>
+                        <select id="category-filter" class="rounded-md border-gray-300 shadow-sm"></select>
+                    </div>
+                </div>
+                <div id="saved-emails-container" class="space-y-4"></div>
+            </div>
+
+            <!-- Assigned Scenarios View -->
+            <div id="assigned-scenarios-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">My Assigned Scenarios</h2>
+                <div id="assigned-scenarios-container" class="space-y-4"></div>
+            </div>
+
+            <!-- Create Scenario View -->
+            <div id="create-scenario-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-2xl font-bold mb-4">✨ Create a Custom Scenario</h2>
+                <p class="text-gray-600 mb-4">Describe a customer service situation. The AI will generate a title, description, persona, and a 3-step dialogue tree for it.</p>
+                <label for="scenario-topic" class="block text-sm font-medium text-gray-700">Scenario Topic</label>
+                <input type="text" id="scenario-topic" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" placeholder="e.g., A customer's weights are not being recognized by the AI">
+                <div id="modal-loading" class="hidden flex-col items-center justify-center mt-4">
+                    <div class="loader"></div>
+                    <p class="text-gray-600 mt-2">Generating your custom scenario...</p>
                 </div>
                 <div class="mt-6 flex justify-end">
-                    <button id="set-new-challenge-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">Save & Set Active</button>
+                    <button id="generate-scenario-btn" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">Generate & Save</button>
                 </div>
             </div>
-             <!-- NEW: Challenge History -->
-            <div class="mt-8">
-                <h3 class="text-xl font-semibold mb-2">Challenge History & Completion</h3>
-                <p class="text-gray-600 mb-4">Select a challenge to view completion status for all users.</p>
-                <div id="all-challenges-list-container" class="space-y-2">
-                    <!-- JS will populate this list -->
+
+            <!-- History List View -->
+            <div id="history-list-view" class="hidden">
+                 <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">My Session History</h2>
+                <div id="history-list-container" class="space-y-4"></div>
+            </div>
+
+            <!-- History Detail View -->
+            <div id="history-detail-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button id="back-to-history-list-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to History</button>
+                <h2 id="history-detail-title" class="text-2xl font-bold mb-2"></h2>
+                <p class="text-lg font-semibold mb-4">Final Empathy Score: <span id="history-detail-score" class="text-blue-600"></span></p>
+                <button id="get-summary-btn" class="w-full mb-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg">✨ Get Summary & Tip</button>
+                <div id="history-summary-container" class="hidden mb-4 p-4 bg-indigo-50 rounded-lg"></div>
+                <div id="history-detail-interactions" class="space-y-6"></div>
+            </div>
+
+            <!-- Simulator View -->
+            <div id="simulator" class="hidden bg-white p-6 sm:p-8 rounded-2xl shadow-lg">
+                <div id="scenario-title" class="text-2xl font-bold mb-2 text-gray-900"></div>
+                <div id="customer-persona" class="text-sm text-gray-500 mb-4 italic"></div>
+                <div class="h-4 bg-gray-200 rounded-full mb-4 overflow-hidden">
+                    <div id="empathy-meter" class="h-full bg-green-500 rounded-full transition-all duration-500" style="width: 50%;"></div>
                 </div>
-            </div>
-        </div>
-
-        <!-- Admin Challenge Completion View -->
-        <div id="admin-challenge-completion-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button id="back-to-weekly-admin-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Challenge Management</button>
-            <h2 id="completion-view-title" class="text-3xl font-bold mb-4 text-center"></h2>
-            <div id="completion-list-container" class="space-y-2">
-                <!-- JS will populate the user list here -->
-            </div>
-        </div>
-        
-        <div id="admin-session-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
-            <h2 class="text-3xl font-bold mb-4 text-center">Audit User Sessions</h2>
-            <div id="admin-session-list-container" class="space-y-4"></div>
-        </div>
-
-        <div id="assign-scenario-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"></div>
-        
-        <!-- General Purpose Modal -->
-        <div id="app-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-                <div class="mt-3 text-center">
-                    <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900"></h3>
-                    <div class="mt-2 px-7 py-3">
-                        <p id="modal-message" class="text-sm text-gray-500"></p>
+                <p class="text-right text-sm text-gray-500 mb-4">Empathy Meter</p>
+                <div id="dialogue-container" class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[100px]">
+                    <p class="font-semibold text-gray-600 mb-2 flex items-center">
+                        Customer says:
+                        <button id="play-audio-btn" class="ml-2 text-xl cursor-pointer hover:scale-110 transition-transform">🔊</button>
+                        <span id="audio-loader" class="hidden ml-2 h-5 w-5 border-t-2 border-b-2 border-gray-900 rounded-full animate-spin"></span>
+                    </p>
+                    <p id="customer-dialogue" class="text-gray-800"></p>
+                </div>
+                <div id="response-area">
+                    <div class="flex justify-between items-center mb-2">
+                        <label for="user-response" class="block font-semibold text-gray-700">Your Response:</label>
+                        <div>
+                            <button id="analyze-tone-btn" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold mr-4">✨ Analyze Tone</button>
+                            <button id="get-suggestions-btn" class="text-sm text-blue-600 hover:text-blue-800 font-semibold">✨ Get Suggestions</button>
+                        </div>
                     </div>
-                    <div id="modal-actions" class="items-center px-4 py-3">
-                        <!-- Buttons will be injected here -->
+                    <div id="tone-analysis-container" class="mb-4 hidden"></div>
+                    <div id="suggestions-container" class="mb-4 hidden"></div>
+                    <textarea id="user-response" class="w-full p-3 border border-gray-300 rounded-lg" rows="4" placeholder="Type your empathetic response here..."></textarea>
+                    <button id="submit-response-btn" class="mt-4 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg">Submit for Feedback</button>
+                </div>
+                <div id="loading-indicator" class="hidden flex-col items-center justify-center mt-4">
+                    <div class="loader"></div><p class="text-gray-600 mt-2">AI coach is thinking...</p>
+                </div>
+                <div id="feedback-container" class="mt-6 hidden"></div>
+                <div class="mt-6 flex justify-between items-center">
+                     <button class="back-to-menu-btn bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">Back to Menu</button>
+                     <button id="next-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg hidden">Next Step</button>
+                </div>
+            </div>
+            
+            <!-- Completion Screen -->
+            <div id="completion-screen" class="hidden text-center bg-white p-8 rounded-2xl shadow-lg">
+                <h2 class="text-3xl font-bold text-green-600 mb-4">Scenario Complete!</h2>
+                <p id="final-feedback" class="text-lg text-gray-700 mb-6"></p>
+                <div class="flex justify-center space-x-4">
+                    <button id="restart-scenario-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg">Try Again</button>
+                    <button id="choose-another-scenario-btn" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-lg">Another Random Scenario</button>
+                </div>
+                 <!-- NEW FEATURE START -->
+                <div class="mt-8 border-t pt-6">
+                     <button id="draft-email-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg">✨ Draft Follow-up Email</button>
+                </div>
+                <div id="email-draft-container" class="hidden mt-6 text-left p-4 bg-gray-50 border rounded-lg">
+                    <div id="email-draft-loading" class="hidden flex flex-col items-center justify-center py-8">
+                        <div class="loader"></div>
+                        <p class="text-gray-600 mt-2">Drafting email...</p>
+                    </div>
+                    <div id="email-draft-content" class="hidden">
+                        <div class="flex justify-between items-center mb-2">
+                            <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
+                            <button id="copy-email-btn" class="bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded text-sm transition-colors">Copy</button>
+                        </div>
+                        <div class="bg-white p-2 border rounded">
+                            <p class="text-sm font-semibold text-gray-600">Subject:</p>
+                            <input id="email-subject" type="text" class="w-full p-1 border-0 focus:ring-0" readonly>
+                        </div>
+                        <div class="bg-white p-2 border rounded mt-2">
+                             <p class="text-sm font-semibold text-gray-600">Body:</p>
+                            <textarea id="email-body" class="w-full p-1 border-0 focus:ring-0" rows="8" readonly></textarea>
+                        </div>
+                    </div>
+                </div>
+                <!-- NEW FEATURE END -->
+            </div>
+
+            <!-- Admin Dashboard View -->
+            <div id="admin-dashboard-view" class="hidden">
+                 <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">👑 Admin Dashboard</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <button data-action="admin-users" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Users & Roles</h3>
+                        <p class="text-gray-600">Grant/revoke admin access and delete users.</p>
+                    </button>
+                    <button data-action="admin-assign-scenarios" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">Assign Scenarios</h3>
+                        <p class="text-gray-600">Assign specific training scenarios to users.</p>
+                    </button>
+                    <button data-action="admin-sessions" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">Audit Sessions</h3>
+                        <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
+                    </button>
+                     <button data-action="admin-weekly-challenge" class="card bg-yellow-400 p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Weekly Challenge</h3>
+                        <p class="text-gray-700">Set or create a new challenge for the current week.</p>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Weekly Challenge View -->
+            <div id="weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">🏆 Weekly Challenge</h2>
+                
+                <!-- Scenario Details -->
+                <div id="weekly-scenario-container" class="mb-6">
+                    <!-- JS will render content here -->
+                </div>
+
+                <!-- Leaderboard -->
+                <hr class="my-6">
+                <h3 class="text-2xl font-bold mb-4 text-center">This Week's Leaderboard</h3>
+                <div id="weekly-leaderboard-container">
+                    <!-- JS will render content here -->
+                </div>
+            </div>
+
+            <div id="admin-user-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                 <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+                 <h2 class="text-3xl font-bold mb-4 text-center">Manage Users</h2>
+                 <div id="admin-user-list-container" class="space-y-2"></div>
+            </div>
+            
+            <!-- NEW VIEW for Assigning Scenarios -->
+            <div id="admin-assign-scenarios-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                 <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+                 <h2 class="text-3xl font-bold mb-4 text-center">Assign Scenario to User</h2>
+                 <div id="admin-assign-list-container" class="space-y-2"></div>
+            </div>
+
+
+            <!-- Admin Weekly Challenge View -->
+            <div id="admin-weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">Manage Weekly Challenge</h2>
+            
+                <!-- Display current challenge -->
+                <div class="mb-6 border-b pb-6">
+                    <h3 class="text-xl font-semibold mb-2">Current Active Challenge</h3>
+                    <div id="current-weekly-challenge-container" class="p-4 bg-gray-50 rounded-lg">
+                        <!-- JS will populate this -->
+                    </div>
+                </div>
+            
+                <!-- Form to create a new one -->
+                <div class="mb-6 border-b pb-6">
+                    <h3 class="text-xl font-semibold mb-2">Set New Weekly Challenge</h3>
+                    <p class="text-gray-600 mb-4">Fill out the details below. Saving will deactivate the current challenge and set this one as active for the current week.</p>
+                    <div class="space-y-4">
+                        <div><label for="new-challenge-title" class="block text-sm font-medium text-gray-700">Title</label><input id="new-challenge-title" type="text" class="w-full p-2 border rounded-md"></div>
+                        <div><label for="new-challenge-description" class="block text-sm font-medium text-gray-700">Description</label><input id="new-challenge-description" type="text" class="w-full p-2 border rounded-md"></div>
+                        <div><label for="new-challenge-persona" class="block text-sm font-medium text-gray-700">Persona</label><textarea id="new-challenge-persona" class="w-full p-2 border rounded-md" rows="2"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 1</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 2</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                        <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 3</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                    </div>
+                    <div class="mt-6 flex justify-end">
+                        <button id="set-new-challenge-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">Save & Set Active</button>
+                    </div>
+                </div>
+                 <!-- NEW: Challenge History -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold mb-2">Challenge History & Completion</h3>
+                    <p class="text-gray-600 mb-4">Select a challenge to view completion status for all users.</p>
+                    <div id="all-challenges-list-container" class="space-y-2">
+                        <!-- JS will populate this list -->
                     </div>
                 </div>
             </div>
+
+            <!-- Admin Challenge Completion View -->
+            <div id="admin-challenge-completion-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button id="back-to-weekly-admin-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Challenge Management</button>
+                <h2 id="completion-view-title" class="text-3xl font-bold mb-4 text-center"></h2>
+                <div id="completion-list-container" class="space-y-2">
+                    <!-- JS will populate the user list here -->
+                </div>
+            </div>
+            
+            <div id="admin-session-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+                <h2 class="text-3xl font-bold mb-4 text-center">Audit User Sessions</h2>
+                <div id="admin-session-list-container" class="space-y-4"></div>
+            </div>
+
+            <div id="assign-scenario-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"></div>
+            
+            <!-- General Purpose Modal -->
+            <div id="app-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                    <div class="mt-3 text-center">
+                        <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900"></h3>
+                        <div class="mt-2 px-7 py-3">
+                            <p id="modal-message" class="text-sm text-gray-500"></p>
+                        </div>
+                        <div id="modal-actions" class="items-center px-4 py-3">
+                            <!-- Buttons will be injected here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
-
-
     </div>
 
     <script type="module">
@@ -581,7 +587,7 @@
                 };
             }
             
-            const apiKey = "";
+            const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
             try {
@@ -694,7 +700,7 @@
                 }
             };
 
-            const apiKey = "";
+            const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
@@ -764,8 +770,8 @@
                       state.data.alternatives = document.getElementById('alternatives-input').value;
                       break;
                  case 'createScenario':
-                       state.data.topic = document.getElementById('scenario-topic').value;
-                       break;
+                      state.data.topic = document.getElementById('scenario-topic').value;
+                      break;
                  case 'rephraseTool':
                       state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
                       state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
@@ -1228,10 +1234,10 @@
 
             if (result && result.rephrased_suggestions) {
                  suggestionsContainer.innerHTML = `<div class="p-4 bg-green-50 border border-green-200 rounded-md text-sm">
-                     <strong class="text-green-800">Rephrasing Suggestions:</strong>
-                     <ul class="mt-2 space-y-2">
-                         ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
-                     </ul>
+                      <strong class="text-green-800">Rephrasing Suggestions:</strong>
+                      <ul class="mt-2 space-y-2">
+                          ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
+                      </ul>
                 </div>`;
                 
                  suggestionsContainer.querySelectorAll('.copy-rephrase-btn').forEach(btn => {
@@ -1260,9 +1266,7 @@
             responseContainer.classList.add('hidden');
 
             const prompt = `You are an expert empathy coach for customer service agents at Tempo.fit. An agent is facing a tough situation: "${situationDescription}".
-
             Your task is to provide a detailed, intelligence-powered empathy report to help the agent handle this with maximum emotional intelligence. Do not provide solutions.
-
             Analyze the situation and return a JSON object with the following structure:
             1.  "key_emotion": A single word or short phrase identifying the customer's core emotion (e.g., "Frustration", "Feeling unheard", "Disappointment").
             2.  "empathetic_phrases": An array of three distinct, professional, and highly empathetic phrases the agent can use throughout the conversation to validate the customer's feelings.
@@ -1286,24 +1290,20 @@
                 responseContainer.innerHTML = `
                     <div class="p-4 bg-purple-50 rounded-lg border border-purple-200">
                         <h3 class="text-lg font-bold text-purple-800 mb-3">AI Empathy Coach Report</h3>
-
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Core Customer Emotion:</p>
                             <p class="text-purple-700 italic">${result.key_emotion}</p>
                         </div>
-
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Ways to Show Empathy:</p>
                             <ul class="list-disc list-inside text-purple-700 space-y-1 mt-1">
                                 ${result.empathetic_phrases.map(line => `<li>${line}</li>`).join('')}
                             </ul>
                         </div>
-
                         <div class="mb-4">
                             <p class="font-semibold text-gray-700">Core Assurance Statement:</p>
                             <p class="text-purple-700">"${result.assurance_statement}"</p>
                         </div>
-
                         <div class="p-3 bg-indigo-100 rounded">
                             <p class="font-semibold text-indigo-800">💡 Coach's Tip for You:</p>
                             <p class="text-indigo-700">${result.coach_tip}</p>
@@ -2059,7 +2059,6 @@
             loginForm.classList.remove('hidden');
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
-            // Reset the registration form view for the next time it's opened
             document.getElementById('register-inputs').classList.remove('hidden');
             document.getElementById('register-success').classList.add('hidden');
         });
@@ -2069,12 +2068,11 @@
             const password = document.getElementById('register-password').value;
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
-            const { data, error } = await db.auth.signUp({ email, password });
-            if (error) {
-                authError.textContent = error.message;
+            const { data, error: signUpError } = await db.auth.signUp({ email, password });
+            if (signUpError) {
+                authError.textContent = signUpError.message;
                 authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
             } else {
-                // Also create a user record in the public users table for the admin
                 const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
                 if (insertError) console.error("Error creating public user record:", insertError.message);
                 
@@ -2092,66 +2090,88 @@
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
             
-            const { error } = await db.auth.signInWithPassword({ email, password });
+            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
             
-            if (error) {
-                authError.textContent = error.message;
+            if (signInError) {
+                authError.textContent = signInError.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
                 loginBtn.textContent = originalBtnText;
                 loginBtn.disabled = false;
             }
-            // onAuthStateChange will handle success
+            // On success, onAuthStateChange will handle the UI update.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            await db.auth.signOut();
-             // No need to clear state here, onAuthStateChange will handle it.
+            clearAllState(); // Clear session storage immediately for a faster UI response
+            const { error: signOutError } = await db.auth.signOut();
+            if (signOutError) {
+                console.error('Error signing out:', signOutError);
+                showModal('Logout Error', 'Could not log you out. Please try again.');
+            }
+            // onAuthStateChange will also fire to confirm and finalize the logged-out state.
         });
 
-       db.auth.onAuthStateChange(async (event, session) => {
-            if (session) {
-                // A session exists. This could be a login or a page refresh.
-                if (userId === session.user.id) {
-                    // If the user ID is already set, it's a token refresh, not a new login. Do nothing.
-                    return; 
-                }
+        db.auth.onAuthStateChange(async (event, session) => {
+            const loginBtn = document.getElementById('login-btn');
+            const appLoader = document.getElementById('app-loader');
+            const appContent = document.getElementById('app-content');
 
+            if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
+                // This block runs on login and on page refresh if a session exists.
                 userId = session.user.id;
+
+                const { data: userData, error: profileError } = await db.from('users')
+                    .select('role')
+                    .eq('id', userId)
+                    .single();
                 
-                const { data: userData } = await db.from('users').select('role').eq('id', userId).single();
+                if (profileError && profileError.code !== 'PGRST116') {
+                    console.error("Error fetching user profile, logging out:", profileError);
+                    await db.auth.signOut();
+                    return;
+                }
                 
                 isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
 
                 document.getElementById('logout-btn').classList.remove('hidden');
                 document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
                 document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-
-                const loginBtn = document.getElementById('login-btn');
-                loginBtn.textContent = 'Login';
-                loginBtn.disabled = false;
                 
-                // If this is a direct login action, clear any old state and go to the main menu.
                 if (event === 'SIGNED_IN') {
-                    sessionStorage.removeItem('lastViewState');
+                    // This was a direct login action, clear any old state and go to the main menu.
+                    sessionStorage.removeItem('lastViewState'); 
                     showView('mainMenu');
                 } else {
-                    // This is a page refresh, try to restore the last view.
+                    // This was a page refresh, try to restore the last view.
                     if (!loadSessionState() && !loadLastViewState()) {
                         showView('mainMenu');
                     }
                 }
-            } else {
-                // No session exists. This happens on logout or initial load without a session.
+                
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
+
+            } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+                // This block runs only when the user is logged out or no session is found initially.
                 userId = null;
                 isAdmin = false;
                 clearAllState();
-                
+
                 document.getElementById('logout-btn').classList.add('hidden');
                 document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
                 document.getElementById('admin-dashboard-btn').classList.add('hidden');
                 
                 showView('auth');
+
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
             }
+            
+            // Show the app content and hide loader once auth state is determined
+            appLoader.classList.add('hidden');
+            appContent.classList.remove('hidden');
         });
 
         setupEventListeners();
