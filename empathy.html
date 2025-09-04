@@ -2076,8 +2076,6 @@
         });
 
         document.getElementById('login-btn').addEventListener('click', async () => {
-            clearAllState(); // User is explicitly starting a new session. Clear old data.
-
             const loginBtn = document.getElementById('login-btn');
             const originalBtnText = loginBtn.textContent;
             loginBtn.textContent = 'Logging in...';
@@ -2096,7 +2094,6 @@
                 loginBtn.textContent = originalBtnText;
                 loginBtn.disabled = false;
             }
-            // On success, onAuthStateChange will handle setting up the session and showing the correct view.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -2105,15 +2102,11 @@
                 console.error('Error signing out:', signOutError);
                 showModal('Logout Error', 'Could not log you out. Please try again.');
             }
-            // onAuthStateChange will handle the cleanup and UI transition to the login page.
         });
 
         db.auth.onAuthStateChange(async (_event, session) => {
             if (session && session.user) {
                 const user = session.user;
-                // Only run the full setup if the user is changing
-                if (userId === user.id) return; 
-
                 userId = user.id;
 
                 const { data: userData, error: profileError } = await db.from('users')
@@ -2121,13 +2114,13 @@
                     .eq('id', user.id)
                     .single();
 
-                if (profileError && profileError.code === 'PGRST116') { // Profile not found
+                if (profileError && profileError.code === 'PGRST116') {
                     const { error: createProfileError } = await db.from('users').insert({ id: user.id, email: user.email, role: 'agent' });
-                    isAdmin = user.email === 'admin@tempo.fit'; // Set admin for new bootstrap user
+                    isAdmin = user.email === 'admin@tempo.fit';
                     if (createProfileError) console.error("Failed to create user profile:", createProfileError);
                 } else if (profileError) {
                     console.error("Failed to fetch user profile:", profileError);
-                    isAdmin = user.email === 'admin@tempo.fit'; // Fallback on error
+                    isAdmin = user.email === 'admin@tempo.fit';
                 } else {
                     isAdmin = (userData && userData.role === 'admin') || user.email === 'admin@tempo.fit';
                 }
@@ -2140,8 +2133,6 @@
                     document.getElementById('admin-dashboard-btn').classList.add('hidden');
                 }
                 
-                // After login or refresh, prioritize loading an in-progress scenario.
-                // If there isn't one, always show the main menu. This fixes the "stuck login" issue.
                 if (!loadSessionState()) {
                     showView('mainMenu');
                 }
@@ -2150,7 +2141,7 @@
                 loginBtn.textContent = 'Login';
                 loginBtn.disabled = false;
 
-            } else { // User is logged out
+            } else {
                 userId = null;
                 isAdmin = false;
                 clearAllState();
@@ -2182,7 +2173,6 @@
             
             currentWeeklyChallenge = challenge;
             
-            // Check if the user has already completed this challenge
             let hasCompleted = false;
             if (userId) {
                 const { data: existingSession, error: sessionCheckError } = await db.from('sessions')
@@ -2428,9 +2418,4 @@
     </script>
 </body>
 </html>
-
-
-
-
-
 
