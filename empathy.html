@@ -53,8 +53,8 @@
         <div id="auth-view" class="bg-white p-8 rounded-2xl shadow-lg max-w-md mx-auto">
             <div id="login-form">
                 <h2 class="text-2xl font-bold mb-4 text-center">Login</h2>
-                <input type="email" id="login-email" placeholder="Email (admin@tempo.fit)" class="w-full p-3 mb-4 border rounded">
-                <input type="password" id="login-password" placeholder="Password (admin123)" class="w-full p-3 mb-4 border rounded">
+                <input type="email" id="login-email" placeholder="Email" class="w-full p-3 mb-4 border rounded">
+                <input type="password" id="login-password" placeholder="Password" class="w-full p-3 mb-4 border rounded">
                 <button id="login-btn" class="w-full bg-blue-500 text-white p-3 rounded">Login</button>
                 <p class="text-center mt-4">Don't have an account? <a href="#" id="show-register" class="text-blue-500">Register</a></p>
             </div>
@@ -77,6 +77,10 @@
         <!-- Main Menu View -->
         <div id="main-menu" class="hidden text-center">
             <div id="user-dashboard" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <button data-action="weekly-challenge" class="card bg-yellow-500 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
+                    <h3 class="text-xl font-bold mb-2">🏆 Weekly Challenge Scenario</h3>
+                    <p>Compete with other agents for the top score on this week's featured scenario!</p>
+                </button>
                  <button data-action="assigned" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
                     <h3 class="text-xl font-bold mb-2 text-gray-800">📝 My Assigned Scenarios</h3>
                     <p class="text-gray-600">Practice scenarios assigned to you by an admin.</p>
@@ -202,11 +206,11 @@
                  <div class="bg-white p-2 border rounded">
                      <p class="text-sm font-semibold text-gray-600">Subject:</p>
                      <input id="crafted-email-subject" type="text" class="w-full p-1 border-0 focus:ring-0">
-                 </div>
+                </div>
                  <div class="bg-white p-2 border rounded mt-2">
                      <p class="text-sm font-semibold text-gray-600">Body:</p>
                     <textarea id="crafted-email-body" class="w-full p-1 border-0 focus:ring-0" rows="10"></textarea>
-                 </div>
+                </div>
                  <div class="mt-4 flex justify-end space-x-2">
                     <button id="recraft-email-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm transition-colors">Recraft</button>
                     <div class="flex-grow"></div>
@@ -357,29 +361,127 @@
             <h2 class="text-3xl font-bold mb-4 text-center">👑 Admin Dashboard</h2>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <button data-action="admin-users" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                    <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Users</h3>
-                    <p class="text-gray-600">View all users and assign scenarios to them.</p>
+                    <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Users & Roles</h3>
+                    <p class="text-gray-600">Grant/revoke admin access and delete users.</p>
+                </button>
+                <button data-action="admin-assign-scenarios" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
+                    <h3 class="text-xl font-bold mb-2 text-gray-800">Assign Scenarios</h3>
+                    <p class="text-gray-600">Assign specific training scenarios to users.</p>
                 </button>
                 <button data-action="admin-sessions" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
                     <h3 class="text-xl font-bold mb-2 text-gray-800">Audit Sessions</h3>
                     <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
                 </button>
+                 <button data-action="admin-weekly-challenge" class="card bg-yellow-400 p-6 rounded-lg cursor-pointer text-left">
+                    <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Weekly Challenge</h3>
+                    <p class="text-gray-700">Set or create a new challenge for the current week.</p>
+                </button>
+            </div>
+        </div>
+
+        <!-- Weekly Challenge View -->
+        <div id="weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+            <button class="back-to-menu-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Menu</button>
+            <h2 class="text-3xl font-bold mb-4 text-center">🏆 Weekly Challenge</h2>
+            
+            <!-- Scenario Details -->
+            <div id="weekly-scenario-container" class="mb-6">
+                <!-- JS will render content here -->
+            </div>
+
+            <!-- Leaderboard -->
+            <hr class="my-6">
+            <h3 class="text-2xl font-bold mb-4 text-center">This Week's Leaderboard</h3>
+            <div id="weekly-leaderboard-container">
+                <!-- JS will render content here -->
             </div>
         </div>
 
         <div id="admin-user-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-             <button id="back-to-admin-dash-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+             <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
              <h2 class="text-3xl font-bold mb-4 text-center">Manage Users</h2>
              <div id="admin-user-list-container" class="space-y-2"></div>
         </div>
         
+        <!-- NEW VIEW for Assigning Scenarios -->
+        <div id="admin-assign-scenarios-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+             <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+             <h2 class="text-3xl font-bold mb-4 text-center">Assign Scenario to User</h2>
+             <div id="admin-assign-list-container" class="space-y-2"></div>
+        </div>
+
+
+        <!-- Admin Weekly Challenge View -->
+        <div id="admin-weekly-challenge-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+            <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+            <h2 class="text-3xl font-bold mb-4 text-center">Manage Weekly Challenge</h2>
+        
+            <!-- Display current challenge -->
+            <div class="mb-6 border-b pb-6">
+                <h3 class="text-xl font-semibold mb-2">Current Active Challenge</h3>
+                <div id="current-weekly-challenge-container" class="p-4 bg-gray-50 rounded-lg">
+                    <!-- JS will populate this -->
+                </div>
+            </div>
+        
+            <!-- Form to create a new one -->
+            <div class="mb-6 border-b pb-6">
+                <h3 class="text-xl font-semibold mb-2">Set New Weekly Challenge</h3>
+                <p class="text-gray-600 mb-4">Fill out the details below. Saving will deactivate the current challenge and set this one as active for the current week.</p>
+                <div class="space-y-4">
+                    <div><label for="new-challenge-title" class="block text-sm font-medium text-gray-700">Title</label><input id="new-challenge-title" type="text" class="w-full p-2 border rounded-md"></div>
+                    <div><label for="new-challenge-description" class="block text-sm font-medium text-gray-700">Description</label><input id="new-challenge-description" type="text" class="w-full p-2 border rounded-md"></div>
+                    <div><label for="new-challenge-persona" class="block text-sm font-medium text-gray-700">Persona</label><textarea id="new-challenge-persona" class="w-full p-2 border rounded-md" rows="2"></textarea></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 1</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 2</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                    <div><label class="block text-sm font-medium text-gray-700">Dialogue Step 3</label><textarea class="w-full p-2 border rounded-md new-challenge-dialogue" rows="2"></textarea></div>
+                </div>
+                <div class="mt-6 flex justify-end">
+                    <button id="set-new-challenge-btn" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-lg">Save & Set Active</button>
+                </div>
+            </div>
+             <!-- NEW: Challenge History -->
+            <div class="mt-8">
+                <h3 class="text-xl font-semibold mb-2">Challenge History & Completion</h3>
+                <p class="text-gray-600 mb-4">Select a challenge to view completion status for all users.</p>
+                <div id="all-challenges-list-container" class="space-y-2">
+                    <!-- JS will populate this list -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Challenge Completion View -->
+        <div id="admin-challenge-completion-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+            <button id="back-to-weekly-admin-btn" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Challenge Management</button>
+            <h2 id="completion-view-title" class="text-3xl font-bold mb-4 text-center"></h2>
+            <div id="completion-list-container" class="space-y-2">
+                <!-- JS will populate the user list here -->
+            </div>
+        </div>
+        
         <div id="admin-session-list-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
-            <button id="back-to-admin-dash-btn2" class="mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+            <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
             <h2 class="text-3xl font-bold mb-4 text-center">Audit User Sessions</h2>
             <div id="admin-session-list-container" class="space-y-4"></div>
         </div>
 
         <div id="assign-scenario-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full"></div>
+        
+        <!-- General Purpose Modal -->
+        <div id="app-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <h3 id="modal-title" class="text-lg leading-6 font-medium text-gray-900"></h3>
+                    <div class="mt-2 px-7 py-3">
+                        <p id="modal-message" class="text-sm text-gray-500"></p>
+                    </div>
+                    <div id="modal-actions" class="items-center px-4 py-3">
+                        <!-- Buttons will be injected here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
 
     </div>
 
@@ -403,6 +505,7 @@
         let currentStep = 0;
         let empathyScore = 50;
         let sessionInteractions = [];
+        let currentWeeklyChallenge = null;
 
         const views = {
             auth: document.getElementById('auth-view'),
@@ -414,12 +517,16 @@
             completion: document.getElementById('completion-screen'),
             adminDashboard: document.getElementById('admin-dashboard-view'),
             adminUserList: document.getElementById('admin-user-list-view'),
+            adminAssignScenarios: document.getElementById('admin-assign-scenarios-view'), // New view
             adminSessionList: document.getElementById('admin-session-list-view'),
+            adminWeeklyChallenge: document.getElementById('admin-weekly-challenge-view'),
+            adminChallengeCompletion: document.getElementById('admin-challenge-completion-view'),
             assignedScenarios: document.getElementById('assigned-scenarios-view'),
             empathyAssistant: document.getElementById('empathy-assistant-view'),
             emailCrafter: document.getElementById('email-crafter-view'),
             savedEmails: document.getElementById('saved-emails-view'),
             rephraseTool: document.getElementById('rephrase-tool-view'),
+            weeklyChallenge: document.getElementById('weekly-challenge-view'),
         };
 
         function showView(viewName) {
@@ -429,6 +536,27 @@
                 saveCurrentViewState(viewName);
             }
         }
+
+        // --- NEW MODAL FUNCTIONS ---
+        function showModal(title, message, buttons = [{ text: 'OK', class: 'bg-blue-500', action: hideModal }]) {
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
+            const actionsContainer = document.getElementById('modal-actions');
+            actionsContainer.innerHTML = '';
+            buttons.forEach(btnInfo => {
+                const button = document.createElement('button');
+                button.textContent = btnInfo.text;
+                button.className = `px-4 py-2 text-white text-base font-medium rounded-md w-full shadow-sm hover:opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 ${btnInfo.class} mb-2`;
+                button.onclick = btnInfo.action;
+                actionsContainer.appendChild(button);
+            });
+            document.getElementById('app-modal').classList.remove('hidden');
+        }
+
+        function hideModal() {
+            document.getElementById('app-modal').classList.add('hidden');
+        }
+
 
         async function getFromAI(prompt, schema = null) {
             const loadingIndicator = document.getElementById('loading-indicator');
@@ -628,20 +756,20 @@
              const state = { currentView: viewName, data: {} };
              switch (viewName) {
                  case 'empathyAssistant':
-                     state.data.situation = document.getElementById('situation-description').value;
-                     break;
-                 case 'emailCrafter':
-                     state.data.customerEmail = document.getElementById('customer-email-input').value;
-                     state.data.resolution = document.getElementById('resolution-input').value;
-                     state.data.alternatives = document.getElementById('alternatives-input').value;
-                     break;
-                 case 'createScenario':
-                      state.data.topic = document.getElementById('scenario-topic').value;
+                      state.data.situation = document.getElementById('situation-description').value;
                       break;
+                 case 'emailCrafter':
+                      state.data.customerEmail = document.getElementById('customer-email-input').value;
+                      state.data.resolution = document.getElementById('resolution-input').value;
+                      state.data.alternatives = document.getElementById('alternatives-input').value;
+                      break;
+                 case 'createScenario':
+                       state.data.topic = document.getElementById('scenario-topic').value;
+                       break;
                  case 'rephraseTool':
-                    state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
-                    state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
-                    break;
+                      state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
+                      state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
+                      break;
              }
              sessionStorage.setItem('lastViewState', JSON.stringify(state));
         }
@@ -657,20 +785,20 @@
                     // Restore data
                     switch (savedState.currentView) {
                         case 'empathyAssistant':
-                            document.getElementById('situation-description').value = savedState.data.situation || '';
-                            break;
+                             document.getElementById('situation-description').value = savedState.data.situation || '';
+                             break;
                         case 'emailCrafter':
-                            document.getElementById('customer-email-input').value = savedState.data.customerEmail || '';
-                            document.getElementById('resolution-input').value = savedState.data.resolution || '';
-                            document.getElementById('alternatives-input').value = savedState.data.alternatives || '';
-                            break;
+                             document.getElementById('customer-email-input').value = savedState.data.customerEmail || '';
+                             document.getElementById('resolution-input').value = savedState.data.resolution || '';
+                             document.getElementById('alternatives-input').value = savedState.data.alternatives || '';
+                             break;
                         case 'createScenario':
-                            document.getElementById('scenario-topic').value = savedState.data.topic || '';
-                            break;
+                             document.getElementById('scenario-topic').value = savedState.data.topic || '';
+                             break;
                         case 'rephraseTool':
-                            document.getElementById('rephrase-customer-statement').value = savedState.data.customerStatement || '';
-                            document.getElementById('rephrase-agent-draft').value = savedState.data.agentDraft || '';
-                            break;
+                             document.getElementById('rephrase-customer-statement').value = savedState.data.customerStatement || '';
+                             document.getElementById('rephrase-agent-draft').value = savedState.data.agentDraft || '';
+                             break;
                     }
                     return true;
                 }
@@ -712,9 +840,9 @@
 
         async function getAllScenarios() {
             let scenarios = [...defaultScenarios];
-            const { data, error } = await db.from('scenarios').select();
-            if (error) {
-                console.error("Could not load user-created scenarios:", error.message);
+            const { data, error: scenariosError } = await db.from('scenarios').select();
+            if (scenariosError) {
+                console.error("Could not load user-created scenarios:", scenariosError.message);
             } else {
                 scenarios = scenarios.concat(data);
             }
@@ -742,8 +870,8 @@
             }
         }
 
-        function startScenario(scenarioData) {
-            currentScenario = scenarioData;
+        function startScenario(scenarioData, challengeId = null) {
+            currentScenario = { ...scenarioData, weekly_challenge_id: challengeId };
             currentStep = 0;
             empathyScore = 50;
             sessionInteractions = [];
@@ -853,13 +981,24 @@
 
         async function saveCompletedSession(scenario, score, interactions) {
             if (!userId || !scenario || interactions.length === 0) return;
-            const { error } = await db.from('sessions').insert({ 
+
+            // Calculate the average score from the AI coach feedback.
+            const totalAiScore = interactions.reduce((sum, interaction) => sum + (interaction.aiScore || 0), 0);
+            const averageScore = Math.round(totalAiScore / interactions.length);
+
+            const sessionPayload = { 
                 user_id: userId, 
                 scenario_title: scenario.title, 
-                final_empathy_score: Math.round(score), 
+                final_empathy_score: averageScore, // Use the new average score
                 interactions: interactions
-            });
-            if (error) console.error("Error saving session:", error.message);
+            };
+
+            if (scenario.weekly_challenge_id) {
+                sessionPayload.weekly_challenge_id = scenario.weekly_challenge_id;
+            }
+
+            const { error: saveError } = await db.from('sessions').insert(sessionPayload);
+            if (saveError) console.error("Error saving session:", saveError.message);
         }
         
         async function showHistoryList() {
@@ -868,10 +1007,10 @@
             container.innerHTML = '<div class="loader mx-auto"></div>';
             if (!userId) { container.innerHTML = '<p>Please log in to see your history.</p>'; return; }
             
-            const { data, error } = await db.from('sessions').select('*').eq('user_id', userId).order('completed_at', { ascending: false });
+            const { data, error: historyError } = await db.from('sessions').select('*').eq('user_id', userId).order('completed_at', { ascending: false });
 
-            if (error) {
-                console.error("Error fetching history:", error.message);
+            if (historyError) {
+                console.error("Error fetching history:", historyError.message);
                 container.innerHTML = '<p class="text-red-500">Could not load history.</p>';
                 return;
             }
@@ -893,13 +1032,13 @@
             const container = document.getElementById('history-detail-interactions');
             container.innerHTML = '<div class="loader mx-auto"></div>';
 
-            const { data: sessionData, error } = await db.from('sessions')
+            const { data: sessionData, error: sessionError } = await db.from('sessions')
                 .select('*')
                 .eq('id', sessionId)
                 .single();
 
-            if (error || !sessionData) {
-                console.error("Error fetching session details:", error?.message);
+            if (sessionError || !sessionData) {
+                console.error("Error fetching session details:", sessionError?.message);
                 container.innerHTML = '<p class="text-red-500">Could not load session details.</p>';
                 return;
             }
@@ -981,12 +1120,12 @@
                             const newFeedback = feedbackContainer.querySelector('textarea').value;
                             const newInteractions = [...sessionData.interactions];
                             newInteractions[index] = { ...newInteractions[index], coach_feedback: newFeedback };
-                            const { error } = await db.from('sessions')
+                            const { error: updateError } = await db.from('sessions')
                                 .update({ interactions: newInteractions })
                                 .eq('id', sessionId);
-                            if (error) {
-                                console.error("Failed to save coach feedback:", error.message);
-                                alert(`Save Failed:\n\n${error.message}\n\nThis is likely a database security rule issue. Please ensure your 'sessions' table has an RLS policy that allows admins to UPDATE rows.`);
+                            if (updateError) {
+                                console.error("Failed to save coach feedback:", updateError.message);
+                                showModal('Error', `Save Failed: ${updateError.message}. This is likely a database security rule issue.`, [{ text: 'OK', class: 'bg-red-500', action: hideModal }]);
                                 showHistoryDetail(sessionId, true);
                             } else {
                                 showHistoryDetail(sessionId, true);
@@ -1039,11 +1178,11 @@
             const result = await getFromAI(prompt, schema);
             if (result && result.suggestions) {
                  suggestionsContainer.innerHTML = `<div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                       <strong>Suggestions:</strong>
-                       <ul class="list-disc list-inside mt-1">
-                           ${result.suggestions.map(s => `<li>${s}</li>`).join('')}
-                       </ul>
-                   </div>`;
+                    <strong>Suggestions:</strong>
+                    <ul class="list-disc list-inside mt-1">
+                        ${result.suggestions.map(s => `<li>${s}</li>`).join('')}
+                    </ul>
+                </div>`;
             } else {
                 suggestionsContainer.innerHTML = `<p class="text-sm text-red-500">Could not get suggestions.</p>`;
             }
@@ -1068,7 +1207,7 @@
             const loading = document.getElementById('rephrase-tool-loading');
 
             if (!customerStatement || !agentDraft) {
-                alert("Please fill in both the customer's statement and your draft response.");
+                showModal('Input Required', 'Please fill in both the customer\'s statement and your draft response.');
                 return;
             }
 
@@ -1089,13 +1228,13 @@
 
             if (result && result.rephrased_suggestions) {
                  suggestionsContainer.innerHTML = `<div class="p-4 bg-green-50 border border-green-200 rounded-md text-sm">
-                       <strong class="text-green-800">Rephrasing Suggestions:</strong>
-                       <ul class="mt-2 space-y-2">
-                           ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
-                       </ul>
-                   </div>`;
+                     <strong class="text-green-800">Rephrasing Suggestions:</strong>
+                     <ul class="mt-2 space-y-2">
+                         ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
+                     </ul>
+                </div>`;
                 
-                suggestionsContainer.querySelectorAll('.copy-rephrase-btn').forEach(btn => {
+                 suggestionsContainer.querySelectorAll('.copy-rephrase-btn').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const textToCopy = e.target.previousElementSibling.textContent;
                         navigator.clipboard.writeText(textToCopy).then(() => {
@@ -1202,9 +1341,9 @@
             container.innerHTML = '<div class="loader mx-auto"></div>';
             if (!userId) { container.innerHTML = '<p>Could not identify user.</p>'; return; }
             
-            const { data, error } = await db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId);
+            const { data, error: assignedError } = await db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId);
             
-            if (error) { console.error(error); container.innerHTML = '<p>Could not load assigned scenarios.</p>'; return; }
+            if (assignedError) { console.error(assignedError); container.innerHTML = '<p>Could not load assigned scenarios.</p>'; return; }
 
             container.innerHTML = '';
             if (data.length === 0) {
@@ -1220,121 +1359,128 @@
                 container.appendChild(card);
             });
         }
+        
+        // --- NEW/MODIFIED ADMIN FUNCTIONS ---
 
         async function showAdminUserList() {
             showView('adminUserList');
             const container = document.getElementById('admin-user-list-container');
             container.innerHTML = '<div class="loader mx-auto"></div>';
             
-            const { data, error } = await db.from('users').select();
+            const { data, error: usersError } = await db.from('users').select('id, email, role');
 
-            if (error) { console.error(error); container.innerHTML = '<p>Could not load users.</p>'; return; }
+            if (usersError) { console.error(usersError); container.innerHTML = '<p>Could not load users.</p>'; return; }
 
             container.innerHTML = '';
             data.forEach(user => {
-                if (user.email === 'admin@tempo.fit') return;
                 const item = document.createElement('div');
-                item.className = 'bg-white p-3 rounded-lg shadow-sm flex items-center space-x-4';
+                item.className = 'bg-white p-3 rounded-lg shadow-sm flex items-center justify-between space-x-4';
                 item.dataset.userId = user.id;
+                
+                const userRole = user.role || 'agent';
 
                 item.innerHTML = `
-                    <div class="flex-grow" id="user-info-${user.id}">
+                    <div class="flex-grow">
                         <p class="user-email font-semibold">${user.email || user.id}</p>
+                        <p class="text-sm text-gray-500">Role: <span class="font-medium ${userRole === 'admin' ? 'text-indigo-600' : 'text-gray-600'}">${userRole}</span></p>
                     </div>
-                    <div class="flex-grow hidden" id="user-edit-${user.id}">
-                        <input type="email" value="${user.email || ''}" class="w-full p-2 border rounded-md">
-                    </div>
-                    <div class="flex space-x-2" id="user-actions-${user.id}">
-                        <button data-uid="${user.id}" class="edit-user-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md">Edit</button>
+                    <div class="flex space-x-2">
+                        <button data-uid="${user.id}" data-current-role="${userRole}" class="toggle-admin-btn text-sm ${userRole === 'admin' ? 'bg-gray-500 hover:bg-gray-600' : 'bg-indigo-500 hover:bg-indigo-600'} text-white px-3 py-1 rounded-md">
+                            ${userRole === 'admin' ? 'Remove Admin' : 'Make Admin'}
+                        </button>
                         <button data-uid="${user.id}" class="delete-user-btn text-sm bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md">Delete</button>
-                        <button data-uid="${user.id}" class="assign-scenario-btn text-sm bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md">Assign Scenario</button>
-                    </div>
-                    <div class="flex space-x-2 hidden" id="user-edit-actions-${user.id}">
-                        <button data-uid="${user.id}" data-original-email="${user.email}" class="save-user-btn text-sm bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md">Save</button>
-                        <button data-uid="${user.id}" class="cancel-edit-user-btn text-sm bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1 rounded-md">Cancel</button>
                     </div>
                 `;
                 container.appendChild(item);
             });
 
-            container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
-            container.querySelectorAll('.edit-user-btn').forEach(btn => btn.addEventListener('click', handleEditUser));
-            container.querySelectorAll('.cancel-edit-user-btn').forEach(btn => btn.addEventListener('click', handleCancelEditUser));
-            container.querySelectorAll('.save-user-btn').forEach(btn => btn.addEventListener('click', handleSaveUserChanges));
+            container.querySelectorAll('.toggle-admin-btn').forEach(btn => btn.addEventListener('click', handleToggleAdmin));
             container.querySelectorAll('.delete-user-btn').forEach(btn => btn.addEventListener('click', handleDeleteUser));
         }
 
-        function handleEditUser(e) {
-            const userId = e.target.dataset.uid;
-            document.getElementById(`user-info-${userId}`).classList.add('hidden');
-            document.getElementById(`user-actions-${userId}`).classList.add('hidden');
-            document.getElementById(`user-edit-${userId}`).classList.remove('hidden');
-            document.getElementById(`user-edit-actions-${userId}`).classList.remove('hidden');
-        }
+        async function showAssignScenariosAdminView() {
+            showView('adminAssignScenarios');
+            const container = document.getElementById('admin-assign-list-container');
+            container.innerHTML = '<div class="loader mx-auto"></div>';
 
-        function handleCancelEditUser(e) {
-            const userId = e.target.dataset.uid;
-            document.getElementById(`user-info-${userId}`).classList.remove('hidden');
-            document.getElementById(`user-actions-${userId}`).classList.remove('hidden');
-            document.getElementById(`user-edit-${userId}`).classList.add('hidden');
-            document.getElementById(`user-edit-actions-${userId}`).classList.add('hidden');
-        }
+            const { data, error: usersError } = await db.from('users').select('id, email');
+            if (usersError) { console.error(usersError); container.innerHTML = '<p>Could not load users.</p>'; return; }
 
-        async function handleSaveUserChanges(e) {
+            container.innerHTML = ' ';
+            data.forEach(user => {
+                 const item = document.createElement('div');
+                item.className = 'bg-white p-3 rounded-lg shadow-sm flex items-center justify-between space-x-4';
+                item.dataset.userId = user.id;
+
+                 item.innerHTML = `
+                    <p class="user-email font-semibold">${user.email || user.id}</p>
+                    <button data-uid="${user.id}" class="assign-scenario-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md">Assign Scenario</button>
+                `;
+                container.appendChild(item);
+            });
+            container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
+        }
+        
+        function handleToggleAdmin(e) {
             const button = e.target;
-            const userId = button.dataset.uid;
-            const editContainer = document.getElementById(`user-edit-${userId}`);
-            const newEmail = editContainer.querySelector('input').value.trim();
-            const originalEmail = button.dataset.originalEmail;
+            const targetUserId = button.dataset.uid;
+            const currentRole = button.dataset.currentRole;
+            const newRole = currentRole === 'admin' ? 'agent' : 'admin';
+            const userEmail = button.closest('[data-user-id]').querySelector('.user-email').textContent;
 
-            if (newEmail === originalEmail) {
-                handleCancelEditUser(e);
-                return;
-            }
-
-            button.textContent = 'Saving...';
-            button.disabled = true;
-
-            const { data, error } = await db.from('users')
-                .update({ email: newEmail })
-                .eq('id', userId)
-                .select()
-                .single();
-
-            if (error) {
-                console.error("Error updating user:", error.message);
-                alert(`Failed to update user: ${error.message}`);
-                button.textContent = 'Save';
-                button.disabled = false;
-            } else {
-                const infoContainer = document.getElementById(`user-info-${userId}`);
-                infoContainer.querySelector('.user-email').textContent = data.email;
-                handleCancelEditUser(e);
-            }
+            showModal(
+                `Confirm Role Change`,
+                `Are you sure you want to change ${userEmail}'s role to "${newRole}"?`,
+                [
+                    {
+                        text: `Yes, change to ${newRole}`,
+                        class: 'bg-indigo-600',
+                        action: async () => {
+                            button.textContent = 'Updating...';
+                            button.disabled = true;
+                            const { error: updateError } = await db.from('users').update({ role: newRole }).eq('id', targetUserId);
+                            hideModal();
+                            if (updateError) {
+                                console.error("Error updating user role:", updateError.message);
+                                showModal('Error', `Failed to update role: ${updateError.message}. Please ensure your Supabase RLS policies are set up correctly.`);
+                            }
+                            showAdminUserList(); // Refresh the list
+                        }
+                    },
+                    { text: 'Cancel', class: 'bg-gray-300 text-gray-800', action: hideModal }
+                ]
+            );
         }
 
-        async function handleDeleteUser(e) {
+        function handleDeleteUser(e) {
             const button = e.target;
-            const userId = button.dataset.uid;
+            const targetUserId = button.dataset.uid;
 
-            if (button.textContent !== 'Confirm Delete?') {
-                button.textContent = 'Confirm Delete?';
-                setTimeout(() => {
-                   if(button) button.textContent = 'Delete';
-                }, 3000);
-                return;
-            }
-
-            const { error } = await db.from('users').delete().eq('id', userId);
-
-            if (error) {
-                console.error("Error deleting user:", error.message);
-                alert(`Failed to delete user: ${error.message}`);
-            } else {
-                const userRow = button.closest('[data-user-id]');
-                userRow.style.opacity = '0';
-                setTimeout(() => userRow.remove(), 300);
-            }
+            showModal('Confirm Deletion', 'Are you sure you want to delete this user? This action is irreversible.', [
+                {
+                    text: 'Yes, Delete',
+                    class: 'bg-red-600',
+                    action: async () => {
+                        const { error: deleteUserError } = await db.from('users').delete().eq('id', targetUserId);
+                        hideModal();
+                        if (deleteUserError) {
+                            console.error("Error deleting user:", deleteUserError.message);
+                            showModal('Error', `Failed to delete user: ${deleteUserError.message}. Please check your Supabase RLS policies.`);
+                        } else {
+                            const userRow = button.closest('[data-user-id]');
+                            if (userRow) {
+                                userRow.style.opacity = '0';
+                                setTimeout(() => userRow.remove(), 300);
+                            }
+                        }
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    class: 'bg-gray-300 text-gray-800',
+                    action: hideModal
+                }
+            ]);
         }
 
         async function openAssignScenarioModal(targetUserId) {
@@ -1344,7 +1490,7 @@
             modal.innerHTML = `
                 <div class="relative top-10 mx-auto p-5 border w-full max-w-2xl shadow-lg rounded-md bg-white">
                     <h3 class="text-lg font-medium">Create and Assign New Scenario</h3>
-                    <p class="text-sm text-gray-500 mb-4">For User: ${targetUserId.substring(0,8)}...</p>
+                    <p class="text-sm text-gray-500 mb-4">For User ID: ${targetUserId.substring(0,8)}...</p>
                     <div class="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
                         <div><label class="block text-sm">Title</label><input id="assign-title" type="text" class="w-full p-2 border rounded"></div>
                         <div><label class="block text-sm">Description</label><input id="assign-description" type="text" class="w-full p-2 border rounded"></div>
@@ -1405,14 +1551,14 @@
             const container = document.getElementById('admin-session-list-container');
             container.innerHTML = '<div class="loader mx-auto"></div>';
             
-            const { data, error } = await db.from('sessions').select(`
+            const { data, error: sessionsError } = await db.from('sessions').select(`
                 *,
                 users (email)
             `).order('completed_at', { ascending: false });
             
-            if (error) { 
-                console.error(error); 
-                container.innerHTML = `<p class="text-red-500">Could not load sessions. Error: ${error.message}</p>`; 
+            if (sessionsError) { 
+                console.error(sessionsError); 
+                container.innerHTML = `<p class="text-red-500">Could not load sessions. Error: ${sessionsError.message}</p>`; 
                 return; 
             }
 
@@ -1437,7 +1583,7 @@
             const outputContainer = document.getElementById('crafted-email-container');
 
             if (!customerEmail || !resolution) {
-                alert("Please provide the original customer email and the resolution details.");
+                showModal('Input Required', 'Please provide the original customer email and the resolution details.');
                 return;
             }
             
@@ -1479,7 +1625,7 @@
                 document.getElementById('crafted-email-body').value = result.body;
                 outputContainer.classList.remove('hidden');
             } else {
-                alert("Sorry, the AI could not craft an email. Please try again.");
+                showModal('Error', 'Sorry, the AI could not craft an email. Please try again.');
             }
         }
 
@@ -1493,7 +1639,7 @@
             const feedbackContainer = document.getElementById('recraft-feedback-container');
 
             if (!feedback) {
-                alert("Please provide feedback for the recraft.");
+                showModal('Input Required', 'Please provide feedback for the recraft.');
                 return;
             }
 
@@ -1540,7 +1686,7 @@
                 document.getElementById('crafted-email-subject').value = result.subject;
                 document.getElementById('crafted-email-body').value = result.body;
             } else {
-                alert("Sorry, the AI could not recraft the email. Please try again.");
+                showModal('Error', 'Sorry, the AI could not recraft the email. Please try again.');
             }
         }
 
@@ -1552,15 +1698,15 @@
 
             if (!userId || !subject || !body) return;
 
-            const { error } = await db.from('saved_emails').insert({
+            const { error: saveEmailError } = await db.from('saved_emails').insert({
                 user_id: userId,
                 subject: subject,
                 body: body,
                 category: category || null // Save as null if empty
             });
 
-            if (error) {
-                console.error("Error saving email:", error.message);
+            if (saveEmailError) {
+                console.error("Error saving email:", saveEmailError.message);
                 saveBtn.textContent = "Save Failed";
             } else {
                 saveBtn.textContent = "Saved!";
@@ -1578,10 +1724,10 @@
             container.innerHTML = '<div class="loader mx-auto"></div>';
             if (!userId) { container.innerHTML = '<p>Please log in to see your saved emails.</p>'; return; }
             
-            const { data: emails, error } = await db.from('saved_emails').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+            const { data: emails, error: fetchEmailsError } = await db.from('saved_emails').select('*').eq('user_id', userId).order('created_at', { ascending: false });
 
-            if (error) {
-                console.error("Error fetching saved emails:", error.message);
+            if (fetchEmailsError) {
+                console.error("Error fetching saved emails:", fetchEmailsError.message);
                 container.innerHTML = '<p class="text-red-500">Could not load your saved emails.</p>';
                 return;
             }
@@ -1675,13 +1821,13 @@
             button.textContent = 'Saving...';
             button.disabled = true;
 
-            const { error } = await db.from('saved_emails')
+            const { error: updateEmailError } = await db.from('saved_emails')
                 .update({ subject: newSubject, body: newBody, category: newCategory || null })
                 .eq('id', id);
 
-            if (error) {
-                console.error("Error updating email:", error.message);
-                alert("Could not save changes. Please try again.");
+            if (updateEmailError) {
+                console.error("Error updating email:", updateEmailError.message);
+                showModal('Error', 'Could not save changes. Please try again.');
                 button.textContent = 'Save Changes';
                 button.disabled = false;
             } else {
@@ -1690,29 +1836,34 @@
             }
         }
         
-        async function handleDeleteEmail(e) {
+        function handleDeleteEmail(e) {
             const button = e.target;
             const item = button.closest('[data-email-id]');
             const id = item.dataset.emailId;
 
-            // Using a simple text change instead of a modal to avoid complexity.
-            if (button.textContent !== 'Confirm Delete?') {
-                button.textContent = 'Confirm Delete?';
-                setTimeout(() => {
-                   if(button) button.textContent = 'Delete';
-                }, 3000);
-                return;
-            }
-
-            const { error } = await db.from('saved_emails').delete().eq('id', id);
-
-            if (error) {
-                console.error("Error deleting email:", error.message);
-                alert("Could not delete the email. Please try again.");
-            } else {
-                item.style.opacity = '0';
-                setTimeout(() => item.remove(), 300);
-            }
+            showModal('Confirm Deletion', 'Are you sure you want to delete this saved email?', [
+                {
+                    text: 'Yes, Delete',
+                    class: 'bg-red-600',
+                    action: async () => {
+                        const { error: deleteEmailError } = await db.from('saved_emails').delete().eq('id', id);
+                        if (deleteEmailError) {
+                             hideModal();
+                             showModal('Error', 'Could not delete the email. Please try again.');
+                             console.error("Error deleting email:", deleteEmailError.message);
+                        } else {
+                            item.style.opacity = '0';
+                            setTimeout(() => item.remove(), 300);
+                            hideModal();
+                        }
+                    }
+                },
+                {
+                    text: 'Cancel',
+                    class: 'bg-gray-300 text-gray-800',
+                    action: hideModal
+                }
+            ]);
         }
 
         async function draftFollowUpEmail() {
@@ -1806,11 +1957,14 @@
                     else if (action === 'assigned') showAssignedScenarios();
                     else if (action === 'quick-fire') startAIQuickFireRound();
                     else if (action === 'admin-users') showAdminUserList();
+                    else if (action === 'admin-assign-scenarios') showAssignScenariosAdminView();
                     else if (action === 'admin-sessions') showAdminSessionList();
+                    else if (action === 'admin-weekly-challenge') showAdminWeeklyChallenge();
                     else if (action === 'empathy-help') showView('empathyAssistant');
                     else if (action === 'email-crafter') showView('emailCrafter');
                     else if (action === 'saved-emails') showSavedEmails();
                     else if (action === 'rephrase-tool') showView('rephraseTool');
+                    else if (action === 'weekly-challenge') showWeeklyChallenge();
                 });
             });
             
@@ -1820,7 +1974,12 @@
                     showView('mainMenu');
                 });
             });
+            
+            document.querySelectorAll('.back-to-admin-dash-btn').forEach(btn => {
+                btn.addEventListener('click', () => showView('adminDashboard'));
+            });
 
+            document.getElementById('back-to-weekly-admin-btn').addEventListener('click', showAdminWeeklyChallenge);
             document.getElementById('get-empathy-help-btn').addEventListener('click', getEmpathyHelpFromAI);
             document.getElementById('get-rephrase-tool-suggestions-btn').addEventListener('click', getRephraseSuggestionsFromTool);
             document.getElementById('craft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
@@ -1832,8 +1991,6 @@
             document.getElementById('draft-email-btn').addEventListener('click', draftFollowUpEmail);
             document.getElementById('copy-email-btn').addEventListener('click', copyEmailToClipboard);
             document.getElementById('admin-dashboard-btn').addEventListener('click', () => showView('adminDashboard'));
-            document.getElementById('back-to-admin-dash-btn')?.addEventListener('click', () => showView('adminDashboard'));
-            document.getElementById('back-to-admin-dash-btn2')?.addEventListener('click', () => showView('adminDashboard'));
             document.getElementById('back-to-history-list-btn').addEventListener('click', showHistoryList);
             document.getElementById('restart-scenario-btn').addEventListener('click', () => startScenario(currentScenario));
             document.getElementById('choose-another-scenario-btn').addEventListener('click', startRandomScenario);
@@ -1861,9 +2018,9 @@
                 const generateBtn = document.getElementById('generate-scenario-btn');
                 const originalText = generateBtn.textContent;
                 if (newScenario && newScenario.dialogue_tree.length >= 3) {
-                    const { error } = await db.from('scenarios').insert({ ...newScenario, author_id: userId });
-                    if (error) {
-                        console.error("Error saving new scenario:", error.message);
+                    const { error: saveScenarioError } = await db.from('scenarios').insert({ ...newScenario, author_id: userId });
+                    if (saveScenarioError) {
+                        console.error("Error saving new scenario:", saveScenarioError.message);
                         generateBtn.textContent = 'Save Failed!';
                         setTimeout(() => { generateBtn.textContent = originalText; }, 2000);
                     } else {
@@ -1905,9 +2062,9 @@
             const password = document.getElementById('register-password').value;
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
-            const { data, error } = await db.auth.signUp({ email, password });
-            if (error) {
-                authError.textContent = error.message;
+            const { data, error: signUpError } = await db.auth.signUp({ email, password });
+            if (signUpError) {
+                authError.textContent = signUpError.message;
                 authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
             } else {
                 const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
@@ -1919,40 +2076,92 @@
         });
 
         document.getElementById('login-btn').addEventListener('click', async () => {
-            clearAllState();
+            clearAllState(); // Clear any stale state before attempting a new login.
+
+            const loginBtn = document.getElementById('login-btn');
+            const originalBtnText = loginBtn.textContent;
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             authError.textContent = '';
             authError.className = 'text-red-500 text-center mt-4';
-            const { error } = await db.auth.signInWithPassword({ email, password });
-            if (error) {
-                authError.textContent = error.message;
+            
+            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+            
+            if (signInError) {
+                authError.textContent = signInError.message;
                 authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+                loginBtn.textContent = originalBtnText;
+                loginBtn.disabled = false;
             }
+            // On success, onAuthStateChange will handle the view change and reset the button.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            clearAllState();
-            await db.auth.signOut();
+            clearAllState(); // Ensure all session data is cleared on logout.
+            const { error: signOutError } = await db.auth.signOut();
+            if (signOutError) {
+                console.error('Error signing out:', signOutError);
+                showModal('Logout Error', 'Could not log you out. Please try again.');
+            }
+            // onAuthStateChange will handle the UI transition to the login page.
         });
 
-        db.auth.onAuthStateChange((_event, session) => {
+        db.auth.onAuthStateChange(async (_event, session) => {
             if (session && session.user) {
-                if (!userId) {
-                    const user = session.user;
-                    userId = user.id;
-                    isAdmin = user.email === 'admin@tempo.fit';
-                    document.getElementById('logout-btn').classList.remove('hidden');
-                    document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
-                    if (isAdmin) {
-                        document.getElementById('admin-dashboard-btn').classList.remove('hidden');
+                const user = session.user;
+                userId = user.id;
+
+                // On login, ensure a public profile exists. If not, create one.
+                const { data: userData, error: profileError } = await db.from('users')
+                    .select('id, role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError && profileError.code === 'PGRST116') { // This code means no user profile was found
+                    // Profile doesn't exist, so create it.
+                    const { error: createProfileError } = await db.from('users').insert({
+                        id: user.id,
+                        email: user.email,
+                        role: 'agent' // Default role for new users
+                    });
+                    if (createProfileError) {
+                        console.error("Critical error creating user profile:", createProfileError);
+                        showModal('Account Error', 'Could not create your user profile. Please contact support.');
+                        // Don't sign out, allow user to stay logged in but be aware of the issue.
+                        return;
                     }
-                    
-                    if (!loadSessionState() && !loadLastViewState()) {
-                        showView('mainMenu');
-                    }
+                    isAdmin = user.email === 'admin@tempo.fit'; // New user, check for bootstrap admin
+                } else if (profileError) {
+                    // Another unexpected error occurred.
+                    console.error("Critical error fetching user profile:", profileError);
+                    // Don't sign out. The app is still usable, just might miss role info.
+                    // Let the isAdmin fallback handle it.
+                } else {
+                    // Profile exists, set admin status from DB, with email as fallback.
+                    isAdmin = (userData && userData.role === 'admin') || user.email === 'admin@tempo.fit';
                 }
-            } else {
+
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
+                if (isAdmin) {
+                    document.getElementById('admin-dashboard-btn').classList.remove('hidden');
+                } else {
+                    document.getElementById('admin-dashboard-btn').classList.add('hidden');
+                }
+                
+                if (!loadSessionState() && !loadLastViewState()) {
+                    showView('mainMenu');
+                }
+                
+                // Ensure login button is reset after successful login
+                const loginBtn = document.getElementById('login-btn');
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
+
+            } else { // This block runs on logout or if there's no session
                 userId = null;
                 isAdmin = false;
                 clearAllState();
@@ -1964,7 +2173,273 @@
         });
 
         setupEventListeners();
+
+        // --- NEW WEEKLY CHALLENGE FUNCTIONS ---
+        async function showWeeklyChallenge() {
+            showView('weeklyChallenge');
+            const scenarioContainer = document.getElementById('weekly-scenario-container');
+            const leaderboardContainer = document.getElementById('weekly-leaderboard-container');
+            scenarioContainer.innerHTML = '<div class="loader mx-auto"></div>';
+            leaderboardContainer.innerHTML = '<div class="loader mx-auto"></div>';
+
+            const { data: challenge, error: challengeError } = await db.from('weekly_challenges').select('*').eq('is_active', true).single();
+            
+            if (challengeError || !challenge) {
+                console.warn("Could not fetch weekly challenge from DB:", challengeError?.message);
+                scenarioContainer.innerHTML = '<p class="text-center text-gray-500">No active weekly challenge has been set by an admin yet. Please check back later!</p>';
+                leaderboardContainer.innerHTML = '';
+                return;
+            } 
+            
+            currentWeeklyChallenge = challenge;
+            
+            // Check if the user has already completed this challenge
+            let hasCompleted = false;
+            if (userId) {
+                const { data: existingSession, error: sessionCheckError } = await db.from('sessions')
+                    .select('id')
+                    .eq('user_id', userId)
+                    .eq('weekly_challenge_id', currentWeeklyChallenge.id)
+                    .limit(1);
+
+                if (sessionCheckError) {
+                    console.error("Error checking for existing session:", sessionCheckError);
+                } else if (existingSession && existingSession.length > 0) {
+                    hasCompleted = true;
+                }
+            }
+
+            const scenario = currentWeeklyChallenge.scenario_data;
+            scenarioContainer.innerHTML = `
+                <div class="p-4 border rounded-lg bg-gray-50 text-left">
+                    <h3 class="text-2xl font-bold text-gray-800">${scenario.title}</h3>
+                    <p class="text-sm text-gray-500 my-2 italic">${scenario.persona}</p>
+                    <p class="text-gray-700 mb-4">${scenario.description}</p>
+                    ${hasCompleted
+                        ? `<button class="w-full bg-gray-400 text-white font-bold py-3 px-4 rounded-lg cursor-not-allowed" disabled>Challenge Already Completed</button>
+                           <p class="text-center text-sm text-gray-600 mt-2">You can only complete the weekly challenge once to keep the leaderboard fair.</p>`
+                        : `<button id="start-weekly-challenge-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Start Challenge</button>`
+                    }
+                </div>
+            `;
+            
+            if (!hasCompleted) {
+                document.getElementById('start-weekly-challenge-btn').addEventListener('click', () => {
+                    startScenario(currentWeeklyChallenge.scenario_data, currentWeeklyChallenge.id);
+                });
+            }
+
+            const { data: sessions, error: scoresError } = await db.from('sessions')
+                .select('user_id, final_empathy_score, users (email)')
+                .eq('weekly_challenge_id', currentWeeklyChallenge.id);
+
+            if (scoresError) {
+                console.error("Error fetching leaderboard scores:", scoresError.message);
+                leaderboardContainer.innerHTML = '<p class="text-red-500 text-center">Could not load leaderboard data.</p>';
+                return;
+            }
+
+            const userScores = {};
+            sessions.forEach(session => {
+                const email = session.users ? session.users.email : `User ${session.user_id.substring(0, 8)}...`;
+                if (!userScores[session.user_id] || session.final_empathy_score > userScores[session.user_id].score) {
+                    userScores[session.user_id] = {
+                        score: session.final_empathy_score,
+                        email: email
+                    };
+                }
+            });
+            const leaderboard = Object.values(userScores).sort((a, b) => b.score - a.score);
+
+            if (leaderboard.length === 0) {
+                leaderboardContainer.innerHTML = '<p class="text-center text-gray-500">No scores have been submitted yet. Be the first!</p>';
+            } else {
+                leaderboardContainer.innerHTML = `
+                    <ol class="space-y-2">
+                        ${leaderboard.slice(0, 10).map((entry, index) => `
+                            <li class="p-3 rounded-md ${index === 0 ? 'bg-yellow-100 border-yellow-300' : (index === 1 ? 'bg-gray-200 border-gray-300' : (index === 2 ? 'bg-orange-100 border-orange-300' : 'bg-gray-100 border-gray-200'))} border flex justify-between items-center text-left">
+                                <span class="font-semibold text-gray-800">${index + 1}. ${entry.email}</span>
+                                <span class="font-bold text-lg text-gray-900">${entry.score}</span>
+                            </li>
+                        `).join('')}
+                    </ol>
+                `;
+            }
+        }
+
+        async function showAdminWeeklyChallenge() {
+            showView('adminWeeklyChallenge');
+            const container = document.getElementById('current-weekly-challenge-container');
+            container.innerHTML = '<div class="loader mx-auto"></div>';
+
+            const { data: challenge, error: challengeError } = await db.from('weekly_challenges').select('*').eq('is_active', true).single();
+
+            if (challengeError || !challenge) {
+                 container.innerHTML = '<p class="text-gray-500">No weekly challenge is currently active.</p>';
+            } else {
+                const scenario = challenge.scenario_data;
+                container.innerHTML = `
+                    <p><strong>Title:</strong> ${scenario.title}</p>
+                    <p><strong>Week ID:</strong> ${challenge.week_id}</p>
+                    <p><strong>Description:</strong> ${scenario.description}</p>
+                `;
+            }
+
+            const allChallengesContainer = document.getElementById('all-challenges-list-container');
+            allChallengesContainer.innerHTML = '<div class="loader mx-auto"></div>';
+
+            const { data: allChallenges, error: allChallengesError } = await db.from('weekly_challenges')
+                .select('*')
+                .order('start_date', { ascending: false });
+            
+            if (allChallengesError) {
+                allChallengesContainer.innerHTML = `<p class="text-red-500">Could not load challenge history.</p>`;
+                return;
+            }
+
+            if (allChallenges.length === 0) {
+                allChallengesContainer.innerHTML = `<p class="text-gray-500">No challenges have been created yet.</p>`;
+            } else {
+                allChallengesContainer.innerHTML = allChallenges.map(challenge => `
+                    <div class="p-3 bg-white border rounded-lg flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold">${challenge.scenario_data.title}</p>
+                            <p class="text-sm text-gray-500">Week ID: ${challenge.week_id}</p>
+                        </div>
+                        <button data-challenge-id="${challenge.id}" data-challenge-title="${challenge.scenario_data.title}" class="view-completion-btn bg-blue-500 hover:bg-blue-600 text-white text-sm font-bold py-2 px-3 rounded-lg">View Completions</button>
+                    </div>
+                `).join('');
+                
+                allChallengesContainer.querySelectorAll('.view-completion-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const challengeId = e.currentTarget.dataset.challengeId;
+                        const challengeTitle = e.currentTarget.dataset.challengeTitle;
+                        showChallengeCompletionDetails(challengeId, challengeTitle);
+                    });
+                });
+            }
+            document.getElementById('set-new-challenge-btn').onclick = handleSetNewWeeklyChallenge;
+        }
+
+        async function handleSetNewWeeklyChallenge(e) {
+            const button = e.target;
+            const newScenarioData = {
+                id: 'weekly-' + Date.now(),
+                title: document.getElementById('new-challenge-title').value.trim(),
+                description: document.getElementById('new-challenge-description').value.trim(),
+                persona: document.getElementById('new-challenge-persona').value.trim(),
+                dialogue_tree: Array.from(document.querySelectorAll('.new-challenge-dialogue')).map(textarea => ({ customer: textarea.value.trim() }))
+            };
+
+            if (!newScenarioData.title || !newScenarioData.description || !newScenarioData.persona || newScenarioData.dialogue_tree.some(step => !step.customer)) {
+                showModal('Input Required', 'Please fill out all fields for the new challenge.');
+                return;
+            }
+
+            button.textContent = 'Setting...';
+            button.disabled = true;
+
+            const { error: deactivateError } = await db.from('weekly_challenges').update({ is_active: false }).eq('is_active', true);
+            if (deactivateError) {
+                console.error("Error deactivating old challenge:", deactivateError);
+                showModal('Error', `Error: ${deactivateError.message}`);
+                button.textContent = 'Save & Set Active';
+                button.disabled = false;
+                return;
+            }
+
+            const today = new Date();
+            const year = today.getFullYear();
+            const firstDayOfYear = new Date(year, 0, 1);
+            const days = Math.floor((today - firstDayOfYear) / (24 * 60 * 60 * 1000));
+            const weekNumber = Math.ceil((days + firstDayOfYear.getDay() + 1) / 7);
+            const weekId = `${year}-${String(weekNumber).padStart(2, '0')}`;
+            
+            const dayOfWeek = today.getDay();
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); 
+            const startDate = new Date(today.setDate(diff));
+            startDate.setHours(0, 0, 0, 0);
+
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+            endDate.setHours(23, 59, 59, 999);
+            
+            const newChallengePayload = {
+                week_id: weekId,
+                start_date: startDate.toISOString(),
+                end_date: endDate.toISOString(),
+                scenario_data: newScenarioData,
+                is_active: true
+            };
+
+            const { error: insertError } = await db.from('weekly_challenges').upsert(newChallengePayload, { onConflict: 'week_id' });
+
+            if (insertError) {
+                console.error("Error setting new challenge:", insertError);
+                showModal('Error', `Error: ${insertError.message}`);
+                button.textContent = 'Save & Set Active';
+                button.disabled = false;
+            } else {
+                button.textContent = 'Challenge Set!';
+                showAdminWeeklyChallenge(); // Refresh the view
+                document.getElementById('new-challenge-title').value = '';
+                document.getElementById('new-challenge-description').value = '';
+                document.getElementById('new-challenge-persona').value = '';
+                document.querySelectorAll('.new-challenge-dialogue').forEach(el => el.value = '');
+                setTimeout(() => {
+                    button.textContent = 'Save & Set Active';
+                    button.disabled = false;
+                }, 2000);
+            }
+        }
+
+        async function showChallengeCompletionDetails(challengeId, challengeTitle) {
+            showView('adminChallengeCompletion');
+            document.getElementById('completion-view-title').textContent = `Completions for: ${challengeTitle}`;
+            const container = document.getElementById('completion-list-container');
+            container.innerHTML = '<div class="loader mx-auto"></div>';
+
+            const [usersResponse, sessionsResponse] = await Promise.all([
+                db.from('users').select('id, email').neq('email', 'admin@tempo.fit'),
+                db.from('sessions').select('user_id, final_empathy_score').eq('weekly_challenge_id', challengeId)
+            ]);
+
+            const { data: allUsers, error: usersError } = usersResponse;
+            const { data: completedSessions, error: sessionsError } = sessionsResponse;
+
+            if (usersError || sessionsError) {
+                console.error("Error fetching completion data:", usersError || sessionsError);
+                container.innerHTML = `<p class="text-red-500">Could not load completion data.</p>`;
+                return;
+            }
+
+            const userScores = {};
+            completedSessions.forEach(session => {
+                if (!userScores[session.user_id] || session.final_empathy_score > userScores[session.user_id]) {
+                    userScores[session.user_id] = session.final_empathy_score;
+                }
+            });
+
+            container.innerHTML = allUsers.map(user => {
+                const score = userScores[user.id];
+                const isCompleted = score !== undefined;
+
+                return `
+                    <div class="p-3 bg-gray-50 border rounded-lg flex justify-between items-center">
+                        <p class="font-semibold text-gray-800">${user.email}</p>
+                        ${isCompleted
+                            ? `<span class="font-bold text-green-600">Completed - Score: ${score}</span>`
+                            : `<span class="font-semibold text-red-600">Not Completed</span>`
+                        }
+                    </div>
+                `;
+            }).join('');
+        }
+
     </script>
 </body>
 </html>
+
+
+
 
