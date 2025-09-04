@@ -512,12 +512,13 @@
         let empathyScore = 50;
         let sessionInteractions = [];
         let currentWeeklyChallenge = null;
-        let initialAuthCheckCompleted = false;
+        let authReady = false;
 
         const views = {
             auth: document.getElementById('auth-view'),
             mainMenu: document.getElementById('main-menu'),
-// ... existing code ... -->
+            createScenario: document.getElementById('create-scenario-view'),
+            historyList: document.getElementById('history-list-view'),
             historyDetail: document.getElementById('history-detail-view'),
             simulator: document.getElementById('simulator'),
             completion: document.getElementById('completion-screen'),
@@ -2380,7 +2381,7 @@
             const appContent = document.getElementById('app-content');
 
             try {
-                if (session) { // User is logged in or just logged in
+                if (session && session.user) { // User is logged in or just logged in
                     const isNewLogin = !userId; // Check if this is the first time we're seeing a user
 
                     if (isNewLogin) {
@@ -2436,8 +2437,8 @@
                     loginBtn.disabled = false;
                 }
             } finally {
-                if (!initialAuthCheckCompleted) {
-                    initialAuthCheckCompleted = true;
+                if (!authReady) {
+                    authReady = true;
                     appLoader.classList.add('hidden');
                     appContent.classList.remove('hidden');
                 }
