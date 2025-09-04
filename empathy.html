@@ -1953,229 +1953,6 @@
             document.body.removeChild(tempTextArea);
         }
 
-        function setupEventListeners() {
-            document.querySelectorAll('[data-action]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const action = e.currentTarget.dataset.action;
-                    if (action === 'practice') startRandomScenario();
-                    else if (action === 'create') showView('createScenario');
-                    else if (action === 'history') showHistoryList();
-                    else if (action === 'assigned') showAssignedScenarios();
-                    else if (action === 'quick-fire') startAIQuickFireRound();
-                    else if (action === 'admin-users') showAdminUserList();
-                    else if (action === 'admin-assign-scenarios') showAssignScenariosAdminView();
-                    else if (action === 'admin-sessions') showAdminSessionList();
-                    else if (action === 'admin-weekly-challenge') showAdminWeeklyChallenge();
-                    else if (action === 'empathy-help') showView('empathyAssistant');
-                    else if (action === 'email-crafter') showView('emailCrafter');
-                    else if (action === 'saved-emails') showSavedEmails();
-                    else if (action === 'rephrase-tool') showView('rephraseTool');
-                    else if (action === 'weekly-challenge') showWeeklyChallenge();
-                });
-            });
-            
-            document.querySelectorAll('.back-to-menu-btn').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    clearAllState();
-                    showView('mainMenu');
-                });
-            });
-            
-            document.querySelectorAll('.back-to-admin-dash-btn').forEach(btn => {
-                btn.addEventListener('click', () => showView('adminDashboard'));
-            });
-
-            document.getElementById('back-to-weekly-admin-btn').addEventListener('click', showAdminWeeklyChallenge);
-            document.getElementById('get-empathy-help-btn').addEventListener('click', getEmpathyHelpFromAI);
-            document.getElementById('get-rephrase-tool-suggestions-btn').addEventListener('click', getRephraseSuggestionsFromTool);
-            document.getElementById('craft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
-            document.getElementById('recraft-email-btn').addEventListener('click', () => {
-                document.getElementById('recraft-feedback-container').classList.toggle('hidden');
-            });
-            document.getElementById('submit-recraft-btn').addEventListener('click', recraftEmail);
-            document.getElementById('save-email-btn').addEventListener('click', saveCraftedEmail);
-            document.getElementById('draft-email-btn').addEventListener('click', draftFollowUpEmail);
-            document.getElementById('copy-email-btn').addEventListener('click', copyEmailToClipboard);
-            document.getElementById('admin-dashboard-btn').addEventListener('click', () => showView('adminDashboard'));
-            document.getElementById('back-to-history-list-btn').addEventListener('click', showHistoryList);
-            document.getElementById('restart-scenario-btn').addEventListener('click', () => startScenario(currentScenario));
-            document.getElementById('choose-another-scenario-btn').addEventListener('click', startRandomScenario);
-            document.getElementById('submit-response-btn').addEventListener('click', handleSubmitResponse);
-            document.getElementById('next-btn').addEventListener('click', loadStep);
-            document.getElementById('analyze-tone-btn').addEventListener('click', getToneAnalysisFromAI);
-            document.getElementById('get-suggestions-btn').addEventListener('click', getSuggestionsFromAI);
-            document.getElementById('user-response').addEventListener('input', saveSessionState);
-            
-            document.getElementById('situation-description').addEventListener('input', () => saveCurrentViewState('empathyAssistant'));
-            document.getElementById('customer-email-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
-            document.getElementById('resolution-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
-            document.getElementById('alternatives-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
-            document.getElementById('scenario-topic').addEventListener('input', () => saveCurrentViewState('createScenario'));
-            document.getElementById('rephrase-customer-statement').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
-            document.getElementById('rephrase-agent-draft').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
-
-
-            document.getElementById('generate-scenario-btn').addEventListener('click', async () => {
-                const topic = document.getElementById('scenario-topic').value.trim();
-                if (!topic) return;
-                const prompt = `Generate a new customer service empathy training scenario for Tempo.fit based on the topic: "${topic}". The output must be a valid JSON object with: "title", "description", "persona", and a 3-step "dialogue_tree" where the last step is a happy resolution.`;
-                const schema = { type: "OBJECT", properties: { "title": { "type": "STRING" }, "description": { "type": "STRING" }, "persona": { "type": "STRING" }, "dialogue_tree": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "customer": { "type": "STRING" } } } } }, required: ["title", "description", "persona", "dialogue_tree"] };
-                const newScenario = await getFromAI(prompt, schema);
-                const generateBtn = document.getElementById('generate-scenario-btn');
-                const originalText = generateBtn.textContent;
-                if (newScenario && newScenario.dialogue_tree.length >= 3) {
-                    const { error: saveScenarioError } = await db.from('scenarios').insert({ ...newScenario, author_id: userId });
-                    if (saveScenarioError) {
-                        console.error("Error saving new scenario:", saveScenarioError.message);
-                        generateBtn.textContent = 'Save Failed!';
-                        setTimeout(() => { generateBtn.textContent = originalText; }, 2000);
-                    } else {
-                        generateBtn.textContent = 'Saved!';
-                        setTimeout(() => { generateBtn.textContent = originalText; showView('mainMenu'); }, 1500);
-                    }
-                } else {
-                    generateBtn.textContent = 'Generation Failed!';
-                    setTimeout(() => { generateBtn.textContent = originalText; }, 2000);
-                }
-            });
-        }
-
-        // --- AUTHENTICATION ---
-        const loginForm = document.getElementById('login-form');
-        const registerForm = document.getElementById('register-form');
-        const authError = document.getElementById('auth-error');
-
-        document.getElementById('show-register').addEventListener('click', (e) => {
-            e.preventDefault();
-            loginForm.classList.add('hidden');
-            registerForm.classList.remove('hidden');
-            authError.textContent = '';
-            authError.className = 'text-red-500 text-center mt-4';
-        });
-
-        document.getElementById('show-login').addEventListener('click', (e) => {
-            e.preventDefault();
-            registerForm.classList.add('hidden');
-            loginForm.classList.remove('hidden');
-            authError.textContent = '';
-            authError.className = 'text-red-500 text-center mt-4';
-            document.getElementById('register-inputs').classList.remove('hidden');
-            document.getElementById('register-success').classList.add('hidden');
-        });
-
-        document.getElementById('register-btn').addEventListener('click', async () => {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            authError.textContent = '';
-            authError.className = 'text-red-500 text-center mt-4';
-            const { data, error: signUpError } = await db.auth.signUp({ email, password });
-            if (signUpError) {
-                authError.textContent = signUpError.message;
-                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
-            } else {
-                const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
-                if (insertError) console.error("Error creating public user record:", insertError.message);
-                
-                document.getElementById('register-inputs').classList.add('hidden');
-                document.getElementById('register-success').classList.remove('hidden');
-            }
-        });
-
-        document.getElementById('login-btn').addEventListener('click', async () => {
-            const loginBtn = document.getElementById('login-btn');
-            const originalBtnText = loginBtn.textContent;
-            loginBtn.textContent = 'Logging in...';
-            loginBtn.disabled = true;
-
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            authError.textContent = '';
-            authError.className = 'text-red-500 text-center mt-4';
-            
-            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
-            
-            if (signInError) {
-                authError.textContent = signInError.message;
-                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
-                loginBtn.textContent = originalBtnText;
-                loginBtn.disabled = false;
-            }
-            // On success, onAuthStateChange will handle the UI update.
-        });
-
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            clearAllState(); // Clear session storage immediately for a faster UI response
-            const { error: signOutError } = await db.auth.signOut();
-            if (signOutError) {
-                console.error('Error signing out:', signOutError);
-                showModal('Logout Error', 'Could not log you out. Please try again.');
-            }
-            // onAuthStateChange will also fire to confirm and finalize the logged-out state.
-        });
-
-        db.auth.onAuthStateChange(async (event, session) => {
-            const loginBtn = document.getElementById('login-btn');
-            const appLoader = document.getElementById('app-loader');
-            const appContent = document.getElementById('app-content');
-
-            if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
-                // This block runs on login and on page refresh if a session exists.
-                userId = session.user.id;
-
-                const { data: userData, error: profileError } = await db.from('users')
-                    .select('role')
-                    .eq('id', userId)
-                    .single();
-                
-                if (profileError && profileError.code !== 'PGRST116') {
-                    console.error("Error fetching user profile, logging out:", profileError);
-                    await db.auth.signOut();
-                    return;
-                }
-                
-                isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
-
-                document.getElementById('logout-btn').classList.remove('hidden');
-                document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
-                document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-                
-                if (event === 'SIGNED_IN') {
-                    // This was a direct login action, clear any old state and go to the main menu.
-                    sessionStorage.removeItem('lastViewState'); 
-                    showView('mainMenu');
-                } else {
-                    // This was a page refresh, try to restore the last view.
-                    if (!loadSessionState() && !loadLastViewState()) {
-                        showView('mainMenu');
-                    }
-                }
-                
-                loginBtn.textContent = 'Login';
-                loginBtn.disabled = false;
-
-            } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-                // This block runs only when the user is logged out or no session is found initially.
-                userId = null;
-                isAdmin = false;
-                clearAllState();
-
-                document.getElementById('logout-btn').classList.add('hidden');
-                document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
-                document.getElementById('admin-dashboard-btn').classList.add('hidden');
-                
-                showView('auth');
-
-                loginBtn.textContent = 'Login';
-                loginBtn.disabled = false;
-            }
-            
-            // Show the app content and hide loader once auth state is determined
-            appLoader.classList.add('hidden');
-            appContent.classList.remove('hidden');
-        });
-
-        setupEventListeners();
-
         // --- NEW WEEKLY CHALLENGE FUNCTIONS ---
         async function showWeeklyChallenge() {
             showView('weeklyChallenge');
@@ -2437,6 +2214,233 @@
             }).join('');
         }
 
+        function setupEventListeners() {
+            document.querySelectorAll('[data-action]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const action = e.currentTarget.dataset.action;
+                    if (action === 'practice') startRandomScenario();
+                    else if (action === 'create') showView('createScenario');
+                    else if (action === 'history') showHistoryList();
+                    else if (action === 'assigned') showAssignedScenarios();
+                    else if (action === 'quick-fire') startAIQuickFireRound();
+                    else if (action === 'admin-users') showAdminUserList();
+                    else if (action === 'admin-assign-scenarios') showAssignScenariosAdminView();
+                    else if (action === 'admin-sessions') showAdminSessionList();
+                    else if (action === 'admin-weekly-challenge') showAdminWeeklyChallenge();
+                    else if (action === 'empathy-help') showView('empathyAssistant');
+                    else if (action === 'email-crafter') showView('emailCrafter');
+                    else if (action === 'saved-emails') showSavedEmails();
+                    else if (action === 'rephrase-tool') showView('rephraseTool');
+                    else if (action === 'weekly-challenge') showWeeklyChallenge();
+                });
+            });
+            
+            document.querySelectorAll('.back-to-menu-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    clearAllState();
+                    showView('mainMenu');
+                });
+            });
+            
+            document.querySelectorAll('.back-to-admin-dash-btn').forEach(btn => {
+                btn.addEventListener('click', () => showView('adminDashboard'));
+            });
+
+            document.getElementById('back-to-weekly-admin-btn').addEventListener('click', showAdminWeeklyChallenge);
+            document.getElementById('get-empathy-help-btn').addEventListener('click', getEmpathyHelpFromAI);
+            document.getElementById('get-rephrase-tool-suggestions-btn').addEventListener('click', getRephraseSuggestionsFromTool);
+            document.getElementById('craft-email-btn').addEventListener('click', craftFollowUpEmailFromTool);
+            document.getElementById('recraft-email-btn').addEventListener('click', () => {
+                document.getElementById('recraft-feedback-container').classList.toggle('hidden');
+            });
+            document.getElementById('submit-recraft-btn').addEventListener('click', recraftEmail);
+            document.getElementById('save-email-btn').addEventListener('click', saveCraftedEmail);
+            document.getElementById('draft-email-btn').addEventListener('click', draftFollowUpEmail);
+            document.getElementById('copy-email-btn').addEventListener('click', copyEmailToClipboard);
+            document.getElementById('admin-dashboard-btn').addEventListener('click', () => showView('adminDashboard'));
+            document.getElementById('back-to-history-list-btn').addEventListener('click', showHistoryList);
+            document.getElementById('restart-scenario-btn').addEventListener('click', () => startScenario(currentScenario));
+            document.getElementById('choose-another-scenario-btn').addEventListener('click', startRandomScenario);
+            document.getElementById('submit-response-btn').addEventListener('click', handleSubmitResponse);
+            document.getElementById('next-btn').addEventListener('click', loadStep);
+            document.getElementById('analyze-tone-btn').addEventListener('click', getToneAnalysisFromAI);
+            document.getElementById('get-suggestions-btn').addEventListener('click', getSuggestionsFromAI);
+            document.getElementById('user-response').addEventListener('input', saveSessionState);
+            
+            document.getElementById('situation-description').addEventListener('input', () => saveCurrentViewState('empathyAssistant'));
+            document.getElementById('customer-email-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('resolution-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('alternatives-input').addEventListener('input', () => saveCurrentViewState('emailCrafter'));
+            document.getElementById('scenario-topic').addEventListener('input', () => saveCurrentViewState('createScenario'));
+            document.getElementById('rephrase-customer-statement').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
+            document.getElementById('rephrase-agent-draft').addEventListener('input', () => saveCurrentViewState('rephraseTool'));
+
+
+            document.getElementById('generate-scenario-btn').addEventListener('click', async () => {
+                const topic = document.getElementById('scenario-topic').value.trim();
+                if (!topic) return;
+                const prompt = `Generate a new customer service empathy training scenario for Tempo.fit based on the topic: "${topic}". The output must be a valid JSON object with: "title", "description", "persona", and a 3-step "dialogue_tree" where the last step is a happy resolution.`;
+                const schema = { type: "OBJECT", properties: { "title": { "type": "STRING" }, "description": { "type": "STRING" }, "persona": { "type": "STRING" }, "dialogue_tree": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "customer": { "type": "STRING" } } } } }, required: ["title", "description", "persona", "dialogue_tree"] };
+                const newScenario = await getFromAI(prompt, schema);
+                const generateBtn = document.getElementById('generate-scenario-btn');
+                const originalText = generateBtn.textContent;
+                if (newScenario && newScenario.dialogue_tree.length >= 3) {
+                    const { error: saveScenarioError } = await db.from('scenarios').insert({ ...newScenario, author_id: userId });
+                    if (saveScenarioError) {
+                        console.error("Error saving new scenario:", saveScenarioError.message);
+                        generateBtn.textContent = 'Save Failed!';
+                        setTimeout(() => { generateBtn.textContent = originalText; }, 2000);
+                    } else {
+                        generateBtn.textContent = 'Saved!';
+                        setTimeout(() => { generateBtn.textContent = originalText; showView('mainMenu'); }, 1500);
+                    }
+                } else {
+                    generateBtn.textContent = 'Generation Failed!';
+                    setTimeout(() => { generateBtn.textContent = originalText; }, 2000);
+                }
+            });
+        }
+
+        // --- AUTHENTICATION ---
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const authError = document.getElementById('auth-error');
+
+        document.getElementById('show-register').addEventListener('click', (e) => {
+            e.preventDefault();
+            loginForm.classList.add('hidden');
+            registerForm.classList.remove('hidden');
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+        });
+
+        document.getElementById('show-login').addEventListener('click', (e) => {
+            e.preventDefault();
+            registerForm.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+            document.getElementById('register-inputs').classList.remove('hidden');
+            document.getElementById('register-success').classList.add('hidden');
+        });
+
+        document.getElementById('register-btn').addEventListener('click', async () => {
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+            const { data, error: signUpError } = await db.auth.signUp({ email, password });
+            if (signUpError) {
+                authError.textContent = signUpError.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+            } else {
+                const { error: insertError } = await db.from('users').insert({ id: data.user.id, email: data.user.email });
+                if (insertError) console.error("Error creating public user record:", insertError.message);
+                
+                document.getElementById('register-inputs').classList.add('hidden');
+                document.getElementById('register-success').classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('login-btn').addEventListener('click', async () => {
+            const loginBtn = document.getElementById('login-btn');
+            const originalBtnText = loginBtn.textContent;
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.disabled = true;
+
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            authError.textContent = '';
+            authError.className = 'text-red-500 text-center mt-4';
+            
+            const { error: signInError } = await db.auth.signInWithPassword({ email, password });
+            
+            if (signInError) {
+                authError.textContent = signInError.message;
+                authError.className = 'text-red-700 text-center mt-4 p-3 bg-red-100 border border-red-300 rounded-lg';
+                loginBtn.textContent = originalBtnText;
+                loginBtn.disabled = false;
+            }
+            // On success, onAuthStateChange will handle the UI update.
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+            clearAllState(); // Clear session storage immediately for a faster UI response
+            const { error: signOutError } = await db.auth.signOut();
+            if (signOutError) {
+                console.error('Error signing out:', signOutError);
+                showModal('Logout Error', 'Could not log you out. Please try again.');
+            }
+            // onAuthStateChange will also fire to confirm and finalize the logged-out state.
+        });
+
+        db.auth.onAuthStateChange(async (event, session) => {
+            const loginBtn = document.getElementById('login-btn');
+            const appLoader = document.getElementById('app-loader');
+            const appContent = document.getElementById('app-content');
+
+            try {
+                // Handle the logic for showing views based on session
+                if (session) { // User is or has become logged in
+                    // Only set user-specific data if it's not already set (prevents re-fetching on minor auth events)
+                    if (!userId) {
+                        userId = session.user.id;
+
+                        const { data: userData, error: profileError } = await db.from('users')
+                            .select('role')
+                            .eq('id', userId)
+                            .single();
+                        
+                        if (profileError && profileError.code !== 'PGRST116') {
+                            console.error("Error fetching user profile, logging out:", profileError);
+                            await db.auth.signOut();
+                            return; // This return is now safe because the finally block will still execute.
+                        }
+                        
+                        isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
+
+                        document.getElementById('logout-btn').classList.remove('hidden');
+                        document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
+                        document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
+                    }
+                    
+                    // If this is a login event, go to main menu. If it's a refresh, restore state.
+                    if (event === 'SIGNED_IN') {
+                        sessionStorage.removeItem('lastViewState'); 
+                        showView('mainMenu');
+                    } else if (event === 'INITIAL_SESSION') {
+                        if (!loadSessionState() && !loadLastViewState()) {
+                            showView('mainMenu');
+                        }
+                    }
+                    
+                    loginBtn.textContent = 'Login';
+                    loginBtn.disabled = false;
+
+                } else { // User is or has become logged out
+                    userId = null;
+                    isAdmin = false;
+                    clearAllState();
+
+                    document.getElementById('logout-btn').classList.add('hidden');
+                    document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
+                    document.getElementById('admin-dashboard-btn').classList.add('hidden');
+                    
+                    showView('auth');
+
+                    loginBtn.textContent = 'Login';
+                    loginBtn.disabled = false;
+                }
+            } finally {
+                // This is the crucial part: it will ALWAYS run after the try block for the INITIAL_SESSION event.
+                if (event === 'INITIAL_SESSION') {
+                    appLoader.classList.add('hidden');
+                    appContent.classList.remove('hidden');
+                }
+            }
+        });
+
+        setupEventListeners();
     </script>
 </body>
 </html>
