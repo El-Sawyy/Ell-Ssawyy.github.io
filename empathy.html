@@ -2098,13 +2098,12 @@
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
-            clearAllState(); // Clear session storage immediately for a faster UI response
             const { error: signOutError } = await db.auth.signOut();
             if (signOutError) {
                 console.error('Error signing out:', signOutError);
                 showModal('Logout Error', 'Could not log you out. Please try again.');
             }
-            // onAuthStateChange will also fire to confirm and finalize the logged-out state.
+            // onAuthStateChange will handle UI update.
         });
 
         db.auth.onAuthStateChange(async (event, session) => {
@@ -2112,8 +2111,11 @@
 
             if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
                 // This block runs on login and on page refresh if a session exists.
+                
+                // Only run the full setup if the user is changing or first time loading
+                if (userId === session.user.id && event !== 'SIGNED_IN') return;
                 userId = session.user.id;
-
+                
                 const { data: userData, error: profileError } = await db.from('users')
                     .select('role')
                     .eq('id', userId)
@@ -2135,8 +2137,8 @@
                     // This was a direct login action, clear any old state and go to the main menu.
                     sessionStorage.removeItem('lastViewState'); 
                     showView('mainMenu');
-                } else {
-                    // This was a page refresh, try to restore the last view.
+                } else { // It was 'INITIAL_SESSION', a page refresh
+                    // Try to restore the previous view. If none, go to main menu.
                     if (!loadSessionState() && !loadLastViewState()) {
                         showView('mainMenu');
                     }
@@ -2159,6 +2161,9 @@
 
                 loginBtn.textContent = 'Login';
                 loginBtn.disabled = false;
+            } else if (event === 'INITIAL_SESSION' && !session) {
+                // This block handles the case where the page loads and there is no session.
+                showView('auth');
             }
         });
 
@@ -2183,6 +2188,7 @@
             
             currentWeeklyChallenge = challenge;
             
+            // Check if the user has already completed this challenge
             let hasCompleted = false;
             if (userId) {
                 const { data: existingSession, error: sessionCheckError } = await db.from('sessions')
@@ -2428,4 +2434,10 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
 
