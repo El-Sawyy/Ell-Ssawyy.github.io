@@ -2094,6 +2094,7 @@
                 loginBtn.textContent = originalBtnText;
                 loginBtn.disabled = false;
             }
+            // On success, onAuthStateChange will handle the UI update.
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
@@ -2102,53 +2103,57 @@
                 console.error('Error signing out:', signOutError);
                 showModal('Logout Error', 'Could not log you out. Please try again.');
             }
+            // onAuthStateChange will handle UI update.
         });
 
         db.auth.onAuthStateChange(async (_event, session) => {
+            const loginBtn = document.getElementById('login-btn');
+
             if (session && session.user) {
-                const user = session.user;
-                userId = user.id;
+                // This check prevents re-running the setup on token refreshes if the user is already logged in.
+                if (userId === session.user.id) return;
+
+                // --- Start of Login/Refresh Setup ---
+                userId = session.user.id;
 
                 const { data: userData, error: profileError } = await db.from('users')
-                    .select('id, role')
-                    .eq('id', user.id)
+                    .select('role')
+                    .eq('id', userId)
                     .single();
 
-                if (profileError && profileError.code === 'PGRST116') {
-                    const { error: createProfileError } = await db.from('users').insert({ id: user.id, email: user.email, role: 'agent' });
-                    isAdmin = user.email === 'admin@tempo.fit';
-                    if (createProfileError) console.error("Failed to create user profile:", createProfileError);
-                } else if (profileError) {
-                    console.error("Failed to fetch user profile:", profileError);
-                    isAdmin = user.email === 'admin@tempo.fit';
-                } else {
-                    isAdmin = (userData && userData.role === 'admin') || user.email === 'admin@tempo.fit';
-                }
-
-                document.getElementById('logout-btn').classList.remove('hidden');
-                document.getElementById('header-subtitle').textContent = `Welcome, ${user.email}`;
-                if (isAdmin) {
-                    document.getElementById('admin-dashboard-btn').classList.remove('hidden');
-                } else {
-                    document.getElementById('admin-dashboard-btn').classList.add('hidden');
+                if (profileError && profileError.code !== 'PGRST116') {
+                    console.error("Error fetching user profile, logging out:", profileError);
+                    await db.auth.signOut();
+                    return;
                 }
                 
+                isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
+
+                document.getElementById('logout-btn').classList.remove('hidden');
+                document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
+                document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
+
                 if (!loadSessionState()) {
                     showView('mainMenu');
                 }
                 
-                const loginBtn = document.getElementById('login-btn');
                 loginBtn.textContent = 'Login';
                 loginBtn.disabled = false;
 
             } else {
+                // --- Start of Logout Logic ---
                 userId = null;
                 isAdmin = false;
                 clearAllState();
+
                 document.getElementById('logout-btn').classList.add('hidden');
                 document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
                 document.getElementById('admin-dashboard-btn').classList.add('hidden');
+                
                 showView('auth');
+
+                loginBtn.textContent = 'Login';
+                loginBtn.disabled = false;
             }
         });
 
@@ -2418,4 +2423,5 @@
     </script>
 </body>
 </html>
+
 
