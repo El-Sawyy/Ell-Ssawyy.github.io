@@ -2106,7 +2106,7 @@
             // onAuthStateChange will handle UI update.
         });
 
-        db.auth.onAuthStateChange(async (_event, session) => {
+        db.auth.onAuthStateChange(async (event, session) => {
             const loginBtn = document.getElementById('login-btn');
 
             if (session && session.user) {
@@ -2130,12 +2130,10 @@
                 document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
                 document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
                 
-                // If this is a fresh login (not a page refresh), clear any old view state and go to the main menu.
                 if (userJustLoggedIn) {
                     sessionStorage.removeItem('lastViewState'); 
                     showView('mainMenu');
                 } else {
-                    // This is a page refresh, try to restore the last view.
                     if (!loadSessionState() && !loadLastViewState()) {
                         showView('mainMenu');
                     }
@@ -2145,7 +2143,6 @@
                 loginBtn.disabled = false;
 
             } else {
-                // --- Start of Logout Logic ---
                 userId = null;
                 isAdmin = false;
                 clearAllState();
@@ -2427,5 +2424,4 @@
     </script>
 </body>
 </html>
-
 
