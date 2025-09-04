@@ -2098,19 +2098,20 @@
         });
 
         document.getElementById('logout-btn').addEventListener('click', async () => {
+            clearAllState(); // Clear session storage immediately for a faster UI response
             const { error: signOutError } = await db.auth.signOut();
             if (signOutError) {
                 console.error('Error signing out:', signOutError);
                 showModal('Logout Error', 'Could not log you out. Please try again.');
             }
-            // onAuthStateChange will handle UI update.
+            // onAuthStateChange will also fire to confirm and finalize the logged-out state.
         });
 
         db.auth.onAuthStateChange(async (event, session) => {
             const loginBtn = document.getElementById('login-btn');
 
-            if (session && session.user) {
-                const userJustLoggedIn = userId !== session.user.id;
+            if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
+                // This block runs on login and on page refresh if a session exists.
                 userId = session.user.id;
 
                 const { data: userData, error: profileError } = await db.from('users')
@@ -2130,10 +2131,12 @@
                 document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
                 document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
                 
-                if (userJustLoggedIn) {
+                if (event === 'SIGNED_IN') {
+                    // This was a direct login action, clear any old state and go to the main menu.
                     sessionStorage.removeItem('lastViewState'); 
                     showView('mainMenu');
                 } else {
+                    // This was a page refresh, try to restore the last view.
                     if (!loadSessionState() && !loadLastViewState()) {
                         showView('mainMenu');
                     }
@@ -2142,7 +2145,8 @@
                 loginBtn.textContent = 'Login';
                 loginBtn.disabled = false;
 
-            } else {
+            } else if (event === 'SIGNED_OUT') {
+                // This block runs only when the user is logged out.
                 userId = null;
                 isAdmin = false;
                 clearAllState();
