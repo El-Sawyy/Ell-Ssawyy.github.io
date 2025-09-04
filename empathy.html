@@ -2110,17 +2110,14 @@
             const loginBtn = document.getElementById('login-btn');
 
             if (session && session.user) {
-                // This check prevents re-running the setup on token refreshes if the user is already logged in.
-                if (userId === session.user.id) return;
-
-                // --- Start of Login/Refresh Setup ---
+                const userJustLoggedIn = userId !== session.user.id;
                 userId = session.user.id;
 
                 const { data: userData, error: profileError } = await db.from('users')
                     .select('role')
                     .eq('id', userId)
                     .single();
-
+                
                 if (profileError && profileError.code !== 'PGRST116') {
                     console.error("Error fetching user profile, logging out:", profileError);
                     await db.auth.signOut();
@@ -2132,9 +2129,16 @@
                 document.getElementById('logout-btn').classList.remove('hidden');
                 document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
                 document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-
-                if (!loadSessionState()) {
+                
+                // If this is a fresh login (not a page refresh), clear any old view state and go to the main menu.
+                if (userJustLoggedIn) {
+                    sessionStorage.removeItem('lastViewState'); 
                     showView('mainMenu');
+                } else {
+                    // This is a page refresh, try to restore the last view.
+                    if (!loadSessionState() && !loadLastViewState()) {
+                        showView('mainMenu');
+                    }
                 }
                 
                 loginBtn.textContent = 'Login';
