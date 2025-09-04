@@ -512,12 +512,12 @@
         let empathyScore = 50;
         let sessionInteractions = [];
         let currentWeeklyChallenge = null;
+        let initialAuthCheckCompleted = false;
 
         const views = {
             auth: document.getElementById('auth-view'),
             mainMenu: document.getElementById('main-menu'),
-            createScenario: document.getElementById('create-scenario-view'),
-            historyList: document.getElementById('history-list-view'),
+// ... existing code ... -->
             historyDetail: document.getElementById('history-detail-view'),
             simulator: document.getElementById('simulator'),
             completion: document.getElementById('completion-screen'),
@@ -2380,10 +2380,11 @@
             const appContent = document.getElementById('app-content');
 
             try {
-                // Handle the logic for showing views based on session
-                if (session) { // User is or has become logged in
-                    // Only set user-specific data if it's not already set (prevents re-fetching on minor auth events)
-                    if (!userId) {
+                if (session) { // User is logged in or just logged in
+                    const isNewLogin = !userId; // Check if this is the first time we're seeing a user
+
+                    if (isNewLogin) {
+                        // This block runs only on a fresh login or a page refresh with a session.
                         userId = session.user.id;
 
                         const { data: userData, error: profileError } = await db.from('users')
@@ -2394,7 +2395,7 @@
                         if (profileError && profileError.code !== 'PGRST116') {
                             console.error("Error fetching user profile, logging out:", profileError);
                             await db.auth.signOut();
-                            return; // This return is now safe because the finally block will still execute.
+                            return;
                         }
                         
                         isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
@@ -2402,22 +2403,25 @@
                         document.getElementById('logout-btn').classList.remove('hidden');
                         document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
                         document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-                    }
-                    
-                    // If this is a login event, go to main menu. If it's a refresh, restore state.
-                    if (event === 'SIGNED_IN') {
-                        sessionStorage.removeItem('lastViewState'); 
-                        showView('mainMenu');
-                    } else if (event === 'INITIAL_SESSION') {
-                        if (!loadSessionState() && !loadLastViewState()) {
+                        
+                        // Now, determine which view to show based on the event type
+                        if (event === 'INITIAL_SESSION') {
+                            // This was a page refresh with an existing session. Restore previous state.
+                            if (!loadSessionState() && !loadLastViewState()) {
+                                showView('mainMenu');
+                            }
+                        } else { // This implies event is SIGNED_IN for a new user
+                            // This was an explicit, fresh login. Clear any old state.
+                            clearAllState(); 
                             showView('mainMenu');
                         }
                     }
-                    
+                    // If it's NOT a new login (userId already exists), we do nothing. This ignores token refreshes.
+
                     loginBtn.textContent = 'Login';
                     loginBtn.disabled = false;
 
-                } else { // User is or has become logged out
+                } else { // User is logged out
                     userId = null;
                     isAdmin = false;
                     clearAllState();
@@ -2432,8 +2436,8 @@
                     loginBtn.disabled = false;
                 }
             } finally {
-                // This is the crucial part: it will ALWAYS run after the try block for the INITIAL_SESSION event.
-                if (event === 'INITIAL_SESSION') {
+                if (!initialAuthCheckCompleted) {
+                    initialAuthCheckCompleted = true;
                     appLoader.classList.add('hidden');
                     appContent.classList.remove('hidden');
                 }
