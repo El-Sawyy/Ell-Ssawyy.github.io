@@ -3,14 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customer Service Empathy Simulator for Tempo.fit</title>
+    <title>Customer Service Empathy Simulator for Kindly!</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Unique font for the brand name -->
+    <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet">
     <!-- Supabase Client Library -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
+        }
+        /* Style for the unique brand font */
+        .brand-font {
+            font-family: 'Pacifico', cursive;
+            /* Adding a subtle text shadow to make it pop */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
         }
         .card {
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
@@ -49,10 +57,17 @@
     <!-- Main App Content (hidden by default) -->
     <div id="app-content" class="hidden">
         <div class="container mx-auto p-4 sm:p-6 md:p-8 max-w-4xl">
-            <header class="text-center mb-8">
-                <h1 class="text-3xl sm:text-4xl font-bold text-gray-900">AI-Powered Empathy Simulator</h1>
-                <p id="header-subtitle" class="text-md text-gray-600 mt-2">Practice real-world Tempo.fit customer scenarios.</p>
-                <button id="logout-btn" class="hidden mt-2 text-sm text-red-600 hover:text-red-800 font-semibold">Logout</button>
+             <header class="text-center mb-8 flex flex-col items-center">
+                <h1 class="text-5xl sm:text-6xl font-bold brand-font bg-gradient-to-r from-blue-600 to-teal-500 bg-clip-text text-transparent py-2">Kindly!</h1>
+                <div class="mt-4">
+                    <div id="logged-out-header">
+                        <p id="header-subtitle" class="text-lg text-gray-600">Practice real-world <span class="bg-yellow-300 text-gray-800 font-semibold rounded-md px-2 py-1">Kindly!</span> customer scenarios.</p>
+                    </div>
+                    <div id="logged-in-header" class="hidden">
+                         <p id="welcome-message" class="text-md text-gray-500"></p>
+                         <button id="logout-btn" class="mt-1 text-sm text-red-600 hover:text-red-800 font-semibold">Logout</button>
+                    </div>
+                </div>
             </header>
 
             <!-- Auth View -->
@@ -84,13 +99,13 @@
             <div id="main-menu" class="hidden text-center">
                 <div id="user-dashboard" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                      <button data-action="weekly-challenge" class="card bg-yellow-500 text-white p-6 rounded-lg cursor-pointer text-left col-span-1 md:col-span-2">
-                        <h3 class="text-xl font-bold mb-2">🏆 Weekly Challenge Scenario</h3>
-                        <p>Compete with other agents for the top score on this week's featured scenario!</p>
-                    </button>
+                         <h3 class="text-xl font-bold mb-2">🏆 Weekly Challenge Scenario</h3>
+                         <p>Compete with other agents for the top score on this week's featured scenario!</p>
+                     </button>
                      <button data-action="assigned" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                        <h3 class="text-xl font-bold mb-2 text-gray-800">📝 My Assigned Scenarios</h3>
-                        <p class="text-gray-600">Practice scenarios assigned to you by an admin.</p>
-                    </button>
+                         <h3 class="text-xl font-bold mb-2 text-gray-800">📝 My Assigned Scenarios</h3>
+                         <p class="text-gray-600">Practice scenarios assigned to you by an admin.</p>
+                     </button>
                     <button data-action="practice" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
                         <h3 class="text-xl font-bold mb-2 text-gray-800">🚀 Practice Random Scenarios</h3>
                         <p class="text-gray-600">Jump into a random multi-step simulation.</p>
@@ -104,17 +119,17 @@
                         <p class="text-gray-600">Design a new custom scenario for your own practice.</p>
                     </button>
                      <button data-action="history" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
-                        <h3 class="text-xl font-bold mb-2 text-gray-800">📈 View My History</h3>
-                        <p class="text-gray-600">Review your past performance, feedback, and ideal responses.</p>
-                    </button>
+                         <h3 class="text-xl font-bold mb-2 text-gray-800">📈 View My History</h3>
+                         <p class="text-gray-600">Review your past performance, feedback, and ideal responses.</p>
+                     </button>
                     <button data-action="rephrase-tool" class="card bg-green-500 text-white p-6 rounded-lg cursor-pointer text-left">
                         <h3 class="text-xl font-bold mb-2">✍️ Help Me Rephrase</h3>
                         <p>Get AI-powered suggestions to make your response more empathetic and professional.</p>
                     </button>
                      <button data-action="email-crafter" class="card bg-orange-500 text-white p-6 rounded-lg cursor-pointer text-left">
-                        <h3 class="text-xl font-bold mb-2">✉️ AI Email Crafter</h3>
-                        <p>Craft the perfect customer response email based on the situation and desired resolution.</p>
-                    </button>
+                         <h3 class="text-xl font-bold mb-2">✉️ AI Email Crafter</h3>
+                         <p>Craft the perfect customer response email based on the situation and desired resolution.</p>
+                     </button>
                     <button data-action="saved-emails" class="card bg-teal-500 text-white p-6 rounded-lg cursor-pointer text-left">
                         <h3 class="text-xl font-bold mb-2">📚 My Saved Emails</h3>
                         <p>Access your personal collection of saved, highly effective email templates.</p>
@@ -125,8 +140,8 @@
                     </button>
                 </div>
                  <button id="admin-dashboard-btn" class="hidden mt-6 card bg-indigo-600 text-white p-4 rounded-lg w-full md:w-1-2 mx-auto">
-                    <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
-                </button>
+                     <h3 class="text-xl font-bold">👑 Admin Dashboard</h3>
+                 </button>
             </div>
 
             <!-- Rephrase Tool View -->
@@ -138,7 +153,7 @@
                 <div class="space-y-4">
                     <div>
                         <label for="rephrase-customer-statement" class="block text-sm font-medium text-gray-700">Customer's Statement</label>
-                        <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Tempo stopped working mid-workout and I'm really frustrated!"></textarea>
+                        <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Kindly! device stopped working mid-workout and I'm really frustrated!"></textarea>
                     </div>
                     <div>
                         <label for="rephrase-agent-draft" class="block text-sm font-medium text-gray-700">Your Draft Response</label>
@@ -207,12 +222,12 @@
 
                 <div id="crafted-email-container" class="hidden mt-6 text-left p-4 bg-gray-50 border rounded-lg">
                      <div class="flex justify-between items-center mb-2">
-                        <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
+                         <h3 class="text-lg font-bold text-gray-800">Generated Email Draft</h3>
                     </div>
                      <div class="bg-white p-2 border rounded">
-                         <p class="text-sm font-semibold text-gray-600">Subject:</p>
-                         <input id="crafted-email-subject" type="text" class="w-full p-1 border-0 focus:ring-0">
-                    </div>
+                          <p class="text-sm font-semibold text-gray-600">Subject:</p>
+                          <input id="crafted-email-subject" type="text" class="w-full p-1 border-0 focus:ring-0">
+                     </div>
                      <div class="bg-white p-2 border rounded mt-2">
                          <p class="text-sm font-semibold text-gray-600">Body:</p>
                         <textarea id="crafted-email-body" class="w-full p-1 border-0 focus:ring-0" rows="10"></textarea>
@@ -379,9 +394,9 @@
                         <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
                     </button>
                      <button data-action="admin-weekly-challenge" class="card bg-yellow-400 p-6 rounded-lg cursor-pointer text-left">
-                        <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Weekly Challenge</h3>
-                        <p class="text-gray-700">Set or create a new challenge for the current week.</p>
-                    </button>
+                         <h3 class="text-xl font-bold mb-2 text-gray-800">Manage Weekly Challenge</h3>
+                         <p class="text-gray-700">Set or create a new challenge for the current week.</p>
+                     </button>
                 </div>
             </div>
 
@@ -501,9 +516,9 @@
         let isAdmin = false;
 
         const defaultScenarios = [
-            { id: 'default-0', title: "Tempo Move Connection Issue", isDefault: true, description: "A customer is frustrated because their Tempo Move won't connect to their TV.", persona: "Customer: Mark, a new user who was excited to start his first class. He's now annoyed and feels like the product is too complicated.", dialogue_tree: [{ customer: "I've been trying for 30 minutes and my Tempo Move just won't show up on my TV! I'm about to miss my scheduled class. This is so frustrating." }, { customer: "I've tried restarting everything already. My iPhone is plugged into the Core, and the HDMI is in the TV. What else could it be?" }, { customer: "Okay, I checked and the TV is on the right HDMI input. It's working now! Thank you for walking me through that." }] },
-            { id: 'default-1', title: "30-Day Trial & Return Question", isDefault: true, description: "A customer is nearing the end of their 30-day trial and is considering a return.", persona: "Customer: Jessica, who likes the workouts but isn't sure if it's worth the price. She's anxious about getting stuck in a contract.", dialogue_tree: [{ customer: "Hi, my 30-day trial is ending soon. I like the Tempo, but I'm not sure I can commit. What's the process if I decide to return it? I'm worried about hidden fees." }, { customer: "So as long as I have the original box, there's no restocking fee? That's good to know. Can I pause my membership instead of canceling?" }, { customer: "A membership pause is a great option. I think I'll do that and decide in a month. Thanks for explaining everything so clearly." }] },
-            { id: 'default-2', title: "AI Form Feedback Complaint", isDefault: true, description: "A long-time user is upset because they feel the AI form feedback is inaccurate.", persona: "Customer: Alex, an experienced lifter who has been using Tempo for 6 months. They are starting to question the value of the AI technology.", dialogue_tree: [{ customer: "I have to say, I'm getting really disappointed with the form feedback. It keeps telling me my squat depth is wrong, but I know my form is solid. It's making me question the whole system." }, { customer: "I've already checked the lighting and made sure the area is clear. It feels like the AI just isn't as smart as it's supposed to be. Is there a way to recalibrate it?" }, { customer: "I didn't know you could submit a video for review. That's actually really helpful. I'll do that after my next workout. I appreciate you offering a real solution." }] }
+            { id: 'default-0', title: "Kindly! Move Connection Issue", isDefault: true, description: "A customer is frustrated because their Kindly! Move won't connect to their TV.", persona: "Customer: Mark, a new user who was excited to start his first class. He's now annoyed and feels like the product is too complicated.", dialogue_tree: [{ customer: "I've been trying for 30 minutes and my Kindly! Move just won't show up on my TV! I'm about to miss my scheduled class. This is so frustrating." }, { customer: "I've tried restarting everything already. My iPhone is plugged into the Core, and the HDMI is in the TV. What else could it be?" }, { customer: "Okay, I checked and the TV is on the right HDMI input. It's working now! Thank you for walking me through that." }] },
+            { id: 'default-1', title: "30-Day Trial & Return Question", isDefault: true, description: "A customer is nearing the end of their 30-day trial and is considering a return.", persona: "Customer: Jessica, who likes the workouts but isn't sure if it's worth the price. She's anxious about getting stuck in a contract.", dialogue_tree: [{ customer: "Hi, my 30-day trial is ending soon. I like Kindly!, but I'm not sure I can commit. What's the process if I decide to return it? I'm worried about hidden fees." }, { customer: "So as long as I have the original box, there's no restocking fee? That's good to know. Can I pause my membership instead of canceling?" }, { customer: "A membership pause is a great option. I think I'll do that and decide in a month. Thanks for explaining everything so clearly." }] },
+            { id: 'default-2', title: "AI Form Feedback Complaint", isDefault: true, description: "A long-time user is upset because they feel the AI form feedback is inaccurate.", persona: "Customer: Alex, an experienced lifter who has been using Kindly! for 6 months. They are starting to question the value of the AI technology.", dialogue_tree: [{ customer: "I have to say, I'm getting really disappointed with the form feedback. It keeps telling me my squat depth is wrong, but I know my form is solid. It's making me question the whole system." }, { customer: "I've already checked the lighting and made sure the area is clear. It feels like the AI just isn't as smart as it's supposed to be. Is there a way to recalibrate it?" }, { customer: "I didn't know you could submit a video for review. That's actually really helpful. I'll do that after my next workout. I appreciate you offering a real solution." }] }
         ];
         
         let currentScenario = null;
@@ -588,6 +603,8 @@
                 };
             }
             
+            // NOTE: This key is for demonstration purposes. In a real application,
+            // this should be handled securely on a server.
             const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
 
@@ -608,7 +625,14 @@
 
                 if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
                     const rawJson = result.candidates[0].content.parts[0].text;
-                    return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
+                    // Robust JSON parsing
+                    try {
+                        return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
+                    } catch (parseError) {
+                        console.error("Failed to parse JSON from AI response:", parseError);
+                        console.error("Raw AI response:", rawJson);
+                        return null;
+                    }
                 } else {
                      console.error("Invalid API response structure:", result);
                      if (result.promptFeedback) {
@@ -763,20 +787,20 @@
              const state = { currentView: viewName, data: {} };
              switch (viewName) {
                  case 'empathyAssistant':
-                      state.data.situation = document.getElementById('situation-description').value;
-                      break;
+                       state.data.situation = document.getElementById('situation-description').value;
+                       break;
                  case 'emailCrafter':
-                      state.data.customerEmail = document.getElementById('customer-email-input').value;
-                      state.data.resolution = document.getElementById('resolution-input').value;
-                      state.data.alternatives = document.getElementById('alternatives-input').value;
-                      break;
+                       state.data.customerEmail = document.getElementById('customer-email-input').value;
+                       state.data.resolution = document.getElementById('resolution-input').value;
+                       state.data.alternatives = document.getElementById('alternatives-input').value;
+                       break;
                  case 'createScenario':
-                      state.data.topic = document.getElementById('scenario-topic').value;
-                      break;
+                       state.data.topic = document.getElementById('scenario-topic').value;
+                       break;
                  case 'rephraseTool':
-                      state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
-                      state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
-                      break;
+                       state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
+                       state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
+                       break;
              }
              sessionStorage.setItem('lastViewState', JSON.stringify(state));
         }
@@ -922,9 +946,9 @@
             const responseText = userResponse.value.trim();
             if (!responseText) return;
             document.getElementById('response-area').classList.add('hidden');
-            const feedbackPrompt = `You are an expert customer service training coach for Tempo.fit. Evaluate a user's response. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}" | **User's Response:** "${responseText}". Provide your evaluation as a JSON object: { "score": <integer 0-100>, "feedback": "<concise, constructive feedback>" }`;
+            const feedbackPrompt = `You are an expert customer service training coach for Kindly!. Evaluate a user's response. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}" | **User's Response:** "${responseText}". Provide your evaluation as a JSON object: { "score": <integer 0-100>, "feedback": "<concise, constructive feedback>" }`;
             const feedbackSchema = { type: "OBJECT", properties: { "score": { "type": "INTEGER" }, "feedback": { "type": "STRING" } }, required: ["score", "feedback"] };
-            const bestAnswerPrompt = `You are a customer service expert for Tempo.fit. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
+            const bestAnswerPrompt = `You are a customer service expert for Kindly!. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
             const bestAnswerSchema = { type: "OBJECT", properties: { "ideal_responses": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["ideal_responses"] };
             const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(feedbackPrompt, feedbackSchema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
             handleAIResponse(responseText, feedbackResult, bestAnswerResult);
@@ -1081,11 +1105,11 @@
                     `;
                 } else {
                      coachFeedbackHTML = `
-                        <div class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <strong class="text-yellow-800">Coach Feedback:</strong>
-                            <p class="text-yellow-700 italic">${coachFeedback || 'No feedback has been added by a coach yet.'}</p>
-                        </div>
-                    `;
+                         <div class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                             <strong class="text-yellow-800">Coach Feedback:</strong>
+                             <p class="text-yellow-700 italic">${coachFeedback || 'No feedback has been added by a coach yet.'}</p>
+                         </div>
+                     `;
                 }
 
                 stepDiv.innerHTML = `
@@ -1180,16 +1204,16 @@
                 }, 3000);
                 return;
             }
-            const prompt = `You are a customer service expert for Tempo.fit. The customer said: "${currentScenario.dialogue_tree[currentStep].customer}". The agent has drafted this response: "${responseText}". Provide three distinct, alternative empathetic phrases or opening lines the agent could use. Return a JSON object: { "suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"] }`;
+            const prompt = `You are a customer service expert for Kindly!. The customer said: "${currentScenario.dialogue_tree[currentStep].customer}". The agent has drafted this response: "${responseText}". Provide three distinct, alternative empathetic phrases or opening lines the agent could use. Return a JSON object: { "suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"] }`;
             const schema = { type: "OBJECT", properties: { "suggestions": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["suggestions"] };
             const result = await getFromAI(prompt, schema);
             if (result && result.suggestions) {
                  suggestionsContainer.innerHTML = `<div class="p-2 bg-blue-50 border border-blue-200 rounded-md text-sm">
-                    <strong>Suggestions:</strong>
-                    <ul class="list-disc list-inside mt-1">
-                        ${result.suggestions.map(s => `<li>${s}</li>`).join('')}
-                    </ul>
-                </div>`;
+                     <strong>Suggestions:</strong>
+                     <ul class="list-disc list-inside mt-1">
+                         ${result.suggestions.map(s => `<li>${s}</li>`).join('')}
+                     </ul>
+                 </div>`;
             } else {
                 suggestionsContainer.innerHTML = `<p class="text-sm text-red-500">Could not get suggestions.</p>`;
             }
@@ -1201,7 +1225,7 @@
             summaryContainer.innerHTML = '<div class="loader mx-auto"></div>';
             summaryContainer.classList.remove('hidden');
             const interactionsText = sessionData.interactions.map(i => `Customer: "${i.customerSays}"\nYour Response: "${i.userResponse}" (Score: ${i.aiScore})\n`).join('\n');
-            const prompt = `As a customer service coach, review this entire conversation from a Tempo.fit support simulation. Scenario: ${sessionData.scenario_title}. Conversation History: ${interactionsText}. Provide a concise summary of the agent's performance and one actionable tip for improvement. Return a JSON object: { "summary": "<string>", "tip": "<string>" }`;
+            const prompt = `As a customer service coach, review this entire conversation from a Kindly! support simulation. Scenario: ${sessionData.scenario_title}. Conversation History: ${interactionsText}. Provide a concise summary of the agent's performance and one actionable tip for improvement. Return a JSON object: { "summary": "<string>", "tip": "<string>" }`;
             const schema = { type: "OBJECT", properties: { "summary": { "type": "STRING" }, "tip": { "type": "STRING" } }, required: ["summary", "tip"] };
             const result = await getFromAI(prompt, schema);
             summaryContainer.innerHTML = result ? `<p><strong>Summary:</strong> ${result.summary}</p><p><strong>Actionable Tip:</strong> ${result.tip}</p>` : `<p class="text-red-500">Could not generate a summary.</p>`;
@@ -1221,7 +1245,7 @@
             loading.classList.remove('hidden');
             suggestionsContainer.classList.add('hidden');
 
-            const prompt = `You are an expert customer service writing coach for Tempo.fit. An agent needs help rephrasing their response.
+            const prompt = `You are an expert customer service writing coach for Kindly!. An agent needs help rephrasing their response.
             Customer's statement: "${customerStatement}"
             Agent's current draft: "${agentDraft}"
             Provide three distinct, improved versions of the agent's response. The new versions should be more empathetic and professional. Focus on improving the phrasing, not adding new information. Return a JSON object: { "rephrased_suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"] }`;
@@ -1239,17 +1263,17 @@
                       <ul class="mt-2 space-y-2">
                           ${result.rephrased_suggestions.map(s => `<li class="p-3 rounded-md bg-white hover:bg-green-100 flex justify-between items-center"><span>${s}</span><button class="copy-rephrase-btn text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-1 px-2 rounded">Copy</button></li>`).join('')}
                       </ul>
-                </div>`;
-                
+                 </div>`;
+                 
                  suggestionsContainer.querySelectorAll('.copy-rephrase-btn').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const textToCopy = e.target.previousElementSibling.textContent;
-                        navigator.clipboard.writeText(textToCopy).then(() => {
-                            e.target.textContent = 'Copied!';
-                            setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
-                        });
-                    });
-                });
+                     btn.addEventListener('click', (e) => {
+                         const textToCopy = e.target.previousElementSibling.textContent;
+                         navigator.clipboard.writeText(textToCopy).then(() => {
+                             e.target.textContent = 'Copied!';
+                             setTimeout(() => { e.target.textContent = 'Copy'; }, 2000);
+                         });
+                     });
+                 });
 
             } else {
                 suggestionsContainer.innerHTML = `<p class="text-sm text-red-500 p-2">Could not get rephrasing suggestions at this time.</p>`;
@@ -1266,7 +1290,7 @@
             }
             responseContainer.classList.add('hidden');
 
-            const prompt = `You are an expert empathy coach for customer service agents at Tempo.fit. An agent is facing a tough situation: "${situationDescription}".
+            const prompt = `You are an expert empathy coach for customer service agents at Kindly!. An agent is facing a tough situation: "${situationDescription}".
             Your task is to provide a detailed, intelligence-powered empathy report to help the agent handle this with maximum emotional intelligence. Do not provide solutions.
             Analyze the situation and return a JSON object with the following structure:
             1.  "key_emotion": A single word or short phrase identifying the customer's core emotion (e.g., "Frustration", "Feeling unheard", "Disappointment").
@@ -1324,7 +1348,7 @@
             document.getElementById('customer-dialogue').innerHTML = '<div class="loader mx-auto"></div>';
             document.getElementById('response-area').classList.add('hidden');
 
-            const prompt = `You are a Tempo.fit customer with a problem. In one sentence, state your problem clearly and with some emotion (e.g., frustration, confusion, excitement). Also, provide a brief one-sentence persona for yourself. Return a JSON object with keys "persona" and "customer_problem".`;
+            const prompt = `You are a Kindly! customer with a problem. In one sentence, state your problem clearly and with some emotion (e.g., frustration, confusion, excitement). Also, provide a brief one-sentence persona for yourself. Return a JSON object with keys "persona" and "customer_problem".`;
             const schema = { type: "OBJECT", properties: { "persona": { "type": "STRING" }, "customer_problem": { "type": "STRING" } }, required: ["persona", "customer_problem"] };
             const result = await getFromAI(prompt, schema);
 
@@ -1420,9 +1444,9 @@
                 item.dataset.userId = user.id;
 
                  item.innerHTML = `
-                    <p class="user-email font-semibold">${user.email || user.id}</p>
-                    <button data-uid="${user.id}" class="assign-scenario-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md">Assign Scenario</button>
-                `;
+                     <p class="user-email font-semibold">${user.email || user.id}</p>
+                     <button data-uid="${user.id}" class="assign-scenario-btn text-sm bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md">Assign Scenario</button>
+                 `;
                 container.appendChild(item);
             });
             container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
@@ -1596,7 +1620,7 @@
             
             outputContainer.classList.add('hidden');
 
-            const prompt = `You are a professional and empathetic customer support agent for Tempo.fit named Alex. Craft a follow-up email based on the following information.
+            const prompt = `You are a professional and empathetic customer support agent for Kindly! named Alex. Craft a follow-up email based on the following information.
 
             **Original Customer Email (for context on their tone and problem):**
             "${customerEmail}"
@@ -1610,9 +1634,9 @@
             **Instructions for the email body:**
             1.  **Structure:** Organize the email into clear paragraphs with proper spacing. It should not be one block of text.
             2.  **Tone:** Analyze the customer's email to determine their tone. If they are frustrated, be extra empathetic. If they are asking a simple question, be welcoming and clear.
-            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is Alex."
+            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Kindly! Support. My name is Alex."
             4.  **Content:** Address their issue directly, provide the resolution, and include any alternatives clearly.
-            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Tempo Support Team".
+            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Kindly! Support Team".
 
             Return the email as a JSON object with "subject" and "body" keys. The body should be plain text, well-formatted with line breaks for paragraphs.`;
 
@@ -1652,7 +1676,7 @@
 
             feedbackContainer.classList.add('hidden'); // Hide feedback form while processing
 
-            const prompt = `You are a professional and empathetic customer support agent for Tempo.fit named Alex. You are revising an email draft based on feedback.
+            const prompt = `You are a professional and empathetic customer support agent for Kindly! named Alex. You are revising an email draft based on feedback.
 
             **Original Customer Email (for context):**
             "${customerEmail}"
@@ -1675,9 +1699,9 @@
             **Instructions for the email body:**
             1.  **Structure:** Organize the email into clear paragraphs with proper spacing. It must not be one block of text.
             2.  **Tone:** Analyze the customer's original email and your previous draft to set the correct tone. Apply the user's feedback (e.g., "be more apologetic").
-            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is Alex."
+            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Kindly! Support. My name is Alex."
             4.  **Content:** Address their issue directly, provide the resolution, and include any alternatives clearly.
-            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Tempo Support Team".
+            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Kindly! Support Team".
 
             Return the revised email as a JSON object with "subject" and "body" keys. The body must be plain text, well-formatted with line breaks for paragraphs.`;
             
@@ -1888,7 +1912,7 @@
                 `Customer: "${interaction.customerSays}"\nAgent: "${interaction.userResponse}"`
             ).join('\n\n');
 
-            const prompt = `You are a professional and empathetic customer support agent for Tempo.fit named Alex. Based on the following scenario and conversation, write a concise follow-up email to the customer. The email should confirm the resolution and reinforce a positive relationship.
+            const prompt = `You are a professional and empathetic customer support agent for Kindly! named Alex. Based on the following scenario and conversation, write a concise follow-up email to the customer. The email should confirm the resolution and reinforce a positive relationship.
             
             **Scenario Title:** ${currentScenario.title}
             **Customer Persona (for context on their tone and name):** ${currentScenario.persona}
@@ -1899,9 +1923,9 @@
             **Instructions for the email body:**
             1.  **Structure:** Organize the email into clear, well-spaced paragraphs.
             2.  **Tone:** The conversation ended positively, so the tone should be friendly and reassuring.
-            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from the persona, e.g., "Hi Mark,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is Alex."
+            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from the persona, e.g., "Hi Mark,"), followed by a new paragraph: "Thank you for reaching out to Kindly! Support. My name is Alex."
             4.  **Content:** Briefly recap the positive resolution and express happiness that the issue is solved.
-            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Tempo Support Team".
+            5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Kindly! Support Team".
             
             Return the email as a JSON object with "subject" and "body" keys. The body should be plain text, well-formatted with line breaks for paragraphs.`;
             
@@ -2126,7 +2150,8 @@
                 button.disabled = false;
                 return;
             }
-
+            
+            // Robust date calculation
             const today = new Date();
             const year = today.getFullYear();
             const firstDayOfYear = new Date(year, 0, 1);
@@ -2135,8 +2160,9 @@
             const weekId = `${year}-${String(weekNumber).padStart(2, '0')}`;
             
             const dayOfWeek = today.getDay();
-            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); 
-            const startDate = new Date(today.setDate(diff));
+            const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+            const startDate = new Date(today); // Create a copy to avoid mutation
+            startDate.setDate(diff);
             startDate.setHours(0, 0, 0, 0);
 
             const endDate = new Date(startDate);
@@ -2179,7 +2205,7 @@
             container.innerHTML = '<div class="loader mx-auto"></div>';
 
             const [usersResponse, sessionsResponse] = await Promise.all([
-                db.from('users').select('id, email').neq('email', 'admin@tempo.fit'),
+                db.from('users').select('id, email').neq('email', 'admin@kindly.app'),
                 db.from('sessions').select('user_id, final_empathy_score').eq('weekly_challenge_id', challengeId)
             ]);
 
@@ -2280,7 +2306,7 @@
             document.getElementById('generate-scenario-btn').addEventListener('click', async () => {
                 const topic = document.getElementById('scenario-topic').value.trim();
                 if (!topic) return;
-                const prompt = `Generate a new customer service empathy training scenario for Tempo.fit based on the topic: "${topic}". The output must be a valid JSON object with: "title", "description", "persona", and a 3-step "dialogue_tree" where the last step is a happy resolution.`;
+                const prompt = `Generate a new customer service empathy training scenario for Kindly! based on the topic: "${topic}". The output must be a valid JSON object with: "title", "description", "persona", and a 3-step "dialogue_tree" where the last step is a happy resolution.`;
                 const schema = { type: "OBJECT", properties: { "title": { "type": "STRING" }, "description": { "type": "STRING" }, "persona": { "type": "STRING" }, "dialogue_tree": { "type": "ARRAY", "items": { "type": "OBJECT", "properties": { "customer": { "type": "STRING" } } } } }, required: ["title", "description", "persona", "dialogue_tree"] };
                 const newScenario = await getFromAI(prompt, schema);
                 const generateBtn = document.getElementById('generate-scenario-btn');
@@ -2399,10 +2425,12 @@
                             return;
                         }
                         
-                        isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
+                        isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
 
-                        document.getElementById('logout-btn').classList.remove('hidden');
-                        document.getElementById('header-subtitle').textContent = `Welcome, ${session.user.email}`;
+                        document.getElementById('logged-out-header').classList.add('hidden');
+                        const loggedInHeader = document.getElementById('logged-in-header');
+                        loggedInHeader.classList.remove('hidden');
+                        loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
                         document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
                         
                         // Now, determine which view to show based on the event type
@@ -2427,8 +2455,8 @@
                     isAdmin = false;
                     clearAllState();
 
-                    document.getElementById('logout-btn').classList.add('hidden');
-                    document.getElementById('header-subtitle').textContent = "Practice real-world Tempo.fit customer scenarios.";
+                    document.getElementById('logged-in-header').classList.add('hidden');
+                    document.getElementById('logged-out-header').classList.remove('hidden');
                     document.getElementById('admin-dashboard-btn').classList.add('hidden');
                     
                     showView('auth');
