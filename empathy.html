@@ -852,16 +852,25 @@
             if (savedStateJSON) {
                 try {
                     const savedState = JSON.parse(savedStateJSON);
+                    // **** START FIX ****
+                    // Add validation to ensure the loaded state is usable
+                    if (!savedState || !savedState.currentScenario || !savedState.currentScenario.dialogue_tree) {
+                        console.error("Incomplete session state found in sessionStorage.", savedState);
+                        clearSessionState();
+                        return false;
+                    }
+                    // **** END FIX ****
+
                     currentScenario = savedState.currentScenario;
                     currentStep = savedState.currentStep;
                     empathyScore = savedState.empathyScore;
-                    sessionInteractions = savedState.sessionInteractions;
+                    sessionInteractions = savedState.sessionInteractions || []; // Ensure interactions is an array
                     showView('simulator');
                     loadStep();
                     document.getElementById('user-response').value = savedState.responseText || '';
                     return true;
                 } catch (e) {
-                    console.error("Failed to parse saved session state:", e);
+                    console.error("Failed to parse or process saved session state:", e);
                     clearSessionState();
                     return false;
                 }
