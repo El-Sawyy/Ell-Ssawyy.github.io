@@ -1357,7 +1357,7 @@
             document.getElementById('customer-dialogue').innerHTML = '<div class="loader mx-auto"></div>';
             document.getElementById('response-area').classList.add('hidden');
 
-            const prompt = `You are a Tempo customer with a problem. In one sentence, state your problem clearly and with some emotion (e.g., frustration, confusion, excitement). Also, provide a brief one-sentence persona for yourself. Return a JSON object with keys "persona" and "customer_problem".`;
+            const prompt = `You are a Tempo.fit customer with a problem related to the Tempo home gym system (like the Tempo Studio or Tempo Move). In one sentence, state your specific problem clearly and with some emotion (e.g., frustration with rep counting, confusion about a feature, excitement for a new class). Also, provide a brief one-sentence persona for yourself. Return a JSON object with keys "persona" and "customer_problem".`;
             const schema = { type: "OBJECT", properties: { "persona": { "type": "STRING" }, "customer_problem": { "type": "STRING" } }, required: ["persona", "customer_problem"] };
             const result = await getFromAI(prompt, schema);
 
@@ -1643,7 +1643,7 @@
             **Instructions for the email body:**
             1.  **Structure:** Organize the email into clear paragraphs with proper spacing. It should not be one block of text.
             2.  **Tone:** Analyze the customer's email to determine their tone. If they are frustrated, be extra empathetic. If they are asking a simple question, be welcoming and clear.
-            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is ."
+            3.  **Standard Opening:** Start the email with "Hi [Customer Name]," (extract their name from their email if possible, otherwise use "Hi there,"), followed by a new paragraph: "Thank you for reaching out to Tempo Support. My name is Alex."
             4.  **Content:** Address their issue directly, provide the resolution, and include any alternatives clearly.
             5.  **Standard Closing:** End the email with the following lines, each on a new line: "Please let us know if you have any further questions; we would be happy to assist you.", "Thank you for contacting us!", "Tempo Support Team".
 
@@ -2499,4 +2499,5 @@
     </script>
 </body>
 </html>
+
 
