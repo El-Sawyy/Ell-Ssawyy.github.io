@@ -2410,80 +2410,89 @@
             // onAuthStateChange will also fire to confirm and finalize the logged-out state.
         });
 
-        // **** START FIX ****
-        // This function handles all authentication state changes, both on initial load and during the session.
-        async function handleAuthStateChange(event, session) {
-            const loginBtn = document.getElementById('login-btn');
-            const appLoader = document.getElementById('app-loader');
-            const appContent = document.getElementById('app-content');
+        // **** START FIX: Re-architected Authentication Flow ****
 
-            try {
-                // This condition covers valid sessions (user is logged in).
-                if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
-                    userId = session.user.id;
+        // This function sets up the UI for a logged-in user.
+        async function setupLoggedInState(session) {
+            userId = session.user.id;
 
-                    const { data: userData, error: profileError } = await db.from('users')
-                        .select('role')
-                        .eq('id', userId)
-                        .single();
-                    
-                    if (profileError && profileError.code !== 'PGRST116') {
-                        console.error("Error fetching user profile, logging out:", profileError);
-                        await db.auth.signOut();
-                        return;
-                    }
-                    
-                    isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
+            const { data: userData, error: profileError } = await db.from('users')
+                .select('role')
+                .eq('id', userId)
+                .single();
 
-                    document.getElementById('logged-out-header').classList.add('hidden');
-                    const loggedInHeader = document.getElementById('logged-in-header');
-                    loggedInHeader.classList.remove('hidden');
-                    loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
-                    document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-                    
-                    // On initial load, try to restore the last view. Otherwise, go to main menu.
-                    if (event === 'INITIAL_SESSION') {
-                        if (!loadSessionState() && !loadLastViewState()) {
-                            showView('mainMenu');
-                        }
-                    } else { // On a fresh SIGNED_IN event, always clear old state.
-                        clearAllState(); 
-                        showView('mainMenu');
-                    }
-                // This condition covers all logged-out states.
-                } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
-                    userId = null;
-                    isAdmin = false;
-                    clearAllState();
+            if (profileError && profileError.code !== 'PGRST116') {
+                console.error("Error fetching user profile, forcing logout:", profileError);
+                await db.auth.signOut();
+                return; // Let onAuthStateChange handle the UI switch to logged-out
+            }
 
-                    document.getElementById('logged-in-header').classList.add('hidden');
-                    document.getElementById('logged-out-header').classList.remove('hidden');
-                    document.getElementById('admin-dashboard-btn').classList.add('hidden');
-                    
-                    showView('auth');
+            isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
+
+            document.getElementById('logged-out-header').classList.add('hidden');
+            const loggedInHeader = document.getElementById('logged-in-header');
+            loggedInHeader.classList.remove('hidden');
+            loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
+            document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
+            
+            // On initial load, try to restore the last view. Otherwise, go to main menu.
+            if (!authReady) { // Only check for session state on the very first load
+                if (!loadSessionState() && !loadLastViewState()) {
+                    showView('mainMenu');
                 }
-            } catch(e) {
-                console.error("A critical error occurred in the auth handler:", e);
-                // As a fallback, always force the app to a logged-out state on error.
-                clearAllState();
-                showView('auth');
-            } finally {
-                // This ensures the loader is always hidden after the first auth event.
-                if (!authReady) {
-                    authReady = true;
-                    appLoader.classList.add('hidden');
-                    appContent.classList.remove('hidden');
-                }
-                if (loginBtn) {
-                    loginBtn.textContent = 'Login';
-                    loginBtn.disabled = false;
-                }
+            } else { // For subsequent logins (not page refresh), always clear state.
+                 clearAllState();
+                 showView('mainMenu');
             }
         }
 
-        // Initialize the app by setting up the auth listener.
-        // The first event fired will be INITIAL_SESSION, which handles the page load case correctly.
-        db.auth.onAuthStateChange(handleAuthStateChange);
+        // This function sets up the UI for a logged-out user.
+        function setupLoggedOutState() {
+            userId = null;
+            isAdmin = false;
+            clearAllState();
+
+            document.getElementById('logged-in-header').classList.add('hidden');
+            document.getElementById('logged-out-header').classList.remove('hidden');
+            document.getElementById('admin-dashboard-btn').classList.add('hidden');
+            
+            showView('auth');
+        }
+
+        // The main initialization function for the entire application.
+        async function initializeApp() {
+            // First, set up a listener for any subsequent auth changes (like manual login/logout).
+            db.auth.onAuthStateChange((event, session) => {
+                // We only care about SIGNED_IN and SIGNED_OUT events here, 
+                // as the initial state is handled below explicitly.
+                if (event === 'SIGNED_IN') {
+                    setupLoggedInState(session);
+                } else if (event === 'SIGNED_OUT') {
+                    setupLoggedOutState();
+                }
+            });
+
+            // Now, explicitly get the current session to handle the initial page load.
+            // This is the key fix that prevents the race condition.
+            const { data: { session }, error } = await db.auth.getSession();
+
+            if (error) {
+                console.error("Error getting session on startup:", error.message);
+                setupLoggedOutState();
+            } else if (session) {
+                await setupLoggedInState(session);
+            } else {
+                setupLoggedOutState();
+            }
+            
+            // Finally, hide the main loader and show the app content.
+            document.getElementById('app-loader').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            authReady = true;
+        }
+
+        // Start the application.
+        initializeApp();
         // **** END FIX ****
 
         setupEventListeners();
