@@ -2410,7 +2410,9 @@
             // onAuthStateChange will also fire to confirm and finalize the logged-out state.
         });
 
-        db.auth.onAuthStateChange(async (event, session) => {
+        // **** START FIX ****
+        // This function handles all authentication state changes, both on initial load and during the session.
+        async function handleAuthStateChange(event, session) {
             const loginBtn = document.getElementById('login-btn');
             const appLoader = document.getElementById('app-loader');
             const appContent = document.getElementById('app-content');
@@ -2420,7 +2422,6 @@
                     const isNewLogin = !userId; // Check if this is the first time we're seeing a user
 
                     if (isNewLogin) {
-                        // This block runs only on a fresh login or a page refresh with a session.
                         userId = session.user.id;
 
                         const { data: userData, error: profileError } = await db.from('users')
@@ -2431,7 +2432,7 @@
                         if (profileError && profileError.code !== 'PGRST116') {
                             console.error("Error fetching user profile, logging out:", profileError);
                             await db.auth.signOut();
-                            return;
+                            return; // Let the subsequent SIGNED_OUT event handle the UI
                         }
                         
                         isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
@@ -2442,22 +2443,20 @@
                         loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
                         document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
                         
-                        // Now, determine which view to show based on the event type
                         if (event === 'INITIAL_SESSION') {
-                            // This was a page refresh with an existing session. Restore previous state.
                             if (!loadSessionState() && !loadLastViewState()) {
                                 showView('mainMenu');
                             }
-                        } else { // This implies event is SIGNED_IN for a new user
-                            // This was an explicit, fresh login. Clear any old state.
+                        } else {
                             clearAllState(); 
                             showView('mainMenu');
                         }
                     }
-                    // If it's NOT a new login (userId already exists), we do nothing. This ignores token refreshes.
 
-                    loginBtn.textContent = 'Login';
-                    loginBtn.disabled = false;
+                    if(loginBtn) {
+                        loginBtn.textContent = 'Login';
+                        loginBtn.disabled = false;
+                    }
 
                 } else { // User is logged out
                     userId = null;
@@ -2470,8 +2469,10 @@
                     
                     showView('auth');
 
-                    loginBtn.textContent = 'Login';
-                    loginBtn.disabled = false;
+                    if(loginBtn) {
+                        loginBtn.textContent = 'Login';
+                        loginBtn.disabled = false;
+                    }
                 }
             } finally {
                 if (!authReady) {
@@ -2480,7 +2481,27 @@
                     appContent.classList.remove('hidden');
                 }
             }
-        });
+        }
+
+        // Main app initialization function.
+        async function initializeApp() {
+            // This listener will handle dynamic changes AFTER initial load (e.g., login, logout).
+            db.auth.onAuthStateChange(handleAuthStateChange);
+
+            // Actively check the session on startup to prevent getting stuck.
+            const { data: { session }, error } = await db.auth.getSession();
+
+            if (error) {
+                console.error("Error during initial session fetch:", error);
+            }
+            
+            // `session` will be null if the refresh token was invalid.
+            // We call the handler directly to ensure the UI updates immediately.
+            handleAuthStateChange('INITIAL_SESSION', session);
+        }
+
+        initializeApp();
+        // **** END FIX ****
 
         setupEventListeners();
     </script>
