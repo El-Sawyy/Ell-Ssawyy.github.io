@@ -2418,40 +2418,47 @@
             const appContent = document.getElementById('app-content');
 
             try {
-                // This condition covers valid sessions (user is logged in).
-                if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
-                    userId = session.user.id;
+                if (session && session.user) { // User is logged in or just logged in
+                    const isNewLogin = !userId; // Check if this is the first time we're seeing a user
 
-                    const { data: userData, error: profileError } = await db.from('users')
-                        .select('role')
-                        .eq('id', userId)
-                        .single();
-                    
-                    if (profileError && profileError.code !== 'PGRST116') {
-                        console.error("Error fetching user profile, logging out:", profileError);
-                        await db.auth.signOut();
-                        return;
-                    }
-                    
-                    isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
+                    if (isNewLogin) {
+                        userId = session.user.id;
 
-                    document.getElementById('logged-out-header').classList.add('hidden');
-                    const loggedInHeader = document.getElementById('logged-in-header');
-                    loggedInHeader.classList.remove('hidden');
-                    loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
-                    document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
-                    
-                    // On initial load, try to restore the last view. Otherwise, go to main menu.
-                    if (event === 'INITIAL_SESSION') {
-                        if (!loadSessionState() && !loadLastViewState()) {
+                        const { data: userData, error: profileError } = await db.from('users')
+                            .select('role')
+                            .eq('id', userId)
+                            .single();
+                        
+                        if (profileError && profileError.code !== 'PGRST116') {
+                            console.error("Error fetching user profile, logging out:", profileError);
+                            await db.auth.signOut();
+                            return; // Let the subsequent SIGNED_OUT event handle the UI
+                        }
+                        
+                        isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
+
+                        document.getElementById('logged-out-header').classList.add('hidden');
+                        const loggedInHeader = document.getElementById('logged-in-header');
+                        loggedInHeader.classList.remove('hidden');
+                        loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
+                        document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
+                        
+                        if (event === 'INITIAL_SESSION') {
+                            if (!loadSessionState() && !loadLastViewState()) {
+                                showView('mainMenu');
+                            }
+                        } else {
+                            clearAllState(); 
                             showView('mainMenu');
                         }
-                    } else { // On a fresh SIGNED_IN event, always clear old state.
-                        clearAllState(); 
-                        showView('mainMenu');
                     }
-                // This condition covers all logged-out states.
-                } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
+
+                    if(loginBtn) {
+                        loginBtn.textContent = 'Login';
+                        loginBtn.disabled = false;
+                    }
+
+                } else { // User is logged out
                     userId = null;
                     isAdmin = false;
                     clearAllState();
@@ -2461,29 +2468,39 @@
                     document.getElementById('admin-dashboard-btn').classList.add('hidden');
                     
                     showView('auth');
+
+                    if(loginBtn) {
+                        loginBtn.textContent = 'Login';
+                        loginBtn.disabled = false;
+                    }
                 }
-            } catch(e) {
-                console.error("A critical error occurred in the auth handler:", e);
-                // As a fallback, always force the app to a logged-out state on error.
-                clearAllState();
-                showView('auth');
             } finally {
-                // This ensures the loader is always hidden after the first auth event.
                 if (!authReady) {
                     authReady = true;
                     appLoader.classList.add('hidden');
                     appContent.classList.remove('hidden');
                 }
-                if (loginBtn) {
-                    loginBtn.textContent = 'Login';
-                    loginBtn.disabled = false;
-                }
             }
         }
 
-        // Initialize the app by setting up the auth listener.
-        // The first event fired will be INITIAL_SESSION, which handles the page load case correctly.
-        db.auth.onAuthStateChange(handleAuthStateChange);
+        // Main app initialization function.
+        async function initializeApp() {
+            // This listener will handle dynamic changes AFTER initial load (e.g., login, logout).
+            db.auth.onAuthStateChange(handleAuthStateChange);
+
+            // Actively check the session on startup to prevent getting stuck.
+            const { data: { session }, error } = await db.auth.getSession();
+
+            if (error) {
+                console.error("Error during initial session fetch:", error);
+            }
+            
+            // `session` will be null if the refresh token was invalid.
+            // We call the handler directly to ensure the UI updates immediately.
+            handleAuthStateChange('INITIAL_SESSION', session);
+        }
+
+        initializeApp();
         // **** END FIX ****
 
         setupEventListeners();
