@@ -37,11 +37,11 @@
           appId: "1:528680834479:web:41fe2ca649ce4c286c8b5a"
         };
         
-        // Initialize Firebase using the global `firebase` object from the compat libraries
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
+        const auth = firebase.auth();
 
-        // Destructure React hooks from the global React object
         const { useState, useEffect, useCallback } = React;
 
         // --- SVG Icons ---
@@ -57,10 +57,111 @@
         const SparklesIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.9 5.8-5.8 1.9 5.8 1.9 1.9 5.8 1.9-5.8 5.8-1.9-5.8-1.9z"/></svg>;
         const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
         const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+        const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
 
-        // --- Main Application Component ---
-        function App() {
-            // --- Application State ---
+        // --- Main App Controller ---
+        function Main() {
+            const [user, setUser] = useState(null);
+            const [userRole, setUserRole] = useState(null);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const unsubscribe = auth.onAuthStateChanged(async (userAuth) => {
+                    if (userAuth) {
+                        const userDoc = await db.collection('users').doc(userAuth.uid).get();
+                        if (userDoc.exists) {
+                            setUserRole(userDoc.data().role);
+                        }
+                        setUser(userAuth);
+                    } else {
+                        setUser(null);
+                        setUserRole(null);
+                    }
+                    setLoading(false);
+                });
+                return () => unsubscribe();
+            }, []);
+
+            if (loading) {
+                return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+            }
+
+            if (!user) {
+                return <LoginPage />;
+            }
+
+            if (userRole === 'admin') {
+                return <AdminView />;
+            }
+
+            if (userRole === 'agent') {
+                return <AgentView user={user} />;
+            }
+            
+            // Fallback for users with no role assigned yet
+            return (
+                 <div className="flex items-center justify-center min-h-screen flex-col">
+                    <p className="mb-4">Your account role is not yet assigned. Please contact an administrator.</p>
+                    <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                </div>
+            );
+        }
+
+        // --- Login Page Component ---
+        function LoginPage() {
+            const [isLogin, setIsLogin] = useState(true);
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                try {
+                    if (isLogin) {
+                        await auth.signInWithEmailAndPassword(email, password);
+                    } else {
+                        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                        // Create a user document with a default role of 'agent'
+                        await db.collection('users').doc(userCredential.user.uid).set({
+                            email: userCredential.user.email,
+                            role: 'agent', // New users default to 'agent'
+                        });
+                    }
+                } catch (err) {
+                    setError(err.message);
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                    <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
+                        <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-200">{isLogin ? 'Log In' : 'Sign Up'}</h2>
+                        <form onSubmit={handleSubmit}>
+                            <div className="mb-4">
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="email">Email</label>
+                                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" required />
+                            </div>
+                            <div className="mb-6">
+                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="password">Password</label>
+                                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" required />
+                            </div>
+                            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                            <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">{isLogin ? 'Log In' : 'Sign Up'}</button>
+                        </form>
+                        <p className="text-center mt-4 text-gray-600 dark:text-gray-400">
+                            {isLogin ? "Don't have an account?" : 'Already have an account?'}
+                            <button onClick={() => setIsLogin(!isLogin)} className="text-blue-500 hover:underline ml-1">
+                                {isLogin ? 'Sign Up' : 'Log In'}
+                            </button>
+                        </p>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- Admin View Component ---
+        function AdminView() {
             const [agents, setAgents] = useState([]);
             const [selectedAgent, setSelectedAgent] = useState(null);
             const [plans, setPlans] = useState([]);
@@ -68,128 +169,88 @@
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             const [dbError, setDbError] = useState(null);
-            
-            // --- Firestore Paths (Shared Database) ---
-            const appId = firebaseConfig.projectId;
-            const agentsPath = `artifacts/${appId}/agents`;
-            const getPlansPath = (agentId) => `artifacts/${appId}/agents/${agentId}/plans`;
-            const getWarningsPath = (agentId) => `artifacts/${appId}/agents/${agentId}/warnings`;
 
-            // --- Data Fetching Effects ---
+            const agentsPath = `agents`;
+            const getPlansPath = (agentId) => `agents/${agentId}/plans`;
+            const getWarningsPath = (agentId) => `agents/${agentId}/warnings`;
+            
             useEffect(() => {
                 setIsLoading(true);
-                setDbError(null);
                 const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
                     setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                     setIsLoading(false);
-                }, (error) => { 
-                    console.error("Error fetching agents:", error); 
-                    if (error.code === 'permission-denied') {
-                        setDbError("Could not fetch data. This is likely due to Firebase security rules. Please ensure your Firestore rules are set to allow public read/write access.");
-                    } else {
-                        setDbError(`An unexpected error occurred: ${error.message}`);
-                    }
-                    setIsLoading(false); 
-                });
+                }, (error) => { console.error("Error fetching agents:", error); setDbError(error.message); setIsLoading(false); });
                 return () => unsubscribe();
             }, []);
 
             useEffect(() => {
-                if (!selectedAgent || !db) { setPlans([]); setWarnings([]); return; }
-                const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).onSnapshot((snapshot) => {
-                    setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                }, (error) => console.error("Error fetching plans:", error));
-                const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).onSnapshot((snapshot) => {
-                    setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                }, (error) => console.error("Error fetching warnings:", error));
+                if (!selectedAgent) { setPlans([]); setWarnings([]); return; }
+                const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).onSnapshot((snapshot) => setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+                const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).onSnapshot((snapshot) => setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
                 return () => { unsubPlans(); unsubWarnings(); };
             }, [selectedAgent]);
-            
-            // --- CRUD Handlers ---
-            const handleSaveData = async (type, data) => {
-                if (!db || (type !== 'agent' && !selectedAgent)) return;
-                
-                const isPlan = type === 'plan';
-                const path = type === 'agent' ? agentsPath : isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
-                const collectionRef = db.collection(path);
 
+            const handleSaveData = async (type, data) => {
+                if (type !== 'agent' && !selectedAgent) return;
+                const path = type === 'agent' ? agentsPath : (type === 'plan' ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id));
+                const collectionRef = db.collection(path);
                 try {
                     const dataToSave = { ...data };
                     delete dataToSave.id;
-
                     if (modal.data?.id) {
                         await collectionRef.doc(modal.data.id).update(dataToSave);
                     } else {
-                        const finalData = isPlan ? { ...dataToSave, status: 'Active', createdAt: new Date().toISOString() } : { ...dataToSave, createdAt: new Date().toISOString() };
-                        await collectionRef.add(finalData);
+                        await collectionRef.add(dataToSave);
                     }
                     closeModal();
                 } catch (error) { console.error(`Error saving ${type}:`, error); }
             };
 
             const handleDelete = async (type, id) => {
-               if (!db || !selectedAgent) return;
+               if (!selectedAgent) return;
                openModal('CONFIRM_DELETE', { 
                    title: `Delete ${type}`,
-                   message: `Are you sure you want to delete this ${type}? This action cannot be undone.`,
+                   message: `Are you sure you want to delete this ${type}?`,
                    onConfirm: async () => {
                        const path = type === 'plan' ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
-                       try { await db.collection(path).doc(id).delete(); } 
-                       catch (error) { console.error(`Error deleting ${type}:`, error); }
+                       await db.collection(path).doc(id).delete();
                        closeModal();
                    }
                });
             };
 
-            const handleDeleteAgent = async (agent) => {
-                if (!db || !agent) return;
-
+            const handleDeleteAgent = (agent) => {
                 openModal('CONFIRM_DELETE', {
                     title: `Delete Agent: ${agent.name}`,
-                    message: `Are you sure you want to delete this agent? This will also permanently delete all of their associated plans and warnings. This action cannot be undone.`,
+                    message: `This will also delete all associated plans and warnings. This cannot be undone.`,
                     onConfirm: async () => {
-                        try {
-                            // Delete all plans for the agent
-                            const plansSnapshot = await db.collection(getPlansPath(agent.id)).get();
-                            const planDeletions = plansSnapshot.docs.map(doc => doc.ref.delete());
-                            await Promise.all(planDeletions);
-
-                            // Delete all warnings for the agent
-                            const warningsSnapshot = await db.collection(getWarningsPath(agent.id)).get();
-                            const warningDeletions = warningsSnapshot.docs.map(doc => doc.ref.delete());
-                            await Promise.all(warningDeletions);
-
-                            // Delete the agent
-                            await db.collection(agentsPath).doc(agent.id).delete();
-
-                            // If the deleted agent was selected, unselect them
-                            if (selectedAgent?.id === agent.id) {
-                                setSelectedAgent(null);
-                            }
-                        } catch (error) {
-                            console.error(`Error deleting agent ${agent.name}:`, error);
-                        }
+                        const plansSnapshot = await db.collection(getPlansPath(agent.id)).get();
+                        await Promise.all(plansSnapshot.docs.map(doc => doc.ref.delete()));
+                        const warningsSnapshot = await db.collection(getWarningsPath(agent.id)).get();
+                        await Promise.all(warningsSnapshot.docs.map(doc => doc.ref.delete()));
+                        await db.collection(agentsPath).doc(agent.id).delete();
+                        if (selectedAgent?.id === agent.id) setSelectedAgent(null);
                         closeModal();
                     }
                 });
             };
             
-            // --- Modal Management ---
             const openModal = (type, data = null) => setModal({ isOpen: true, type, data });
             const closeModal = () => setModal({ isOpen: false, type: '', data: null });
 
-            // --- Main Render ---
             return (
-                <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row">
-                    {/* Sidebar */}
+                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row">
                     <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Agent Tracker</h1>
+                        <div className="flex justify-between items-center mb-4">
+                           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
+                            <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
+                        </div>
                         <button onClick={() => openModal('ADD_AGENT')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors mb-4">
                             <PlusCircleIcon /> Add Agent
                         </button>
                         <nav className="space-y-1">
-                            {isLoading ? <p>Loading agents...</p> : dbError ? <p className="text-red-500 text-sm p-2 bg-red-100 dark:bg-red-900 rounded-md">Error loading agents.</p> : agents.map(agent => (
-                                <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg transition-colors ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                            {isLoading ? <p>Loading...</p> : agents.map(agent => (
+                                <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                                     <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
                                         <UserIcon />
                                         <div>
@@ -197,33 +258,22 @@
                                            <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
                                         </div>
                                     </a>
-                                    <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 dark:hover:text-red-400 p-1 rounded-full transition-opacity">
+                                    <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
                                         <TrashIcon />
                                     </button>
                                 </div>
                             ))}
                         </nav>
                     </aside>
-
-                    {/* Main Content */}
                     <main className="flex-1 p-4 md:p-8 overflow-auto">
-                        {dbError ? (
-                            <div className="flex items-center justify-center h-full">
-                                <div className="text-center bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg relative" role="alert">
-                                    <strong className="font-bold">Database Error!</strong>
-                                    <span className="block sm:inline ml-2">{dbError}</span>
-                                    <p className="mt-2 text-xs text-red-600 dark:text-red-300">Please go to your Firebase project, navigate to Firestore Database → Rules, and ensure they are published correctly to allow public access.</p>
-                                </div>
-                            </div>
-                        ) : selectedAgent ? (
+                        {/* Main content same as before but now it is the AdminView */}
+                        {selectedAgent ? (
                             <div>
                                 <header className="mb-8">
                                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
                                     <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
                                 </header>
-                                
                                 <DashboardStats plans={plans} warnings={warnings} />
-
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                     <section>
                                          <div className="flex items-center justify-between mb-4">
@@ -234,11 +284,10 @@
                                         </div>
                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                             {plans.length > 0 ? plans.map(plan => (
-                                                <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} />
+                                                <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
                                         </div>
                                     </section>
-
                                     <section>
                                          <div className="flex items-center justify-between mb-4">
                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
@@ -248,7 +297,7 @@
                                         </div>
                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                            {warnings.length > 0 ? warnings.map(warning => (
-                                                <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} />
+                                                <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
                                         </div>
                                     </section>
@@ -258,10 +307,8 @@
                             <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2><p className="text-gray-500 dark:text-gray-400 mt-2">Or add a new agent to get started.</p></div></div>
                         )}
                     </main>
-
-                    {/* Modal */}
                     {modal.isOpen && (
-                        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+                         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
                             <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
                                  <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
                                      <h3 className="text-xl font-semibold">{ modal.type === 'ADD_AGENT' ? 'Add New Agent' : modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : (modal.data?.title || 'Confirm Deletion') }</h3>
@@ -283,20 +330,104 @@
                         </div>
                     )}
                 </div>
+            )
+        }
+        
+        // --- Agent View Component ---
+        function AgentView({ user }) {
+            const [agentData, setAgentData] = useState(null);
+            const [plans, setPlans] = useState([]);
+            const [warnings, setWarnings] = useState([]);
+            const [isLoading, setIsLoading] = useState(true);
+            const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
+
+            useEffect(() => {
+                const agentQuery = db.collection('agents').where('email', '==', user.email);
+                const unsubscribe = agentQuery.onSnapshot(snapshot => {
+                    if (!snapshot.empty) {
+                        const agentDoc = snapshot.docs[0];
+                        const agent = { id: agentDoc.id, ...agentDoc.data() };
+                        setAgentData(agent);
+
+                        const plansUnsub = db.collection(`agents/${agent.id}/plans`).onSnapshot(planSnap => {
+                            setPlans(planSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        });
+                        const warningsUnsub = db.collection(`agents/${agent.id}/warnings`).onSnapshot(warningSnap => {
+                            setWarnings(warningSnap.docs.map(d => ({ id: d.id, ...d.data() })));
+                        });
+                        setIsLoading(false);
+                        return () => { plansUnsub(); warningsUnsub(); };
+                    } else {
+                        setIsLoading(false);
+                    }
+                });
+                return () => unsubscribe();
+            }, [user.email]);
+            
+            const openModal = (type, data = null) => setModal({ isOpen: true, type, data });
+            const closeModal = () => setModal({ isOpen: false, type: '', data: null });
+
+            if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading Your Data...</div>;
+
+            if (!agentData) {
+                return (
+                    <div className="flex items-center justify-center min-h-screen flex-col">
+                        <p className="mb-4">Your agent profile has not been set up by an administrator yet.</p>
+                        <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                    </div>
+                );
+            }
+
+            return (
+                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans">
+                     <header className="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
+                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Performance Dashboard</h1>
+                        <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500 flex items-center gap-2">
+                            <LogOutIcon />
+                            <span>Log Out</span>
+                        </button>
+                     </header>
+                     <main className="p-4 md:p-8">
+                        <DashboardStats plans={plans} warnings={warnings} />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <section>
+                                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                    {plans.length > 0 ? plans.map(plan => (
+                                        <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
+                                    )) : <p className="p-4 text-gray-500">You have no performance plans on record.</p>}
+                                </div>
+                            </section>
+                            <section>
+                                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
+                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                    {warnings.length > 0 ? warnings.map(warning => (
+                                        <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
+                                    )) : <p className="p-4 text-gray-500">You have no warnings on record.</p>}
+                                </div>
+                            </section>
+                        </div>
+                     </main>
+                     {modal.isOpen && (
+                         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+                            <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] relative flex flex-col`}>
+                                 <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
+                                     <h3 className="text-xl font-semibold">{modal.type === 'VIEW_PLAN' ? 'Viewing Plan' : 'Viewing Warning'}</h3>
+                                     <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
+                                 </div>
+                                 <div className="p-6 overflow-y-auto flex-grow">
+                                    <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} />
+                                 </div>
+                            </div>
+                        </div>
+                    )}
+                 </div>
             );
         }
-
-        // --- Dashboard & List Components ---
-        const StatCard = ({ title, value, icon, colorClass }) => (
-            <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4`}>
-                <div className={`text-3xl ${colorClass}`}>{icon}</div>
-                <div>
-                    <p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
-                    <p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p>
-                </div>
-            </div>
-        );
-
+        
+        // --- Shared Components ---
+        
+        const StatCard = ({ title, value, icon, colorClass }) => ( <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4`}><div className={`text-3xl ${colorClass}`}>{icon}</div><div><p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p><p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p></div></div> );
         const DashboardStats = ({ plans, warnings }) => {
             const activePlans = plans.filter(p => p.status === 'Active').length;
             const totalWarnings = warnings.length;
@@ -310,281 +441,51 @@
                 </section>
             );
         };
-
-        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete, selectedAgent, getPlansPath }) => {
-            const statusColor = {
-                Active: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
-                Completed: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-                Passed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
-                Failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
-                Extended: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
-            };
-            
-            const handleUpdatePlanStatus = async (planId, status) => {
-                if (!db || !selectedAgent) return;
-                const planRef = db.collection(getPlansPath(selectedAgent.id)).doc(planId);
-                try { await planRef.update({ status }); } 
-                catch (error) { console.error("Error updating plan status:", error); }
-            };
+        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete, selectedAgent, getPlansPath, isAdmin }) => {
+            const statusColor = { Active: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300', Completed: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', Passed: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300', Failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300', Extended: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300' };
+            const handleUpdatePlanStatus = (planId, status) => { if (!db || !selectedAgent) return; db.collection(getPlansPath(selectedAgent.id)).doc(planId).update({ status }); };
 
             if (type === 'warning') {
                 return (
                      <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <div className="flex-1 overflow-hidden">
-                            <p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p>
-                            <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary provided'}</p>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"><EyeIcon /></button>
-                            <button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600 dark:hover:text-green-400"><EditIcon /></button>
-                            <button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400"><TrashIcon /></button>
-                        </div>
+                        <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
+                        <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
                     </div>
                 );
             }
             
             const title = (doc.areasOfFocus && doc.areasOfFocus[0] ? doc.areasOfFocus[0].title : 'PIP/QIP');
-            
             return (
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div className="flex-1 overflow-hidden">
-                        <p className="text-xs font-bold uppercase text-indigo-500">{doc.type}</p>
-                        <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{title}</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                            {doc.startDate ? `Start: ${new Date(doc.startDate).toLocaleDateString()} | End: ${new Date(doc.endDate).toLocaleDateString()}` : ''}
-                        </p>
-                    </div>
-                    <select value={doc.status} onChange={(e) => handleUpdatePlanStatus(doc.id, e.target.value)} className={`flex-shrink-0 text-xs p-1 rounded-md border-none mx-4 ${statusColor[doc.status]}`}>
-                        <option>Active</option><option>Passed</option><option>Failed</option><option>Extended</option><option>Completed</option>
-                    </select>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                        <button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400"><EyeIcon /></button>
-                        <button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600 dark:hover:text-green-400"><EditIcon /></button>
-                        <button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400"><TrashIcon /></button>
-                    </div>
+                    <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-indigo-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{title}</p><p className="text-sm text-gray-500">{doc.startDate ? `Start: ${new Date(doc.startDate).toLocaleDateString()} | End: ${new Date(doc.endDate).toLocaleDateString()}` : ''}</p></div>
+                    {isAdmin ? <select value={doc.status} onChange={(e) => handleUpdatePlanStatus(doc.id, e.target.value)} className={`flex-shrink-0 text-xs p-1 rounded-md border-none mx-4 ${statusColor[doc.status]}`}><option>Active</option><option>Passed</option><option>Failed</option><option>Extended</option><option>Completed</option></select> : <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full mx-4 ${statusColor[doc.status]}`}>{doc.status}</span>}
+                    <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
                 </div>
             );
         };
-
         const DocumentViewer = ({ data, type, agent }) => {
-            const handleDownloadDocx = async () => {
-                try {
-                    const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = docx;
-                    const sections = [];
-                    sections.push(new Paragraph({ text: type === 'plan' ? `Performance Improvement Plan (${data.type})` : 'Official Warning', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, }));
-                    sections.push(new Paragraph(" ")); 
-                    const headerInfo = [ `Employee Name: ${agent.name}`, `Date: ${new Date(data.date || data.startDate).toLocaleDateString()}`, `Manager: ${data.managerName || data.manager}`, type === 'plan' ? `End Date: ${new Date(data.endDate).toLocaleDateString()}` : `Warning Type: ${data.type}` ];
-                    headerInfo.forEach(info => sections.push(new Paragraph(info)));
-                    sections.push(new Paragraph(" "));
-                    const createSection = (title, content) => [ new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, style: "Well Spaced" }), new Paragraph(content || "N/A"), new Paragraph(" ")];
-                    if(type === 'warning') {
-                        sections.push(...createSection("Summary of Concerns", data.summaryOfConcerns));
-                        sections.push(...createSection("Improvement Action Plan", data.improvementActionPlan));
-                        sections.push(...createSection("Next Action if Plan is Not Followed", data.nextAction));
-                    }
-                    if(type === 'plan') {
-                        sections.push(...createSection("Introduction", data.introduction));
-                        sections.push(...createSection("Empowerment Statement", data.empowermentStatement));
-                        sections.push(new Paragraph({ text: "Areas of Focus & Expectations", heading: HeadingLevel.HEADING_2 }));
-                        data.areasOfFocus?.forEach((area, index) => {
-                            sections.push(new Paragraph({ text: `${index + 1}. ${area.title}`, style: "List Paragraph", bullet: { level: 0 } }));
-                            sections.push(new Paragraph([new TextRun({ text: "Expectation: ", bold: true }), new TextRun(area.expectation)]));
-                            sections.push(new Paragraph([new TextRun({ text: "Action Plan: ", bold: true }), new TextRun(area.actionPlan)]));
-                            sections.push(new Paragraph([new TextRun({ text: "Goal: ", bold: true }), new TextRun(area.goal)]));
-                            sections.push(new Paragraph(" "));
-                        });
-                        sections.push(...createSection("Support & Monitoring Plan", data.supportPlan));
-                        sections.push(...createSection("Consequences of Not Meeting Expectations", data.consequences));
-                        sections.push(new Paragraph({ text: "QA Targets", heading: HeadingLevel.HEADING_2 }));
-                        const tableRows = [ new TableRow({ children: [ new TableCell({ children: [new Paragraph("Week")] }), new TableCell({ children: [new Paragraph("Required")] }), new TableCell({ children: [new Paragraph("Achieved")] }) ]}) ];
-                        data.qaTargets?.forEach(target => {
-                            tableRows.push(new TableRow({ children: [ new TableCell({ children: [new Paragraph(target.week)] }), new TableCell({ children: [new Paragraph(target.required)] }), new TableCell({ children: [new Paragraph(target.achieved)] }) ]}));
-                        });
-                        sections.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } }));
-                    }
-                    sections.push(new Paragraph({ text: "\n\n\n\n" }));
-                    sections.push(new Paragraph("Employee's Signature: _________________________"));
-                    sections.push(new Paragraph("\n"));
-                    sections.push(new Paragraph("Team Leader's Signature: _________________________"));
-                    const doc = new Document({ sections: [{ children: sections }] });
-                    Packer.toBlob(doc).then(blob => {
-                        saveAs(blob, `${agent.name}-${type}-${new Date().toISOString().split('T')[0]}.docx`);
-                    });
-                } catch (error) {
-                    console.error('Failed to download document:', error);
-                    alert('An error occurred while trying to download the document. Please check the console for details.');
-                }
-            };
-            const printContent = () => {
-                const printable = document.getElementById('printable-document').innerHTML;
-                const newWin = window.open('', 'Print-Window');
-                newWin.document.open();
-                newWin.document.write(`<html><head><title>Print</title><style>@import url('https://cdn.tailwindcss.com/dist/tailwind.min.css');</style></head><body onload="window.print()" onafterprint="window.close()"><div class="prose">${printable}</div></body></html>`);
-                newWin.document.close();
-            };
+            const handleDownloadDocx = () => { try { const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = docx; const sections = []; sections.push(new Paragraph({ text: type === 'plan' ? `Performance Improvement Plan (${data.type})` : 'Official Warning', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, })); sections.push(new Paragraph(" ")); const headerInfo = [ `Employee Name: ${agent.name}`, `Date: ${new Date(data.date || data.startDate).toLocaleDateString()}`, `Manager: ${data.managerName || data.manager}`, type === 'plan' ? `End Date: ${new Date(data.endDate).toLocaleDateString()}` : `Warning Type: ${data.type}` ]; headerInfo.forEach(info => sections.push(new Paragraph(info))); sections.push(new Paragraph(" ")); const createSection = (title, content) => [ new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, style: "Well Spaced" }), new Paragraph(content || "N/A"), new Paragraph(" ")]; if(type === 'warning') { sections.push(...createSection("Summary of Concerns", data.summaryOfConcerns)); sections.push(...createSection("Improvement Action Plan", data.improvementActionPlan)); sections.push(...createSection("Next Action if Plan is Not Followed", data.nextAction)); } if(type === 'plan') { sections.push(...createSection("Introduction", data.introduction)); sections.push(...createSection("Empowerment Statement", data.empowermentStatement)); sections.push(new Paragraph({ text: "Areas of Focus & Expectations", heading: HeadingLevel.HEADING_2 })); data.areasOfFocus?.forEach((area, index) => { sections.push(new Paragraph({ text: `${index + 1}. ${area.title}`, style: "List Paragraph", bullet: { level: 0 } })); sections.push(new Paragraph([new TextRun({ text: "Expectation: ", bold: true }), new TextRun(area.expectation)])); sections.push(new Paragraph([new TextRun({ text: "Action Plan: ", bold: true }), new TextRun(area.actionPlan)])); sections.push(new Paragraph([new TextRun({ text: "Goal: ", bold: true }), new TextRun(area.goal)])); sections.push(new Paragraph(" ")); }); sections.push(...createSection("Support & Monitoring Plan", data.supportPlan)); sections.push(...createSection("Consequences of Not Meeting Expectations", data.consequences)); sections.push(new Paragraph({ text: "QA Targets", heading: HeadingLevel.HEADING_2 })); const tableRows = [ new TableRow({ children: [ new TableCell({ children: [new Paragraph("Week")] }), new TableCell({ children: [new Paragraph("Required")] }), new TableCell({ children: [new Paragraph("Achieved")] }) ]}) ]; data.qaTargets?.forEach(target => { tableRows.push(new TableRow({ children: [ new TableCell({ children: [new Paragraph(target.week)] }), new TableCell({ children: [new Paragraph(target.required)] }), new TableCell({ children: [new Paragraph(target.achieved)] }) ]})); }); sections.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } })); } sections.push(new Paragraph({ text: "\n\n\n\n" })); sections.push(new Paragraph("Employee's Signature: _________________________")); sections.push(new Paragraph("\n")); sections.push(new Paragraph("Team Leader's Signature: _________________________")); const doc = new Document({ sections: [{ children: sections }] }); Packer.toBlob(doc).then(blob => { saveAs(blob, `${agent.name}-${type}-${new Date().toISOString().split('T')[0]}.docx`); }); } catch (error) { console.error('Failed to download document:', error); alert('Download error.'); } };
+            const printContent = () => { const printable = document.getElementById('printable-document').innerHTML; const newWin = window.open('', 'Print-Window'); newWin.document.open(); newWin.document.write(`<html><head><title>Print</title><style>@import url('https://cdn.tailwindcss.com/dist/tailwind.min.css');</style></head><body onload="window.print()" onafterprint="window.close()"><div class="prose">${printable}</div></body></html>`); newWin.document.close(); };
             const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
-            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
-
-            return (
-                <div>
-                    <div id="printable-document" className="prose dark:prose-invert max-w-none p-4">
-                         <h2 className="text-2xl font-bold text-center">{type === 'plan' ? `Performance Improvement Plan (${data.type})` : 'Official Warning'}</h2>
-                        <div className="grid grid-cols-2 gap-4 my-6 text-sm">
-                            {renderField("Employee Name", agent.name)}
-                            {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
-                            {renderField("Manager", data.managerName || data.manager)}
-                            {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
-                        </div>
-                        {type === 'warning' && ( <> {renderSection("Summary of Concerns", data.summaryOfConcerns)} {renderSection("Improvement Action Plan", data.improvementActionPlan)} {renderSection("Next Action if Plan is Not Followed", data.nextAction)} </> )}
-                        {type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment Statement", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">Areas of Focus & Expectations</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 pl-4 break-inside-avoid"><h5 className="font-bold">{index + 1}. {area.title}</h5><p><span className="font-semibold">Expectation:</span> {area.expectation}</p><p><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support & Monitoring Plan", data.supportPlan)} {renderSection("Consequences of Not Meeting Expectations", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">QA Targets</h4><table className="w-full text-left"><thead><tr><th>Week</th><th>Required</th><th>Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index}><td>{target.week}</td><td>{target.required}</td><td>{target.achieved}</td></tr> ))}</tbody></table></div> </> )}
-                        <div className="flex justify-between mt-16 pt-8 border-t signature-block"><div><p>Employee's Signature</p><p className="mt-8">____________________</p></div><div><p>Team Leader's Signature</p><p className="mt-8">____________________</p></div></div>
-                    </div>
-                     <div className="flex-shrink-0 flex justify-end p-4 border-t dark:border-gray-700 gap-2">
-                        <button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white hover:bg-green-700"><DownloadIcon /> Download</button>
-                        <button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700"><PrinterIcon /> Print</button>
-                    </div>
-                </div>
-            );
+            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">{title}</h4><p className="whitespace-pre-wrap">{content}</p></div> );
+            return ( <div><div id="printable-document" className="prose dark:prose-invert max-w-none p-4"><h2 className="text-2xl font-bold text-center">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2><div className="grid grid-cols-2 gap-4 my-6 text-sm">{renderField("Employee Name", agent.name)}{renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}{renderField("Manager", data.managerName || data.manager)}{type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}</div>{type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}{type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 pl-4"><h5 className="font-bold">{index + 1}. {area.title}</h5><p><span className="font-semibold">Expectation:</span> {area.expectation}</p><p><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">QA Targets</h4><table className="w-full text-left"><thead><tr><th>Week</th><th>Required</th><th>Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index}><td>{target.week}</td><td>{target.required}</td><td>{target.achieved}</td></tr> ))}</tbody></table></div> </> )}<div className="flex justify-between mt-16 pt-8 border-t"><div><p>Employee's Signature</p><p className="mt-8">__________</p></div><div><p>Leader's Signature</p><p className="mt-8">__________</p></div></div></div><div className="flex-shrink-0 flex justify-end p-4 border-t gap-2"><button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white"><DownloadIcon /> Download</button><button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white"><PrinterIcon /> Print</button></div></div> );
         };
-
-
-        // --- Form Components ---
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
         const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /></div>;
         const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /></div>;
-
-        const AITools = ({ formType, onPopulate, disabled }) => {
-            const [mode, setMode] = useState(null);
-            const [text, setText] = useState('');
-            const [isProcessing, setIsProcessing] = useState(false);
-            const [error, setError] = useState('');
-
-            const handleProcess = async () => {
-                setIsProcessing(true);
-                setError('');
-                
-                // IMPORTANT: You must add your own Google AI API key here for this feature to work.
-                // Get a key from https://aistudio.google.com/
-                const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; 
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-                let prompt, schema;
-                if (formType === 'plan') {
-                    schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } };
-                } else {
-                    schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } };
-                }
-                
-                if (mode === 'fill') {
-                    prompt = `Analyze the following text from a performance document and extract the information into a valid JSON object based on the provided schema. Ensure all fields are strings. If a value is not found, use an empty string.\n\nText to parse:\n${text}`;
-                } else {
-                    const documentType = formType === 'plan' ? 'Performance Improvement Plan' : 'Warning';
-                    prompt = `Generate a professional ${documentType} based on the following issue: "${text}". The output must be a valid JSON object following the provided schema. Create realistic and actionable content for all fields.`;
-                }
-                
-                const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } };
-
-                try {
-                    const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                    if (!response.ok) throw new Error(`API error: ${response.statusText}`);
-                    const result = await response.json();
-                    const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (!jsonText) throw new Error("No content returned from API.");
-                    onPopulate(JSON.parse(jsonText));
-                    setMode(null);
-                } catch (err) {
-                    console.error("Error with AI Tool:", err);
-                    setError(`Failed to process. Error: ${err.message}`);
-                } finally {
-                    setIsProcessing(false);
-                }
-            };
-            
-            if (!mode) {
-                return (
-                    <div className="my-4 p-3 border-t dark:border-gray-700 flex gap-2">
-                        <button type="button" onClick={() => setMode('fill')} disabled={disabled} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button>
-                        <button type="button" onClick={() => setMode('generate')} disabled={disabled} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="my-4 p-3 border-t dark:border-gray-700 space-y-2">
-                    <label className="block text-sm font-medium">{mode === 'fill' ? 'Paste document text here:' : 'Describe the performance issue:'}</label>
-                    {mode === 'fill' ? 
-                        <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700" placeholder="Paste the entire content..."/> :
-                        <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700" placeholder="e.g., Agent has low QA scores and poor communication"/>
-                    }
-                    {error && <p className="text-sm text-red-500">{error}</p>}
-                    <div className="flex justify-end gap-2">
-                        <button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 text-sm">Cancel</button>
-                        <button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-indigo-600 text-white text-sm disabled:bg-indigo-400">{isProcessing ? 'Processing...' : (mode === 'fill' ? 'Parse & Fill' : 'Generate & Fill')}</button>
-                    </div>
-                </div>
-            );
-        };
-
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 hover:bg-indigo-200"><SparklesIcon /> Auto-fill</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 hover:bg-purple-200"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t space-y-2"><label>{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)}>Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text}>{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
-            const handleSubmit = (e) => { e.preventDefault(); onSubmit({ name, employeeId }); };
-
-            return (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <FormInput label="Agent Name" type="text" value={name} onChange={e => setName(e.target.value)} required />
-                    <FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required />
-                    <div className="flex justify-end gap-2 pt-4">
-                        <button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button>
-                        <button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">Add Agent</button>
-                    </div>
-                </form>
-            );
+            const [email, setEmail] = useState('');
+            const handleSubmit = (e) => { e.preventDefault(); onSubmit({ name, employeeId, email }); };
+            return ( <form onSubmit={handleSubmit} className="space-y-4"><FormInput label="Agent Name" type="text" value={name} onChange={e => setName(e.target.value)} required /><FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required /><FormInput label="Agent's Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="The email they registered with" required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white">Add Agent</button></div></form> );
         };
-
-
-        const PlanForm = ({ onSubmit, onCancel, initialData }) => {
-            const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: new Date().toISOString().split('T')[0], endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData });
-            const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({ ...prev, [name]: value })); };
-            const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(prev => ({ ...prev, [section]: list })); };
-            const addDynamicItem = (section, item) => { setFormData(prev => ({ ...prev, [section]: [...prev[section], item] })); };
-            const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(prev => ({ ...prev, [section]: list })); };
-            const handlePopulate = (data) => setFormData(prev => ({ ...prev, ...data, areasOfFocus: data.areasOfFocus || prev.areasOfFocus, qaTargets: data.qaTargets || prev.qaTargets }));
-
-            return (
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4">
-                    <AITools formType="plan" onPopulate={handlePopulate} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1">Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div>
-                    <FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required />
-                    <FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required />
-                    <FormSection title="Areas of Focus & Expectations">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border rounded-md dark:border-gray-600 relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })} className="text-sm text-blue-600 hover:underline">+ Add Area</button></FormSection>
-                    <FormTextarea label="Support & Monitoring Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required />
-                    <FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required />
-                    <FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required (%)" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved (%)" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} className="mt-5 text-red-500 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900 disabled:opacity-50" disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })} className="text-sm text-blue-600 hover:underline">+ Add Target</button></FormSection>
-                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-green-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Plan'}</button></div>
-                </form>
-            );
-        };
-
-        const WarningForm = ({ onSubmit, onCancel, initialData }) => {
-            const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: new Date().toISOString().split('T')[0], summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData });
-            const handleChange = (e) => { const { name, value } = e.target; setFormData(prev => ({...prev, [name]: value})); };
-            const handlePopulate = (data) => setFormData(prev => ({...prev, ...data}));
-
-            return (
-                <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4">
-                    <AITools formType="warning" onPopulate={handlePopulate} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="manager" value={formData.manager} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1">Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div>
-                    <FormTextarea label="Summary of Concerns" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required />
-                    <FormTextarea label="Improvement Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required />
-                    <FormTextarea label="Next Action if Plan is Not Followed" name="nextAction" value={formData.nextAction} onChange={handleChange} required />
-                    <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-yellow-500 text-white">{initialData?.id ? 'Save Changes' : 'Create Warning'}</button></div>
-                </form>
-            );
-        };
+        const PlanForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label>Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div><FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required /><FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required /><FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border rounded-md relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })}>+ Add Area</button></FormSection><FormTextarea label="Support Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required /><FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required /><FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })}>+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel}>Cancel</button><button type="submit">{initialData?.id ? 'Save' : 'Create'}</button></div></form>;};
+        const WarningForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required /><div><label>Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div><FormTextarea label="Summary" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required /><FormTextarea label="Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required /><FormTextarea label="Next Action" name="nextAction" value={formData.nextAction} onChange={handleChange} required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel}>Cancel</button><button type="submit">{initialData?.id ? 'Save' : 'Create'}</button></div></form>; };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
-
+        root.render(<Main />);
     </script>
 </body>
 </html>
