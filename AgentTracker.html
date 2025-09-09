@@ -1,11 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Performance & Quality Tracker</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class', // or 'media'
+      }
+    </script>
     
     <!-- React Libraries -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
@@ -42,8 +47,34 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        const { useState, useEffect, useCallback } = React;
+        const { useState, useEffect, useCallback, createContext, useContext } = React;
 
+        // --- Theme Context and Provider ---
+        const ThemeContext = createContext();
+
+        const ThemeProvider = ({ children }) => {
+            const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+            useEffect(() => {
+                const root = window.document.documentElement;
+                root.classList.remove('light', 'dark');
+                root.classList.add(theme);
+                localStorage.setItem('theme', theme);
+            }, [theme]);
+
+            const toggleTheme = () => {
+                setTheme(prevTheme => (prevTheme === 'dark' ? 'light' : 'dark'));
+            };
+
+            return (
+                <ThemeContext.Provider value={{ theme, toggleTheme }}>
+                    {children}
+                </ThemeContext.Provider>
+            );
+        };
+
+        const useTheme = () => useContext(ThemeContext);
+        
         // --- SVG Icons ---
         const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
         const FileTextIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>;
@@ -58,6 +89,9 @@
         const DownloadIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>;
         const CheckCircleIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
         const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
+        const SunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>;
+        const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
+        const MessageSquareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 
         // --- Main App Controller ---
         function Main() {
@@ -69,52 +103,43 @@
                 const unsubscribeAuth = auth.onAuthStateChanged((userAuth) => {
                     if (userAuth) {
                         setUser(userAuth);
-                        // Use a real-time listener for the user's role document
                         const unsubscribeRole = db.collection('users').doc(userAuth.uid).onSnapshot(userDoc => {
+                            setLoading(false);
                             if (userDoc.exists) {
                                 setUserRole(userDoc.data().role);
                             } else {
-                                setUserRole(null); // User document doesn't exist
+                                setUserRole(null);
                             }
-                            setLoading(false);
                         }, (error) => {
                              console.error("Error fetching user role:", error);
                              setUserRole(null);
                              setLoading(false);
                         });
-                        
-                        // Return the role listener's unsubscribe function to clean up
                         return () => unsubscribeRole();
-
                     } else {
                         setUser(null);
                         setUserRole(null);
                         setLoading(false);
                     }
                 });
-                // Clean up the auth listener
                 return () => unsubscribeAuth();
             }, []);
 
             if (loading) {
-                return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+                return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">Loading...</div>;
             }
 
             if (!user) {
                 return <LoginPage />;
             }
-
             if (userRole === 'admin') {
-                return <AdminView />;
+                return <AdminView user={user}/>;
             }
-
             if (userRole === 'agent') {
                 return <AgentView user={user} />;
             }
-            
-            // Fallback for users with no role assigned yet, or if the role document is missing
             return (
-                 <div className="flex items-center justify-center min-h-screen flex-col">
+                 <div className="flex items-center justify-center min-h-screen flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
                     <p className="mb-4">Your account role is not yet assigned. Please contact an administrator.</p>
                     <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
                 </div>
@@ -126,6 +151,8 @@
             const [isLogin, setIsLogin] = useState(true);
             const [email, setEmail] = useState('');
             const [password, setPassword] = useState('');
+            const [name, setName] = useState('');
+            const [employeeId, setEmployeeId] = useState('');
             const [error, setError] = useState('');
 
             const handleSubmit = async (e) => {
@@ -135,11 +162,22 @@
                     if (isLogin) {
                         await auth.signInWithEmailAndPassword(email, password);
                     } else {
+                        // 1. Create user in Auth
                         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                        // Create a user document with a default role of 'agent'
-                        await db.collection('users').doc(userCredential.user.uid).set({
-                            email: userCredential.user.email,
-                            role: 'agent', // New users default to 'agent'
+                        const { user } = userCredential;
+
+                        // 2. Create user document for role management
+                        await db.collection('users').doc(user.uid).set({
+                            email: user.email,
+                            role: 'agent',
+                        });
+
+                        // 3. Automatically create agent profile
+                        await db.collection('agents').add({
+                            name,
+                            employeeId,
+                            email: user.email,
+                            createdAt: new Date().toISOString(),
                         });
                     }
                 } catch (err) {
@@ -148,19 +186,23 @@
             };
 
             return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+                <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+                    <div className="absolute top-4 right-4">
+                        <ThemeToggleButton />
+                    </div>
                     <div className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md w-full max-w-md">
                         <h2 className="text-2xl font-bold mb-6 text-center text-gray-800 dark:text-gray-200">{isLogin ? 'Log In' : 'Sign Up'}</h2>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="email">Email</label>
-                                <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" required />
-                            </div>
-                            <div className="mb-6">
-                                <label className="block text-gray-700 dark:text-gray-300 mb-2" htmlFor="password">Password</label>
-                                <input type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600" required />
-                            </div>
-                            {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {!isLogin && (
+                                <React.Fragment>
+                                    <FormInput label="Full Name" type="text" value={name} onChange={e => setName(e.target.value)} required />
+                                    <FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required />
+                                </React.Fragment>
+                            )}
+                            <FormInput label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+                            <FormInput label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+                            
+                            {error && <p className="text-red-500 text-sm">{error}</p>}
                             <button type="submit" className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700">{isLogin ? 'Log In' : 'Sign Up'}</button>
                         </form>
                         <p className="text-center mt-4 text-gray-600 dark:text-gray-400">
@@ -175,25 +217,24 @@
         }
 
         // --- Admin View Component ---
-        function AdminView() {
+        function AdminView({ user }) {
+            const [view, setView] = useState('dashboard'); // 'dashboard' or 'tracker'
             const [agents, setAgents] = useState([]);
             const [selectedAgent, setSelectedAgent] = useState(null);
             const [plans, setPlans] = useState([]);
             const [warnings, setWarnings] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
-            const [dbError, setDbError] = useState(null);
 
             const agentsPath = `agents`;
             const getPlansPath = (agentId) => `agents/${agentId}/plans`;
             const getWarningsPath = (agentId) => `agents/${agentId}/warnings`;
             
             useEffect(() => {
-                setIsLoading(true);
                 const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
                     setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                     setIsLoading(false);
-                }, (error) => { console.error("Error fetching agents:", error); setDbError(error.message); setIsLoading(false); });
+                }, (error) => console.error("Error fetching agents:", error));
                 return () => unsubscribe();
             }, []);
 
@@ -205,16 +246,17 @@
             }, [selectedAgent]);
 
             const handleSaveData = async (type, data) => {
-                if (type !== 'agent' && !selectedAgent) return;
-                const path = type === 'agent' ? agentsPath : (type === 'plan' ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id));
+                const isPlan = type === 'plan';
+                if (!isPlan && type !== 'agent' && !selectedAgent) return;
+                const path = type === 'agent' ? agentsPath : isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
                 const collectionRef = db.collection(path);
                 try {
-                    const dataToSave = { ...data };
+                    const dataToSave = { ...data, lastModifiedBy: user.email };
                     delete dataToSave.id;
                     if (modal.data?.id) {
                         await collectionRef.doc(modal.data.id).update(dataToSave);
                     } else {
-                        await collectionRef.add(dataToSave);
+                        await collectionRef.add({ ...dataToSave, createdAt: new Date().toISOString() });
                     }
                     closeModal();
                 } catch (error) { console.error(`Error saving ${type}:`, error); }
@@ -253,35 +295,46 @@
             const closeModal = () => setModal({ isOpen: false, type: '', data: null });
 
             return (
-                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row">
+                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row transition-colors duration-300">
                     <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
                         <div className="flex justify-between items-center mb-4">
                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
-                            <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
+                            <div className="flex items-center gap-2">
+                                <ThemeToggleButton />
+                                <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
+                            </div>
                         </div>
-                        <button onClick={() => openModal('ADD_AGENT')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors mb-4">
-                            <PlusCircleIcon /> Add Agent
-                        </button>
-                        <nav className="space-y-1">
-                            {isLoading ? <p>Loading...</p> : agents.map(agent => (
-                                <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                    <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
-                                        <UserIcon />
-                                        <div>
-                                           <span className="font-semibold">{agent.name}</span>
-                                           <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
-                                        </div>
-                                    </a>
-                                    <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
-                                        <TrashIcon />
-                                    </button>
-                                </div>
-                            ))}
-                        </nav>
+                        <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
+                           <button onClick={() => setView('dashboard')} className={`w-1/2 p-2 text-sm font-semibold rounded-l-md ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Dashboard</button>
+                           <button onClick={() => setView('tracker')} className={`w-1/2 p-2 text-sm font-semibold rounded-r-md ${view === 'tracker' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Agents</button>
+                        </div>
+                        {view === 'tracker' && (
+                          <>
+                            <button onClick={() => openModal('ADD_AGENT')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors mb-4">
+                                <PlusCircleIcon /> Add Agent
+                            </button>
+                            <nav className="space-y-1">
+                                {isLoading ? <p>Loading...</p> : agents.map(agent => (
+                                    <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                        <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
+                                            <UserIcon />
+                                            <div>
+                                               <span className="font-semibold">{agent.name}</span>
+                                               <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
+                                            </div>
+                                        </a>
+                                        <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
+                                            <TrashIcon />
+                                        </button>
+                                    </div>
+                                ))}
+                            </nav>
+                          </>
+                        )}
                     </aside>
                     <main className="flex-1 p-4 md:p-8 overflow-auto">
-                        {/* Main content same as before but now it is the AdminView */}
-                        {selectedAgent ? (
+                        {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} /> : 
+                          selectedAgent ? (
                             <div>
                                 <header className="mb-8">
                                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
@@ -318,7 +371,7 @@
                                 </div>
                             </div>
                         ) : (
-                            <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2><p className="text-gray-500 dark:text-gray-400 mt-2">Or add a new agent to get started.</p></div></div>
+                            <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
                         )}
                     </main>
                     {modal.isOpen && (
@@ -332,7 +385,7 @@
                                     {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
                                     {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
                                     {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
-                                    {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} />}
+                                    {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} getPlansPath={getPlansPath} />}
                                      {modal.type === 'CONFIRM_DELETE' && (
                                         <div>
                                             <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
@@ -393,13 +446,16 @@
             }
 
             return (
-                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans">
+                 <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans transition-colors duration-300">
                      <header className="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
                         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Performance Dashboard</h1>
-                        <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500 flex items-center gap-2">
-                            <LogOutIcon />
-                            <span>Log Out</span>
-                        </button>
+                         <div className="flex items-center gap-4">
+                            <ThemeToggleButton />
+                            <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500 flex items-center gap-2">
+                                <LogOutIcon />
+                                <span>Log Out</span>
+                            </button>
+                        </div>
                      </header>
                      <main className="p-4 md:p-8">
                         <DashboardStats plans={plans} warnings={warnings} />
@@ -409,7 +465,7 @@
                                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                     {plans.length > 0 ? plans.map(plan => (
                                         <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
-                                    )) : <p className="p-4 text-gray-500">You have no performance plans on record.</p>}
+                                    )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
                                 </div>
                             </section>
                             <section>
@@ -417,7 +473,7 @@
                                 <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                     {warnings.length > 0 ? warnings.map(warning => (
                                         <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
-                                    )) : <p className="p-4 text-gray-500">You have no warnings on record.</p>}
+                                    )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
                                 </div>
                             </section>
                         </div>
@@ -430,7 +486,7 @@
                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                  </div>
                                  <div className="p-6 overflow-y-auto flex-grow">
-                                    <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} />
+                                    <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />
                                  </div>
                             </div>
                         </div>
@@ -441,6 +497,67 @@
         
         // --- Shared Components ---
         
+        const ThemeToggleButton = () => {
+            const { theme, toggleTheme } = useTheme();
+            return (
+                <button onClick={toggleTheme} className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600">
+                    {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+                </button>
+            );
+        };
+        const AdminDashboard = ({ agents, setSelectedAgent, setView }) => {
+            const [activePlans, setActivePlans] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                setLoading(true);
+                let allPlans = [];
+                const unsubscribers = agents.map(agent => {
+                    return db.collection(`agents/${agent.id}/plans`).where('status', '==', 'Active')
+                        .onSnapshot(snapshot => {
+                            const agentPlans = snapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data(),
+                                agentName: agent.name,
+                                agentId: agent.id
+                            }));
+                            // Replace old plans for this agent with new ones
+                            allPlans = [...allPlans.filter(p => p.agentId !== agent.id), ...agentPlans];
+                            setActivePlans(allPlans);
+                        });
+                });
+                setLoading(false);
+                return () => unsubscribers.forEach(unsub => unsub());
+            }, [agents]);
+
+            const goToAgent = (plan) => {
+                const agent = agents.find(a => a.id === plan.agentId);
+                if (agent) {
+                    setSelectedAgent(agent);
+                    setView('tracker');
+                }
+            };
+            
+            return (
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h2>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                        <h3 className="text-xl font-semibold mb-4">All Active Plans</h3>
+                        {loading && <p>Loading active plans...</p>}
+                        {!loading && activePlans.length === 0 && <p>There are no active plans across all agents.</p>}
+                        <div className="space-y-2">
+                          {activePlans.sort((a,b) => new Date(a.endDate) - new Date(b.endDate)).map(plan => (
+                             <div key={plan.id} onClick={() => goToAgent(plan)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                 <p className="font-bold">{plan.agentName}</p>
+                                 <p className="text-sm">{plan.type}: {plan.areasOfFocus && plan.areasOfFocus[0] ? plan.areasOfFocus[0].title : 'General Plan'}</p>
+                                 <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {new Date(plan.endDate).toLocaleDateString()}</p>
+                             </div>
+                          ))}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
         const StatCard = ({ title, value, icon, colorClass }) => ( <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4`}><div className={`text-3xl ${colorClass}`}>{icon}</div><div><p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p><p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p></div></div> );
         const DashboardStats = ({ plans, warnings }) => {
             const activePlans = plans.filter(p => p.status === 'Active').length;
@@ -477,31 +594,54 @@
                 </div>
             );
         };
-        const DocumentViewer = ({ data, type, agent }) => {
-            const handleDownloadDocx = () => { try { const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = docx; const sections = []; sections.push(new Paragraph({ text: type === 'plan' ? `Performance Improvement Plan (${data.type})` : 'Official Warning', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, })); sections.push(new Paragraph(" ")); const headerInfo = [ `Employee Name: ${agent.name}`, `Date: ${new Date(data.date || data.startDate).toLocaleDateString()}`, `Manager: ${data.managerName || data.manager}`, type === 'plan' ? `End Date: ${new Date(data.endDate).toLocaleDateString()}` : `Warning Type: ${data.type}` ]; headerInfo.forEach(info => sections.push(new Paragraph(info))); sections.push(new Paragraph(" ")); const createSection = (title, content) => [ new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, style: "Well Spaced" }), new Paragraph(content || "N/A"), new Paragraph(" ")]; if(type === 'warning') { sections.push(...createSection("Summary of Concerns", data.summaryOfConcerns)); sections.push(...createSection("Improvement Action Plan", data.improvementActionPlan)); sections.push(...createSection("Next Action if Plan is Not Followed", data.nextAction)); } if(type === 'plan') { sections.push(...createSection("Introduction", data.introduction)); sections.push(...createSection("Empowerment Statement", data.empowermentStatement)); sections.push(new Paragraph({ text: "Areas of Focus & Expectations", heading: HeadingLevel.HEADING_2 })); data.areasOfFocus?.forEach((area, index) => { sections.push(new Paragraph({ text: `${index + 1}. ${area.title}`, style: "List Paragraph", bullet: { level: 0 } })); sections.push(new Paragraph([new TextRun({ text: "Expectation: ", bold: true }), new TextRun(area.expectation)])); sections.push(new Paragraph([new TextRun({ text: "Action Plan: ", bold: true }), new TextRun(area.actionPlan)])); sections.push(new Paragraph([new TextRun({ text: "Goal: ", bold: true }), new TextRun(area.goal)])); sections.push(new Paragraph(" ")); }); sections.push(...createSection("Support & Monitoring Plan", data.supportPlan)); sections.push(...createSection("Consequences of Not Meeting Expectations", data.consequences)); sections.push(new Paragraph({ text: "QA Targets", heading: HeadingLevel.HEADING_2 })); const tableRows = [ new TableRow({ children: [ new TableCell({ children: [new Paragraph("Week")] }), new TableCell({ children: [new Paragraph("Required")] }), new TableCell({ children: [new Paragraph("Achieved")] }) ]}) ]; data.qaTargets?.forEach(target => { tableRows.push(new TableRow({ children: [ new TableCell({ children: [new Paragraph(target.week)] }), new TableCell({ children: [new Paragraph(target.required)] }), new TableCell({ children: [new Paragraph(target.achieved)] }) ]})); }); sections.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } })); } sections.push(new Paragraph({ text: "\n\n\n\n" })); sections.push(new Paragraph("Employee's Signature: _________________________")); sections.push(new Paragraph("\n")); sections.push(new Paragraph("Team Leader's Signature: _________________________")); const doc = new Document({ sections: [{ children: sections }] }); Packer.toBlob(doc).then(blob => { saveAs(blob, `${agent.name}-${type}-${new Date().toISOString().split('T')[0]}.docx`); }); } catch (error) { console.error('Failed to download document:', error); alert('Download error.'); } };
-            const printContent = () => { const printable = document.getElementById('printable-document').innerHTML; const newWin = window.open('', 'Print-Window'); newWin.document.open(); newWin.document.write(`<html><head><title>Print</title><style>@import url('https://cdn.tailwindcss.com/dist/tailwind.min.css');</style></head><body onload="window.print()" onafterprint="window.close()"><div class="prose">${printable}</div></body></html>`); newWin.document.close(); };
+        const DocumentViewer = ({ data, type, agent, user, isAdmin, getPlansPath }) => {
+            const [coachingNotes, setCoachingNotes] = useState([]);
+            const [newNote, setNewNote] = useState("");
+
+            useEffect(() => {
+                if(type !== 'plan' || !agent) return;
+                 const path = `agents/${agent.id}/plans/${data.id}/coachingNotes`;
+                 const unsubscribe = db.collection(path).orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+                    setCoachingNotes(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                 });
+                 return () => unsubscribe();
+            }, [data, type, agent]);
+
+            const handleAddCoachingNote = async (e) => {
+                e.preventDefault();
+                if(!newNote.trim()) return;
+                const path = `agents/${agent.id}/plans/${data.id}/coachingNotes`;
+                await db.collection(path).add({
+                    note: newNote,
+                    author: user.email,
+                    createdAt: new Date().toISOString()
+                });
+                setNewNote("");
+            };
+
+            const handleDownloadDocx = () => { try { const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, AlignmentType, HeadingLevel } = docx; const sections = []; sections.push(new Paragraph({ text: type === 'plan' ? `Performance Improvement Plan (${data.type})` : 'Official Warning', heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, })); sections.push(new Paragraph(" ")); const headerInfo = [ `Employee Name: ${agent.name}`, `Date: ${new Date(data.date || data.startDate).toLocaleDateString()}`, `Manager: ${data.managerName || data.manager}`, type === 'plan' ? `End Date: ${new Date(data.endDate).toLocaleDateString()}` : `Warning Type: ${data.type}` ]; headerInfo.forEach(info => sections.push(new Paragraph(info))); sections.push(new Paragraph(" ")); const createSection = (title, content) => [ new Paragraph({ text: title, heading: HeadingLevel.HEADING_2, style: "Well Spaced" }), new Paragraph(content || "N/A"), new Paragraph(" ")]; if(type === 'warning') { sections.push(...createSection("Summary of Concerns", data.summaryOfConcerns)); sections.push(...createSection("Improvement Action Plan", data.improvementActionPlan)); sections.push(...createSection("Next Action if Plan is Not Followed", data.nextAction)); } if(type === 'plan') { sections.push(...createSection("Introduction", data.introduction)); sections.push(...createSection("Empowerment Statement", data.empowermentStatement)); sections.push(new Paragraph({ text: "Areas of Focus & Expectations", heading: HeadingLevel.HEADING_2 })); data.areasOfFocus?.forEach((area, index) => { sections.push(new Paragraph({ text: `${index + 1}. ${area.title}`, style: "List Paragraph", bullet: { level: 0 } })); sections.push(new Paragraph([new TextRun({ text: "Expectation: ", bold: true }), new TextRun(area.expectation)])); sections.push(new Paragraph([new TextRun({ text: "Action Plan: ", bold: true }), new TextRun(area.actionPlan)])); sections.push(new Paragraph([new TextRun({ text: "Goal: ", bold: true }), new TextRun(area.goal)])); sections.push(new Paragraph(" ")); }); sections.push(...createSection("Support & Monitoring Plan", data.supportPlan)); sections.push(...createSection("Consequences of Not Meeting Expectations", data.consequences)); sections.push(new Paragraph({ text: "QA Targets", heading: HeadingLevel.HEADING_2 })); const tableRows = [ new TableRow({ children: [ new TableCell({ children: [new Paragraph("Week")] }), new TableCell({ children: [new Paragraph("Required")] }), new TableCell({ children: [new Paragraph("Achieved")] }) ]}) ]; data.qaTargets?.forEach(target => { tableRows.push(new TableRow({ children: [ new TableCell({ children: [new Paragraph(target.week)] }), new TableCell({ children: [new Paragraph(target.required)] }), new TableCell({ children: [new Paragraph(target.achieved)] }) ]})); }); sections.push(new Table({ rows: tableRows, width: { size: 100, type: WidthType.PERCENTAGE } })); coachingNotes.forEach(note => { sections.push(new Paragraph(`Coaching Note (${new Date(note.createdAt).toLocaleString()}): ${note.note}`)) }); } sections.push(new Paragraph({ text: "\n\n\n\n" })); sections.push(new Paragraph("Employee's Signature: _________________________")); sections.push(new Paragraph("\n")); sections.push(new Paragraph("Team Leader's Signature: _________________________")); const doc = new Document({ sections: [{ children: sections }] }); Packer.toBlob(doc).then(blob => { saveAs(blob, `${agent.name}-${type}-${new Date().toISOString().split('T')[0]}.docx`); }); } catch (error) { console.error('Failed to download document:', error); alert('Download error.'); } };
+            const printContent = () => { const printable = document.getElementById('printable-document').innerHTML; const newWin = window.open('', 'Print-Window'); newWin.document.open(); newWin.document.write(`<html><head><title>Print</title><style>@import url('https://cdn.tailwindcss.com/dist/tailwind.min.css'); .no-print{display:none}</style></head><body onload="window.print()" onafterprint="window.close()"><div class="prose">${printable}</div></body></html>`); newWin.document.close(); };
             const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
-            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">{title}</h4><p className="whitespace-pre-wrap">{content}</p></div> );
-            return ( <div><div id="printable-document" className="prose dark:prose-invert max-w-none p-4"><h2 className="text-2xl font-bold text-center">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2><div className="grid grid-cols-2 gap-4 my-6 text-sm">{renderField("Employee Name", agent.name)}{renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}{renderField("Manager", data.managerName || data.manager)}{type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}</div>{type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}{type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 pl-4"><h5 className="font-bold">{index + 1}. {area.title}</h5><p><span className="font-semibold">Expectation:</span> {area.expectation}</p><p><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b pb-1 mb-2">QA Targets</h4><table className="w-full text-left"><thead><tr><th>Week</th><th>Required</th><th>Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index}><td>{target.week}</td><td>{target.required}</td><td>{target.achieved}</td></tr> ))}</tbody></table></div> </> )}<div className="flex justify-between mt-16 pt-8 border-t"><div><p>Employee's Signature</p><p className="mt-8">__________</p></div><div><p>Leader's Signature</p><p className="mt-8">__________</p></div></div></div><div className="flex-shrink-0 flex justify-end p-4 border-t gap-2"><button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white"><DownloadIcon /> Download</button><button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white"><PrinterIcon /> Print</button></div></div> );
+            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
+            return ( <div><div id="printable-document"><h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2><div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">{renderField("Employee Name", agent.name)}{renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}{renderField("Manager", data.managerName || data.manager)}{type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}</div>{type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}{type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4"><h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Expectation:</span> {area.expectation}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> </> )}<div className="mt-6 no-print"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>{isAdmin && <form onSubmit={handleAddCoachingNote} className="flex gap-2 mb-4"><FormTextarea label="Add a new coaching note" value={newNote} onChange={e => setNewNote(e.target.value)} /><button type="submit" className="self-end py-2 px-4 bg-blue-600 text-white rounded-md">Add</button></form>}{coachingNotes.length > 0 ? <div className="space-y-3">{coachingNotes.map(note => <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md"><p className="text-sm">{note.note}</p><p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p></div>)}</div> : <p>No coaching notes yet.</p>}</div><div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600"><div><p>Employee's Signature</p><p className="mt-8">____________________</p></div><div><p>Leader's Signature</p><p className="mt-8">____________________</p></div></div></div><div className="flex-shrink-0 flex justify-end p-4 border-t dark:border-gray-700 gap-2"><button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white hover:bg-green-700"><DownloadIcon /> Download</button><button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700"><PrinterIcon /> Print</button></div></div> );
         };
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
-        const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /></div>;
-        const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /></div>;
-        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 hover:bg-indigo-200"><SparklesIcon /> Auto-fill</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 hover:bg-purple-200"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t space-y-2"><label>{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)}>Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text}>{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
+        const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
+        const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
             const [email, setEmail] = useState('');
             const handleSubmit = (e) => { e.preventDefault(); onSubmit({ name, employeeId, email }); };
-            return ( <form onSubmit={handleSubmit} className="space-y-4"><FormInput label="Agent Name" type="text" value={name} onChange={e => setName(e.target.value)} required /><FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required /><FormInput label="Agent's Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="The email they registered with" required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white">Add Agent</button></div></form> );
+            return ( <form onSubmit={handleSubmit} className="space-y-4"><FormInput label="Agent Name" type="text" value={name} onChange={e => setName(e.target.value)} required /><FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required /><FormInput label="Agent's Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="The email they registered with" required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white">Add Agent</button></div></form> );
         };
-        const PlanForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label>Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div><FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required /><FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required /><FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border rounded-md relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })}>+ Add Area</button></FormSection><FormTextarea label="Support Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required /><FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required /><FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })}>+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel}>Cancel</button><button type="submit">{initialData?.id ? 'Save' : 'Create'}</button></div></form>;};
-        const WarningForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required /><div><label>Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div><FormTextarea label="Summary" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required /><FormTextarea label="Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required /><FormTextarea label="Next Action" name="nextAction" value={formData.nextAction} onChange={handleChange} required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel}>Cancel</button><button type="submit">{initialData?.id ? 'Save' : 'Create'}</button></div></form>; };
+        const PlanForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div><FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required /><FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required /><FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border dark:border-gray-600 rounded-md relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full p-1 leading-none">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Area</button></FormSection><FormTextarea label="Support Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required /><FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required /><FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} className="mt-6 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full disabled:opacity-50" disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-green-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Plan'}</button></div></form>;};
+        const WarningForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div><FormTextarea label="Summary" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required /><FormTextarea label="Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required /><FormTextarea label="Next Action" name="nextAction" value={formData.nextAction} onChange={handleChange} required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-yellow-500 text-white">{initialData?.id ? 'Save Changes' : 'Create Warning'}</button></div></form>; };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<Main />);
+        root.render(<ThemeProvider><Main /></ThemeProvider>);
     </script>
 </body>
 </html>
-" of "pip-qip-tracker.html" and I want to add a dark mode and a light mode option with a button
 
