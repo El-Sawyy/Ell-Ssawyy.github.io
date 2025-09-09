@@ -428,8 +428,10 @@
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
 
             useEffect(() => {
+                setIsLoading(true);
                 const agentQuery = db.collection('agents').where('email', '==', user.email);
                 const unsubscribe = agentQuery.onSnapshot(snapshot => {
+                    setIsLoading(false);
                     if (!snapshot.empty) {
                         const agentDoc = snapshot.docs[0];
                         const agent = { id: agentDoc.id, ...agentDoc.data() };
@@ -441,12 +443,16 @@
                         const warningsUnsub = db.collection(`agents/${agent.id}/warnings`).onSnapshot(warningSnap => {
                             setWarnings(warningSnap.docs.map(d => ({ id: d.id, ...d.data() })));
                         });
-                        setIsLoading(false);
+                        
                         return () => { plansUnsub(); warningsUnsub(); };
                     } else {
-                        setIsLoading(false);
+                        setAgentData(null); 
                     }
+                }, (error) => {
+                    console.error("Error fetching agent profile:", error);
+                    setIsLoading(false);
                 });
+
                 return () => unsubscribe();
             }, [user.email]);
             
@@ -609,7 +615,7 @@
             return (
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-indigo-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{title}</p><p className="text-sm text-gray-500">{doc.startDate ? `Start: ${new Date(doc.startDate).toLocaleDateString()} | End: ${new Date(doc.endDate).toLocaleDateString()}` : ''}</p></div>
-                    {isAdmin ? <select value={doc.status} onChange={(e) => handleUpdatePlanStatus(doc.id, e.target.value)} className={`appearance-none flex-shrink-0 text-xs p-1 rounded-md border-none mx-4 ${statusColor[doc.status]}`}><option>Active</option><option>Passed</option><option>Failed</option><option>Extended</option><option>Completed</option></select> : <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full mx-4 ${statusColor[doc.status]}`}>{doc.status}</span>}
+                    {isAdmin ? <select value={doc.status} onChange={(e) => handleUpdatePlanStatus(doc.id, e.target.value)} className={`appearance-none flex-shrink-0 text-xs p-1 rounded-md border-none mx-4 ${statusColor[doc.status]} dark:bg-gray-700 dark:text-gray-200`}><option>Active</option><option>Passed</option><option>Failed</option><option>Extended</option><option>Completed</option></select> : <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full mx-4 ${statusColor[doc.status]}`}>{doc.status}</span>}
                     <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
                 </div>
             );
