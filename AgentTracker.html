@@ -35,7 +35,6 @@
         
         // Initialize Firebase using the global `firebase` object from the compat libraries
         firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
         const db = firebase.firestore();
 
         // Destructure React hooks from the global React object
@@ -70,10 +69,6 @@
 
         // --- Main Application Component ---
         function App() {
-            // --- Firebase State ---
-            const [userId, setUserId] = useState(null);
-            const [isAuthReady, setIsAuthReady] = useState(false);
-
             // --- Application State ---
             const [agents, setAgents] = useState([]);
             const [selectedAgent, setSelectedAgent] = useState(null);
@@ -81,43 +76,35 @@
             const [warnings, setWarnings] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
+            const [dbError, setDbError] = useState(null);
             
-            // --- Firestore Paths ---
+            // --- Firestore Paths (Shared Database) ---
             const appId = firebaseConfig.projectId;
-            const agentsPath = `artifacts/${appId}/users/${userId}/agents`;
-            const getPlansPath = (agentId) => `artifacts/${appId}/users/${userId}/agents/${agentId}/plans`;
-            const getWarningsPath = (agentId) => `artifacts/${appId}/users/${userId}/agents/${agentId}/warnings`;
+            const agentsPath = `artifacts/${appId}/agents`;
+            const getPlansPath = (agentId) => `artifacts/${appId}/agents/${agentId}/plans`;
+            const getWarningsPath = (agentId) => `artifacts/${appId}/agents/${agentId}/warnings`;
 
-            // --- Firebase Initialization Effect ---
+            // --- Data Fetching Effects ---
             useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged(async (user) => {
-                    if (user) {
-                        setUserId(user.uid);
+                setIsLoading(true);
+                setDbError(null);
+                const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
+                    setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+                    setIsLoading(false);
+                }, (error) => { 
+                    console.error("Error fetching agents:", error); 
+                    if (error.code === 'permission-denied') {
+                        setDbError("Could not fetch data. This is likely due to Firebase security rules. Please ensure your Firestore rules are set to allow public read/write access.");
                     } else {
-                        try {
-                           await auth.signInAnonymously();
-                        } catch(error) {
-                            console.error("Anonymous Sign-In Error:", error);
-                        }
+                        setDbError(`An unexpected error occurred: ${error.message}`);
                     }
-                    setIsAuthReady(true);
+                    setIsLoading(false); 
                 });
                 return () => unsubscribe();
             }, []);
 
-            // --- Data Fetching Effects ---
             useEffect(() => {
-                if (!isAuthReady || !db || !userId) return;
-                setIsLoading(true);
-                const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
-                    setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-                    setIsLoading(false);
-                }, (error) => { console.error("Error fetching agents:", error); setIsLoading(false); });
-                return () => unsubscribe();
-            }, [isAuthReady, userId]);
-
-            useEffect(() => {
-                if (!selectedAgent || !db || !userId) { setPlans([]); setWarnings([]); return; }
+                if (!selectedAgent || !db) { setPlans([]); setWarnings([]); return; }
                 const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).onSnapshot((snapshot) => {
                     setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 }, (error) => console.error("Error fetching plans:", error));
@@ -125,13 +112,14 @@
                     setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 }, (error) => console.error("Error fetching warnings:", error));
                 return () => { unsubPlans(); unsubWarnings(); };
-            }, [selectedAgent, userId]);
+            }, [selectedAgent]);
             
             // --- CRUD Handlers ---
             const handleSaveData = async (type, data) => {
-                if (!db || !selectedAgent) return;
+                if (!db || (type !== 'agent' && !selectedAgent)) return;
+                
                 const isPlan = type === 'plan';
-                const path = isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
+                const path = type === 'agent' ? agentsPath : isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
                 const collectionRef = db.collection(path);
 
                 try {
@@ -172,7 +160,7 @@
                             <PlusCircleIcon /> Add Agent
                         </button>
                         <nav className="space-y-2">
-                            {isLoading ? <p>Loading agents...</p> : agents.map(agent => (
+                            {isLoading ? <p>Loading agents...</p> : dbError ? <p className="text-red-500 text-sm p-2 bg-red-100 dark:bg-red-900 rounded-md">Error loading agents.</p> : agents.map(agent => (
                                 <a key={agent.id} href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }}
                                     className={`flex items-center gap-3 p-2 rounded-lg transition-colors ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
                                     <UserIcon />
@@ -187,7 +175,15 @@
 
                     {/* Main Content */}
                     <main className="flex-1 p-4 md:p-8 overflow-auto">
-                        {selectedAgent ? (
+                        {dbError ? (
+                            <div className="flex items-center justify-center h-full">
+                                <div className="text-center bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg relative" role="alert">
+                                    <strong className="font-bold">Database Error!</strong>
+                                    <span className="block sm:inline ml-2">{dbError}</span>
+                                    <p className="mt-2 text-xs text-red-600 dark:text-red-300">Please go to your Firebase project, navigate to Firestore Database → Rules, and ensure they are published correctly to allow public access.</p>
+                                </div>
+                            </div>
+                        ) : selectedAgent ? (
                             <div className="space-y-8">
                                 <header>
                                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
@@ -203,7 +199,7 @@
                                     </div>
                                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                         {plans.length > 0 ? plans.map(plan => (
-                                            <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} />
+                                            <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} />
                                         )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
                                     </div>
                                 </section>
@@ -236,7 +232,7 @@
                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                  </div>
                                  <div className="p-6 overflow-y-auto flex-grow">
-                                    {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={async (data) => { await db.collection(agentsPath).add({ ...data, createdAt: new Date().toISOString() }); closeModal(); }} onCancel={closeModal} />}
+                                    {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
                                     {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
                                     {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} />}
@@ -255,7 +251,7 @@
         }
 
         // --- List & Card Components ---
-        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete }) => {
+        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete, selectedAgent, getPlansPath }) => {
             const isPlan = type === 'plan';
             const title = isPlan ? (doc.areasOfFocus && doc.areasOfFocus[0] ? doc.areasOfFocus[0].title : 'PIP/QIP') : doc.summaryOfConcerns || 'Warning';
             
@@ -391,6 +387,8 @@
                 setIsProcessing(true);
                 setError('');
                 
+                // IMPORTANT: You must add your own Google AI API key here for this feature to work.
+                // Get a key from https://aistudio.google.com/
                 const apiKey = ""; 
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
                 let prompt, schema;
