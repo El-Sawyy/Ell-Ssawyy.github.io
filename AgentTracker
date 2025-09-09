@@ -11,7 +11,6 @@ import {
     updateDoc
 } from 'firebase/firestore';
 
-
 // --- Your Firebase Configuration ---
 const firebaseConfig = {
   apiKey: "AIzaSyDB183VLIdw9tE7gr5cbs0dCPsyjmXG9r8",
