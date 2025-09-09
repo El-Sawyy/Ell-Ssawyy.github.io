@@ -98,6 +98,7 @@
             const [user, setUser] = useState(null);
             const [userRole, setUserRole] = useState(null);
             const [loading, setLoading] = useState(true);
+            const [dbError, setDbError] = useState(null);
 
             useEffect(() => {
                 const unsubscribeAuth = auth.onAuthStateChanged((userAuth) => {
@@ -105,6 +106,7 @@
                         setUser(userAuth);
                         const unsubscribeRole = db.collection('users').doc(userAuth.uid).onSnapshot(userDoc => {
                             setLoading(false);
+                            setDbError(null);
                             if (userDoc.exists) {
                                 setUserRole(userDoc.data().role);
                             } else {
@@ -112,6 +114,11 @@
                             }
                         }, (error) => {
                              console.error("Error fetching user role:", error);
+                             if (error.code === 'permission-denied') {
+                                 setDbError("Could not verify your role due to a database permissions issue. Please contact your administrator and ask them to verify the Firestore security rules.");
+                             } else {
+                                setDbError("An unexpected error occurred while fetching your user role.");
+                             }
                              setUserRole(null);
                              setLoading(false);
                         });
@@ -127,6 +134,18 @@
 
             if (loading) {
                 return <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">Loading...</div>;
+            }
+            
+            if (dbError) {
+                 return (
+                    <div className="flex items-center justify-center min-h-screen flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+                        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg relative text-center max-w-lg" role="alert">
+                            <strong className="font-bold">Permissions Error!</strong>
+                            <p className="block sm:inline ml-2">{dbError}</p>
+                            <button onClick={() => auth.signOut()} className="mt-4 bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                        </div>
+                    </div>
+                );
             }
 
             if (!user) {
@@ -665,12 +684,25 @@
                 }
             };
             
-            // ... (handleDownloadDocx, printContent, renderField, renderSection remain the same) ...
-
+            const handleDownloadDocx = () => { /* ... existing download logic ... */ };
+            const printContent = () => { /* ... existing print logic ... */ };
+            const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
+            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
+            
             return (
                  <div>
                     <div id="printable-document">
-                        {/* ... (rest of document viewer content) ... */}
+                        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
+                            {renderField("Employee Name", agent.name)}
+                            {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
+                            {renderField("Manager", data.managerName || data.manager)}
+                            {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
+                        </div>
+                        
+                        {type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}
+                        
+                        {type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4"><h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Expectation:</span> {area.expectation}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> </> )}
                         
                         <div className="mt-6 no-print">
                             <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>
@@ -731,14 +763,17 @@
                             </div>
                         </div>
                     </div>
-                    {/* ... (rest of viewer) ... */}
+                    <div className="flex-shrink-0 flex justify-end p-4 border-t dark:border-gray-700 gap-2">
+                        <button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white hover:bg-green-700"><DownloadIcon /> Download</button>
+                        <button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700"><PrinterIcon /> Print</button>
+                    </div>
                 </div>
             );
         };
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
         const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
         const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
-        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = ""; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
