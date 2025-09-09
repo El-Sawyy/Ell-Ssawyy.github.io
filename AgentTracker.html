@@ -716,6 +716,18 @@
             const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
             const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
             
+            const renderNoteContent = (note) => {
+                switch(note.type) {
+                    case 'Email':
+                        return <div><p className="font-bold">{note.content.subject}</p><p>{note.content.body}</p></div>;
+                    case 'Bullets':
+                        return <ul className="list-disc list-inside">{note.content.map((pt, i) => <li key={i}>{pt}</li>)}</ul>;
+                    case 'Note':
+                    default:
+                        return <p>{note.content}</p>;
+                }
+            };
+            
             return (
                  <div>
                     <div id="printable-document">
@@ -756,7 +768,16 @@
                                     </form>
                                 </div>
                             )}
-                            {coachingNotes.length > 0 ? <div className="space-y-3">{coachingNotes.map(note => <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md"><p className="text-xs text-gray-500 dark:text-gray-400">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p></div>)}</div> : <p>No coaching notes yet.</p>}
+                             {coachingNotes.length > 0 ? (
+                                <div className="space-y-3">
+                                    {coachingNotes.map(note => (
+                                        <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                            <div className="text-sm text-gray-800 dark:text-gray-200">{renderNoteContent(note)}</div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : <p className="text-gray-500 dark:text-gray-400">No coaching notes yet.</p>}
                         </div>
 
                         <div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600">
