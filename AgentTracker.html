@@ -6,27 +6,23 @@
     <title>Performance & Quality Tracker</title>
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React Libraries -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    
     <!-- Babel to transpile JSX in the browser -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase Libraries (v9+ compat libraries for global access) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900">
     <div id="root"></div>
 
     <script type="text/babel">
-        import React, { useState, useEffect, useCallback } from 'https://esm.sh/react@18.2.0';
-        import ReactDOM from 'https://esm.sh/react-dom@18.2.0/client';
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { 
-            getFirestore, 
-            collection, 
-            doc, 
-            addDoc, 
-            onSnapshot, 
-            deleteDoc, 
-            updateDoc 
-        } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
         // --- Your Firebase Configuration ---
         const firebaseConfig = {
           apiKey: "AIzaSyDB183VLIdw9tE7gr5cbs0dCPsyjmXG9r8",
@@ -36,6 +32,14 @@
           messagingSenderId: "528680834479",
           appId: "1:528680834479:web:41fe2ca649ce4c286c8b5a"
         };
+        
+        // Initialize Firebase using the global `firebase` object from the compat libraries
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Destructure React hooks from the global React object
+        const { useState, useEffect, useCallback } = React;
 
         // --- SVG Icons ---
         const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
@@ -67,8 +71,6 @@
         // --- Main Application Component ---
         function App() {
             // --- Firebase State ---
-            const [db, setDb] = useState(null);
-            const [auth, setAuth] = useState(null);
             const [userId, setUserId] = useState(null);
             const [isAuthReady, setIsAuthReady] = useState(false);
 
@@ -81,7 +83,6 @@
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             
             // --- Firestore Paths ---
-            // Using the Project ID as a static and unique identifier for the database paths
             const appId = firebaseConfig.projectId;
             const agentsPath = `artifacts/${appId}/users/${userId}/agents`;
             const getPlansPath = (agentId) => `artifacts/${appId}/users/${userId}/agents/${agentId}/plans`;
@@ -89,70 +90,59 @@
 
             // --- Firebase Initialization Effect ---
             useEffect(() => {
-                try {
-                    const app = initializeApp(firebaseConfig);
-                    const authInstance = getAuth(app);
-                    const dbInstance = getFirestore(app);
-                    setDb(dbInstance);
-                    setAuth(authInstance);
-
-                    const unsubscribe = onAuthStateChanged(authInstance, async (user) => {
-                        if (user) {
-                            setUserId(user.uid);
-                        } else {
-                            try {
-                               await signInAnonymously(authInstance);
-                            } catch(error) {
-                                console.error("Anonymous Sign-In Error:", error);
-                            }
+                const unsubscribe = auth.onAuthStateChanged(async (user) => {
+                    if (user) {
+                        setUserId(user.uid);
+                    } else {
+                        try {
+                           await auth.signInAnonymously();
+                        } catch(error) {
+                            console.error("Anonymous Sign-In Error:", error);
                         }
-                        setIsAuthReady(true);
-                    });
-                    return () => unsubscribe();
-                } catch (error) {
-                    console.error("Firebase Init Error:", error);
-                    setIsLoading(false);
-                }
+                    }
+                    setIsAuthReady(true);
+                });
+                return () => unsubscribe();
             }, []);
 
             // --- Data Fetching Effects ---
             useEffect(() => {
                 if (!isAuthReady || !db || !userId) return;
                 setIsLoading(true);
-                const unsubscribe = onSnapshot(collection(db, agentsPath), (snapshot) => {
+                const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
                     setAgents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                     setIsLoading(false);
                 }, (error) => { console.error("Error fetching agents:", error); setIsLoading(false); });
                 return () => unsubscribe();
-            }, [isAuthReady, db, userId]);
+            }, [isAuthReady, userId]);
 
             useEffect(() => {
                 if (!selectedAgent || !db || !userId) { setPlans([]); setWarnings([]); return; }
-                const unsubPlans = onSnapshot(collection(db, getPlansPath(selectedAgent.id)), (snapshot) => {
+                const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).onSnapshot((snapshot) => {
                     setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 }, (error) => console.error("Error fetching plans:", error));
-                const unsubWarnings = onSnapshot(collection(db, getWarningsPath(selectedAgent.id)), (snapshot) => {
+                const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).onSnapshot((snapshot) => {
                     setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
                 }, (error) => console.error("Error fetching warnings:", error));
                 return () => { unsubPlans(); unsubWarnings(); };
-            }, [selectedAgent, db, userId]);
+            }, [selectedAgent, userId]);
             
             // --- CRUD Handlers ---
             const handleSaveData = async (type, data) => {
                 if (!db || !selectedAgent) return;
                 const isPlan = type === 'plan';
                 const path = isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
+                const collectionRef = db.collection(path);
 
                 try {
-                    // Remove the ID from the data object to avoid Firestore errors
                     const dataToSave = { ...data };
                     delete dataToSave.id;
 
                     if (modal.data?.id) {
-                        await updateDoc(doc(db, path, modal.data.id), dataToSave);
+                        await collectionRef.doc(modal.data.id).update(dataToSave);
                     } else {
                         const finalData = isPlan ? { ...dataToSave, status: 'Active', createdAt: new Date().toISOString() } : { ...dataToSave, createdAt: new Date().toISOString() };
-                        await addDoc(collection(db, path), finalData);
+                        await collectionRef.add(finalData);
                     }
                     closeModal();
                 } catch (error) { console.error(`Error saving ${type}:`, error); }
@@ -162,7 +152,7 @@
                if (!db || !selectedAgent) return;
                openModal('CONFIRM_DELETE', { onConfirm: async () => {
                    const path = type === 'plan' ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
-                   try { await deleteDoc(doc(db, path, id)); } 
+                   try { await db.collection(path).doc(id).delete(); } 
                    catch (error) { console.error(`Error deleting ${type}:`, error); }
                    closeModal();
                }});
@@ -213,7 +203,7 @@
                                     </div>
                                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                         {plans.length > 0 ? plans.map(plan => (
-                                            <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} db={db} selectedAgent={selectedAgent} getPlansPath={getPlansPath} />
+                                            <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} />
                                         )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
                                     </div>
                                 </section>
@@ -246,7 +236,7 @@
                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                  </div>
                                  <div className="p-6 overflow-y-auto flex-grow">
-                                    {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={async (data) => { await addDoc(collection(db, agentsPath), { ...data, createdAt: new Date().toISOString() }); closeModal(); }} onCancel={closeModal} />}
+                                    {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={async (data) => { await db.collection(agentsPath).add({ ...data, createdAt: new Date().toISOString() }); closeModal(); }} onCancel={closeModal} />}
                                     {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
                                     {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} />}
@@ -265,7 +255,7 @@
         }
 
         // --- List & Card Components ---
-        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete, db, selectedAgent, getPlansPath }) => {
+        const DocumentListItem = ({ doc, type, onView, onEdit, onDelete }) => {
             const isPlan = type === 'plan';
             const title = isPlan ? (doc.areasOfFocus && doc.areasOfFocus[0] ? doc.areasOfFocus[0].title : 'PIP/QIP') : doc.summaryOfConcerns || 'Warning';
             
@@ -279,8 +269,8 @@
             
             const handleUpdatePlanStatus = async (planId, status) => {
                 if (!db || !selectedAgent) return;
-                const planRef = doc(db, getPlansPath(selectedAgent.id), planId);
-                try { await updateDoc(planRef, { status }); } 
+                const planRef = db.collection(getPlansPath(selectedAgent.id)).doc(planId);
+                try { await planRef.update({ status }); } 
                 catch (error) { console.error("Error updating plan status:", error); }
             };
 
