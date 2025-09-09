@@ -66,20 +66,34 @@
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                const unsubscribe = auth.onAuthStateChanged(async (userAuth) => {
+                const unsubscribeAuth = auth.onAuthStateChanged((userAuth) => {
                     if (userAuth) {
-                        const userDoc = await db.collection('users').doc(userAuth.uid).get();
-                        if (userDoc.exists) {
-                            setUserRole(userDoc.data().role);
-                        }
                         setUser(userAuth);
+                        // Use a real-time listener for the user's role document
+                        const unsubscribeRole = db.collection('users').doc(userAuth.uid).onSnapshot(userDoc => {
+                            if (userDoc.exists) {
+                                setUserRole(userDoc.data().role);
+                            } else {
+                                setUserRole(null); // User document doesn't exist
+                            }
+                            setLoading(false);
+                        }, (error) => {
+                             console.error("Error fetching user role:", error);
+                             setUserRole(null);
+                             setLoading(false);
+                        });
+                        
+                        // Return the role listener's unsubscribe function to clean up
+                        return () => unsubscribeRole();
+
                     } else {
                         setUser(null);
                         setUserRole(null);
+                        setLoading(false);
                     }
-                    setLoading(false);
                 });
-                return () => unsubscribe();
+                // Clean up the auth listener
+                return () => unsubscribeAuth();
             }, []);
 
             if (loading) {
@@ -98,7 +112,7 @@
                 return <AgentView user={user} />;
             }
             
-            // Fallback for users with no role assigned yet
+            // Fallback for users with no role assigned yet, or if the role document is missing
             return (
                  <div className="flex items-center justify-center min-h-screen flex-col">
                     <p className="mb-4">Your account role is not yet assigned. Please contact an administrator.</p>
@@ -489,4 +503,5 @@
     </script>
 </body>
 </html>
+" of "pip-qip-tracker.html" and I want to add a dark mode and a light mode option with a button
 
