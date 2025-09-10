@@ -47,7 +47,7 @@
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        const { useState, useEffect, useCallback, createContext, useContext } = React;
+        const { useState, useEffect, useCallback, createContext, useContext, useMemo } = React;
 
         // --- Theme Context and Provider ---
         const ThemeContext = createContext();
@@ -120,7 +120,7 @@
                              if (error.code === 'permission-denied') {
                                  setDbError("Could not verify your role due to a database permissions issue. Please contact your administrator and ask them to verify the Firestore security rules.");
                              } else {
-                                setDbError("An unexpected error occurred while fetching your user role.");
+                                 setDbError("An unexpected error occurred while fetching your user role.");
                              }
                              setUserRole(null);
                              setLoading(false);
@@ -141,14 +141,14 @@
             
             if (dbError && user) {
                  return (
-                    <div className="flex items-center justify-center min-h-screen flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-                        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg relative text-center max-w-lg" role="alert">
-                            <strong className="font-bold">Permissions Error!</strong>
-                            <p className="block sm:inline ml-2">{dbError}</p>
-                            <button onClick={() => auth.signOut()} className="mt-4 bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
-                        </div>
-                    </div>
-                );
+                     <div className="flex items-center justify-center min-h-screen flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
+                         <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-200 px-4 py-3 rounded-lg relative text-center max-w-lg" role="alert">
+                             <strong className="font-bold">Permissions Error!</strong>
+                             <p className="block sm:inline ml-2">{dbError}</p>
+                             <button onClick={() => auth.signOut()} className="mt-4 bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                         </div>
+                     </div>
+                 );
             }
 
             if (!user) {
@@ -162,9 +162,9 @@
             }
             return (
                  <div className="flex items-center justify-center min-h-screen flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
-                    <p className="mb-4">Your account role is not yet assigned. Please contact an administrator.</p>
-                    <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
-                </div>
+                     <p className="mb-4">Your account role is not yet assigned. Please contact an administrator.</p>
+                     <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                 </div>
             );
         }
 
@@ -319,107 +319,104 @@
 
             return (
                  <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row transition-colors duration-300">
-                    <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
-                        <div className="flex justify-between items-center mb-4">
-                           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
-                            <div className="flex items-center gap-2">
-                                <ThemeToggleButton />
-                                <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
-                            </div>
-                        </div>
-                        <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
+                     <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+                         <div className="flex justify-between items-center mb-4">
+                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
+                             <div className="flex items-center gap-2">
+                                 <ThemeToggleButton />
+                                 <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
+                             </div>
+                         </div>
+                         <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
                            <button onClick={() => setView('dashboard')} className={`w-1/2 p-2 text-sm font-semibold rounded-l-md ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Dashboard</button>
                            <button onClick={() => setView('tracker')} className={`w-1/2 p-2 text-sm font-semibold rounded-r-md ${view === 'tracker' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Agents</button>
-                        </div>
-                        {view === 'tracker' && (
-                          <>
-                            <button onClick={() => openModal('ADD_AGENT')} className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors mb-4">
-                                <PlusCircleIcon /> Add Agent
-                            </button>
-                            <nav className="space-y-1">
-                                {isLoading ? <p>Loading...</p> : agents.map(agent => (
-                                    <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                        <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
-                                            <UserIcon />
-                                            <div>
-                                               <span className="font-semibold">{agent.name}</span>
-                                               <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
-                                            </div>
-                                        </a>
-                                        <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
-                                            <TrashIcon />
-                                        </button>
-                                    </div>
-                                ))}
-                            </nav>
-                          </>
-                        )}
-                    </aside>
-                    <main className="flex-1 p-4 md:p-8 overflow-auto">
-                        {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} /> : 
-                          selectedAgent ? (
-                            <div>
-                                <header className="mb-8">
-                                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
-                                    <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
-                                </header>
-                                <DashboardStats plans={plans} warnings={warnings} />
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    <section>
+                         </div>
+                         {view === 'tracker' && (
+                           <>
+                             <nav className="space-y-1">
+                                 {isLoading ? <p>Loading...</p> : agents.map(agent => (
+                                     <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                         <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
+                                             <UserIcon />
+                                             <div>
+                                                 <span className="font-semibold">{agent.name}</span>
+                                                 <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
+                                             </div>
+                                         </a>
+                                         <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
+                                             <TrashIcon />
+                                         </button>
+                                     </div>
+                                 ))}
+                             </nav>
+                           </>
+                         )}
+                     </aside>
+                     <main className="flex-1 p-4 md:p-8 overflow-auto">
+                         {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} /> : 
+                           selectedAgent ? (
+                             <div>
+                                 <header className="mb-8">
+                                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
+                                     <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
+                                 </header>
+                                 <DashboardStats plans={plans} warnings={warnings} />
+                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                     <section>
                                          <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
-                                            <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-                                                <PlusCircleIcon /> Create Plan
-                                            </button>
-                                        </div>
-                                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                            {plans.length > 0 ? plans.map(plan => (
-                                                <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
-                                            )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
-                                        </div>
-                                    </section>
-                                    <section>
+                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
+                                             <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                                 <PlusCircleIcon /> Create Plan
+                                             </button>
+                                         </div>
+                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                             {plans.length > 0 ? plans.map(plan => (
+                                                 <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
+                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
+                                         </div>
+                                     </section>
+                                     <section>
                                          <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
-                                            <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
-                                                <PlusCircleIcon /> Create Warning
-                                            </button>
-                                        </div>
-                                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                           {warnings.length > 0 ? warnings.map(warning => (
-                                                <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
-                                            )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
-                                        </div>
-                                    </section>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
-                        )}
-                    </main>
-                    {modal.isOpen && (
+                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
+                                             <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                                                 <PlusCircleIcon /> Create Warning
+                                             </button>
+                                         </div>
+                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                            {warnings.length > 0 ? warnings.map(warning => (
+                                                 <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
+                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
+                                         </div>
+                                     </section>
+                                 </div>
+                             </div>
+                         ) : (
+                             <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
+                         )}
+                     </main>
+                     {modal.isOpen && (
                          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-                            <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
+                             <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
                                  <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
                                      <h3 className="text-xl font-semibold">{ modal.type === 'ADD_AGENT' ? 'Add New Agent' : modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : (modal.data?.title || 'Confirm Deletion') }</h3>
                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                  </div>
                                  <div className="p-6 overflow-y-auto flex-grow">
-                                    {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
-                                    {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
-                                    {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
-                                    {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} getPlansPath={getPlansPath} />}
-                                     {modal.type === 'CONFIRM_DELETE' && (
-                                        <div>
-                                            <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
-                                            <div className="flex justify-end gap-2 mt-4"><button onClick={closeModal} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button><button onClick={modal.data.onConfirm} className="py-2 px-4 rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button></div>
-                                        </div>
-                                    )}
+                                     {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
+                                     {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
+                                     {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
+                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} getPlansPath={getPlansPath} />}
+                                      {modal.type === 'CONFIRM_DELETE' && (
+                                         <div>
+                                             <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
+                                             <div className="flex justify-end gap-2 mt-4"><button onClick={closeModal} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button><button onClick={modal.data.onConfirm} className="py-2 px-4 rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button></div>
+                                         </div>
+                                     )}
                                  </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                             </div>
+                         </div>
+                     )}
+                 </div>
             )
         }
         
@@ -456,9 +453,9 @@
                         setAgentData(null);
                     }
                 }, err => {
-                     console.error("Error fetching agent profile:", err);
-                     setError("Could not load your profile due to a database permissions error. Please contact an admin.");
-                     setIsLoading(false);
+                      console.error("Error fetching agent profile:", err);
+                      setError("Could not load your profile due to a database permissions error. Please contact an admin.");
+                      setIsLoading(false);
                 });
 
 
@@ -477,9 +474,9 @@
             if (error) {
                 return (
                      <div className="flex items-center justify-center min-h-screen flex-col">
-                        <p className="mb-4 text-red-500">{error}</p>
-                        <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
-                    </div>
+                         <p className="mb-4 text-red-500">{error}</p>
+                         <button onClick={() => auth.signOut()} className="bg-red-500 text-white py-2 px-4 rounded-lg">Log Out</button>
+                     </div>
                 );
             }
 
@@ -494,50 +491,50 @@
 
             return (
                  <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans transition-colors duration-300">
-                     <header className="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
-                        <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Performance Dashboard</h1>
-                         <div className="flex items-center gap-4">
-                            <ThemeToggleButton />
-                            <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500 flex items-center gap-2">
-                                <LogOutIcon />
-                                <span>Log Out</span>
-                            </button>
-                        </div>
-                     </header>
-                     <main className="p-4 md:p-8">
-                        <DashboardStats plans={plans} warnings={warnings} />
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <section>
-                                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                    {plans.length > 0 ? plans.map(plan => (
-                                        <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
-                                    )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
-                                </div>
-                            </section>
-                            <section>
-                                <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
-                                <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                    {warnings.length > 0 ? warnings.map(warning => (
-                                        <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
-                                    )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
-                                </div>
-                            </section>
-                        </div>
-                     </main>
-                     {modal.isOpen && (
-                         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-                            <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] relative flex flex-col`}>
-                                 <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
-                                     <h3 className="text-xl font-semibold">{modal.type === 'VIEW_PLAN' ? 'Viewing Plan' : 'Viewing Warning'}</h3>
-                                     <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
-                                 </div>
-                                 <div className="p-6 overflow-y-auto flex-grow">
-                                    <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />
-                                 </div>
-                            </div>
-                        </div>
-                    )}
+                      <header className="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
+                          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your Performance Dashboard</h1>
+                           <div className="flex items-center gap-4">
+                               <ThemeToggleButton />
+                               <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500 flex items-center gap-2">
+                                   <LogOutIcon />
+                                   <span>Log Out</span>
+                               </button>
+                           </div>
+                      </header>
+                      <main className="p-4 md:p-8">
+                          <DashboardStats plans={plans} warnings={warnings} />
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                              <section>
+                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                      {plans.length > 0 ? plans.map(plan => (
+                                          <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
+                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
+                                  </div>
+                              </section>
+                              <section>
+                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                      {warnings.length > 0 ? warnings.map(warning => (
+                                          <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
+                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
+                                  </div>
+                              </section>
+                          </div>
+                      </main>
+                      {modal.isOpen && (
+                          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+                              <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] relative flex flex-col`}>
+                                  <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
+                                      <h3 className="text-xl font-semibold">{modal.type === 'VIEW_PLAN' ? 'Viewing Plan' : 'Viewing Warning'}</h3>
+                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
+                                  </div>
+                                  <div className="p-6 overflow-y-auto flex-grow">
+                                      <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />
+                                  </div>
+                              </div>
+                          </div>
+                      )}
                  </div>
             );
         }
@@ -552,33 +549,53 @@
                 </button>
             );
         };
+
         const AdminDashboard = ({ agents, setSelectedAgent, setView }) => {
-            const [activePlans, setActivePlans] = useState([]);
+            const [allPlans, setAllPlans] = useState([]);
+            const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
 
             useEffect(() => {
-                setLoading(true);
-                let allPlans = [];
-                const unsubscribers = agents.map(agent => {
-                    return db.collection(`agents/${agent.id}/plans`).where('status', '==', 'Active')
-                        .onSnapshot(snapshot => {
-                            const agentPlans = snapshot.docs.map(doc => ({
-                                id: doc.id,
-                                ...doc.data(),
-                                agentName: agent.name,
-                                agentId: agent.id
-                            }));
-                            // Replace old plans for this agent with new ones
-                            allPlans = [...allPlans.filter(p => p.agentId !== agent.id), ...agentPlans];
-                            setActivePlans(allPlans);
-                        });
-                });
-                setLoading(false);
-                return () => unsubscribers.forEach(unsub => unsub());
-            }, [agents]);
+                if (!agents.length) {
+                    setLoading(false);
+                    setAllPlans([]);
+                    setAllWarnings([]);
+                    return;
+                }
 
-            const goToAgent = (plan) => {
-                const agent = agents.find(a => a.id === plan.agentId);
+                setLoading(true);
+                // Using one-time fetches for the dashboard stats.
+                const plansPromises = agents.map(agent => 
+                    db.collection(`agents/${agent.id}/plans`).get().then(snapshot => 
+                        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))
+                    )
+                );
+                const warningsPromises = agents.map(agent => 
+                    db.collection(`agents/${agent.id}/warnings`).get().then(snapshot => 
+                        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))
+                    )
+                );
+
+                Promise.all([Promise.all(plansPromises), Promise.all(warningsPromises)])
+                    .then(([plansArrays, warningsArrays]) => {
+                        setAllPlans(plansArrays.flat());
+                        setAllWarnings(warningsArrays.flat());
+                        setLoading(false);
+                    })
+                    .catch(error => {
+                        console.error("Error fetching all agent data:", error);
+                        setLoading(false);
+                    });
+            }, [agents]);
+            
+            const totalPlans = allPlans.length;
+            const passedPlans = allPlans.filter(p => p.status === 'Passed').length;
+            const failedPlans = allPlans.filter(p => p.status === 'Failed').length;
+            const activePlans = allPlans.filter(p => p.status === 'Active');
+            const totalWarnings = allWarnings.length;
+
+            const goToAgent = (item) => {
+                const agent = agents.find(a => a.id === item.agentId);
                 if (agent) {
                     setSelectedAgent(agent);
                     setView('tracker');
@@ -588,23 +605,40 @@
             return (
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h2>
+                    
+                    <div className="mb-8">
+                        {loading ? <p>Loading stats...</p> :
+                        <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+                            <StatCard title="Total Plans" value={totalPlans} icon={<FileTextIcon />} colorClass="text-gray-500" />
+                            <StatCard title="Passed Plans" value={passedPlans} icon={<CheckCircleIcon />} colorClass="text-green-500" />
+                            <StatCard title="Failed Plans" value={failedPlans} icon={<XIcon />} colorClass="text-red-500" />
+                            <StatCard title="Active Plans" value={activePlans.length} icon={<FileTextIcon />} colorClass="text-blue-500" />
+                            <StatCard title="Total Warnings" value={totalWarnings} icon={<AlertTriangleIcon />} colorClass="text-yellow-500" />
+                        </section>
+                        }
+                    </div>
+
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <h3 className="text-xl font-semibold mb-4">All Active Plans</h3>
-                        {loading && <p>Loading active plans...</p>}
-                        {!loading && activePlans.length === 0 && <p>There are no active plans across all agents.</p>}
+                        <h3 className="text-xl font-semibold mb-4">
+                            All Active Plans
+                        </h3>
+                        {loading ? <p>Loading active plans...</p> :
+                         activePlans.length === 0 ? <p>There are no active plans across all agents.</p> :
                         <div className="space-y-2">
-                          {activePlans.sort((a,b) => new Date(a.endDate) - new Date(b.endDate)).map(plan => (
-                             <div key={plan.id} onClick={() => goToAgent(plan)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                 <p className="font-bold">{plan.agentName}</p>
-                                 <p className="text-sm">{plan.type}: {plan.areasOfFocus && plan.areasOfFocus[0] ? plan.areasOfFocus[0].title : 'General Plan'}</p>
-                                 <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {new Date(plan.endDate).toLocaleDateString()}</p>
-                             </div>
+                          {activePlans.sort((a,b) => new Date(a.endDate || 0) - new Date(b.endDate || 0)).map(plan => (
+                              <div key={plan.id} onClick={() => goToAgent(plan)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                  <p className="font-bold">{plan.agentName}</p>
+                                  <p className="text-sm">{plan.type}: {plan.areasOfFocus && plan.areasOfFocus[0] ? plan.areasOfFocus[0].title : 'General Plan'}</p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {new Date(plan.endDate).toLocaleDateString()}</p>
+                              </div>
                           ))}
                         </div>
+                        }
                     </div>
                 </div>
             );
         };
+
         const StatCard = ({ title, value, icon, colorClass }) => ( <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4`}><div className={`text-3xl ${colorClass}`}>{icon}</div><div><p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p><p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p></div></div> );
         const DashboardStats = ({ plans, warnings }) => {
             const activePlans = plans.filter(p => p.status === 'Active').length;
@@ -626,9 +660,9 @@
             if (type === 'warning') {
                 return (
                      <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                        <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
-                        <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
-                    </div>
+                         <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
+                         <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
+                     </div>
                 );
             }
             
@@ -649,14 +683,14 @@
             const [bulletPoints, setBulletPoints] = useState([""]);
             const [agentSignName, setAgentSignName] = useState("");
             const [leaderSignName, setLeaderSignName] = useState("");
-            const planRef = type === 'plan' && agent && data?.id ? db.collection(`agents/${agent.id}/plans`).doc(data.id) : null;
+            const docRef = agent && data?.id ? db.collection(`agents/${agent.id}/${type}s`).doc(data.id) : null;
 
             useEffect(() => {
-                if(type !== 'plan' || !planRef) return;
-                 const unsubscribe = planRef.collection('coachingNotes').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
-                    setCoachingNotes(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-                 });
-                 return () => unsubscribe();
+                if(type !== 'plan' || !docRef) return;
+                 const unsubscribe = docRef.collection('coachingNotes').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+                     setCoachingNotes(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                  });
+                  return () => unsubscribe();
             }, [data, type, agent]);
             
             const handleAddBulletPoint = () => setBulletPoints([...bulletPoints, ""]);
@@ -668,6 +702,7 @@
 
             const handleAddCoachingNote = async (e) => {
                 e.preventDefault();
+                if(type !== 'plan' || !docRef) return;
                 let content;
                 switch (noteType) {
                     case 'Bullets':
@@ -683,7 +718,7 @@
                         content = newNote;
                 }
 
-                await planRef.collection('coachingNotes').add({
+                await docRef.collection('coachingNotes').add({
                     type: noteType,
                     content,
                     author: user.email,
@@ -695,7 +730,7 @@
             };
 
             const handleSign = async (role) => {
-                if(!planRef) return;
+                if(!docRef) return;
                 const name = role === 'agent' ? agentSignName : leaderSignName;
                 if(!name.trim()) return;
 
@@ -705,9 +740,9 @@
                 };
 
                 if(role === 'agent') {
-                    await planRef.update({ agentSignature: signatureData });
+                    await docRef.update({ agentSignature: signatureData });
                 } else {
-                    await planRef.update({ leaderSignature: signatureData });
+                    await docRef.update({ leaderSignature: signatureData });
                 }
             };
             
@@ -730,92 +765,94 @@
             
             return (
                  <div>
-                    <div id="printable-document">
-                        <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
-                            {renderField("Employee Name", agent.name)}
-                            {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
-                            {renderField("Manager", data.managerName || data.manager)}
-                            {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
-                        </div>
-                        
-                        {type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}
-                        
-                        {type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4"><h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Expectation:</span> {area.expectation}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> </> )}
-                        
-                        <div className="mt-6 no-print">
-                            <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>
-                            {isAdmin && (
-                                <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
-                                    <div className="flex gap-2 mb-2">
-                                        <button onClick={() => setNoteType('Note')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Note' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Note</button>
-                                        <button onClick={() => setNoteType('Bullets')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Bullets' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Points</button>
-                                        <button onClick={() => setNoteType('Email')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Email' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Email</button>
-                                    </div>
-                                    <form onSubmit={handleAddCoachingNote}>
-                                        {noteType === 'Email' && <FormInput label="Subject" value={noteSubject} onChange={e => setNoteSubject(e.target.value)} className="mb-2" />}
-                                        {noteType === 'Bullets' ? (
-                                            <div className="space-y-2">
-                                                {bulletPoints.map((point, index) => (
-                                                    <input key={index} type="text" value={point} onChange={e => handleBulletPointChange(index, e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800" placeholder={`Point ${index + 1}`}/>
-                                                ))}
-                                                <button type="button" onClick={handleAddBulletPoint} className="text-sm text-blue-600">+ Add Point</button>
-                                            </div>
-                                        ) : (
-                                            <FormTextarea label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={e => setNewNote(e.target.value)} />
-                                        )}
-                                        <button type="submit" className="mt-2 py-2 px-4 bg-blue-600 text-white rounded-md">Add Note</button>
-                                    </form>
-                                </div>
-                            )}
-                             {coachingNotes.length > 0 ? (
-                                <div className="space-y-3">
-                                    {coachingNotes.map(note => (
-                                        <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                                            <div className="text-sm text-gray-800 dark:text-gray-200">{renderNoteContent(note)}</div>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : <p className="text-gray-500 dark:text-gray-400">No coaching notes yet.</p>}
-                        </div>
+                     <div id="printable-document">
+                         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2>
+                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
+                             {renderField("Employee Name", agent.name)}
+                             {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
+                             {renderField("Manager", data.managerName || data.manager)}
+                             {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
+                         </div>
+                         
+                         {type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}
+                         
+                         {type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4"><h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Expectation:</span> {area.expectation}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> </> )}
+                         
+                         {type === 'plan' && (
+                             <div className="mt-6 no-print">
+                                 <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>
+                                 {isAdmin && (
+                                     <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+                                         <div className="flex gap-2 mb-2">
+                                             <button onClick={() => setNoteType('Note')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Note' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Note</button>
+                                             <button onClick={() => setNoteType('Bullets')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Bullets' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Points</button>
+                                             <button onClick={() => setNoteType('Email')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Email' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Email</button>
+                                         </div>
+                                         <form onSubmit={handleAddCoachingNote}>
+                                             {noteType === 'Email' && <FormInput label="Subject" value={noteSubject} onChange={e => setNoteSubject(e.target.value)} className="mb-2" />}
+                                             {noteType === 'Bullets' ? (
+                                                 <div className="space-y-2">
+                                                     {bulletPoints.map((point, index) => (
+                                                         <input key={index} type="text" value={point} onChange={e => handleBulletPointChange(index, e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800" placeholder={`Point ${index + 1}`}/>
+                                                     ))}
+                                                     <button type="button" onClick={handleAddBulletPoint} className="text-sm text-blue-600">+ Add Point</button>
+                                                 </div>
+                                             ) : (
+                                                 <FormTextarea label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={e => setNewNote(e.target.value)} />
+                                             )}
+                                             <button type="submit" className="mt-2 py-2 px-4 bg-blue-600 text-white rounded-md">Add Note</button>
+                                         </form>
+                                     </div>
+                                 )}
+                                  {coachingNotes.length > 0 ? (
+                                     <div className="space-y-3">
+                                         {coachingNotes.map(note => (
+                                             <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                                 <div className="text-sm text-gray-800 dark:text-gray-200">{renderNoteContent(note)}</div>
+                                                 <p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 ) : <p className="text-gray-500 dark:text-gray-400">No coaching notes yet.</p>}
+                             </div>
+                         )}
 
-                        <div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600">
+                         <div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600">
+                              <div>
+                                 <p>Employee's Signature</p>
+                                 {data.agentSignature ? (
+                                     <div className="mt-2">
+                                         <p className="font-semibold text-lg">{data.agentSignature.name}</p>
+                                         <p className="text-xs text-gray-500">Signed on {new Date(data.agentSignature.date).toLocaleString()}</p>
+                                     </div>
+                                 ) : !isAdmin ? (
+                                     <div className="flex gap-2 items-center mt-2">
+                                         <FormInput placeholder="Type your full name" value={agentSignName} onChange={e => setAgentSignName(e.target.value)} />
+                                         <button onClick={() => handleSign('agent')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
+                                     </div>
+                                 ) : <p className="mt-8">____________________</p>}
+                             </div>
                              <div>
-                                <p>Employee's Signature</p>
-                                {data.agentSignature ? (
-                                    <div className="mt-2">
-                                        <p className="font-semibold text-lg">{data.agentSignature.name}</p>
-                                        <p className="text-xs text-gray-500">Signed on {new Date(data.agentSignature.date).toLocaleString()}</p>
-                                    </div>
-                                ) : !isAdmin ? (
-                                    <div className="flex gap-2 items-center mt-2">
-                                        <FormInput placeholder="Type your full name" value={agentSignName} onChange={e => setAgentSignName(e.target.value)} />
-                                        <button onClick={() => handleSign('agent')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
-                                    </div>
-                                ) : <p className="mt-8">____________________</p>}
-                            </div>
-                            <div>
-                                <p>Leader's Signature</p>
-                                {data.leaderSignature ? (
-                                     <div className="mt-2 text-right">
-                                        <p className="font-semibold text-lg">{data.leaderSignature.name}</p>
-                                        <p className="text-xs text-gray-500">Signed on {new Date(data.leaderSignature.date).toLocaleString()}</p>
-                                    </div>
-                                ) : isAdmin ? (
-                                    <div className="flex gap-2 items-center mt-2">
-                                        <FormInput placeholder="Type your full name" value={leaderSignName} onChange={e => setLeaderSignName(e.target.value)} />
-                                        <button onClick={() => handleSign('leader')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
-                                    </div>
-                                ) : <p className="mt-8">____________________</p>}
-                            </div>
-                        </div>
-                    </div>
-                    <div className="flex-shrink-0 flex justify-end p-4 border-t dark:border-gray-700 gap-2">
-                        <button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white hover:bg-green-700"><DownloadIcon /> Download</button>
-                        <button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700"><PrinterIcon /> Print</button>
-                    </div>
-                </div>
+                                 <p>Leader's Signature</p>
+                                 {data.leaderSignature ? (
+                                      <div className="mt-2 text-right">
+                                         <p className="font-semibold text-lg">{data.leaderSignature.name}</p>
+                                         <p className="text-xs text-gray-500">Signed on {new Date(data.leaderSignature.date).toLocaleString()}</p>
+                                     </div>
+                                 ) : isAdmin ? (
+                                     <div className="flex gap-2 items-center mt-2">
+                                         <FormInput placeholder="Type your full name" value={leaderSignName} onChange={e => setLeaderSignName(e.target.value)} />
+                                         <button onClick={() => handleSign('leader')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
+                                     </div>
+                                 ) : <p className="mt-8">____________________</p>}
+                             </div>
+                         </div>
+                     </div>
+                     <div className="flex-shrink-0 flex justify-end p-4 border-t dark:border-gray-700 gap-2">
+                         <button onClick={handleDownloadDocx} className="flex items-center gap-2 py-2 px-4 rounded-md bg-green-600 text-white hover:bg-green-700"><DownloadIcon /> Download</button>
+                         <button onClick={printContent} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700"><PrinterIcon /> Print</button>
+                     </div>
+                 </div>
             );
         };
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
@@ -837,4 +874,13 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
 
