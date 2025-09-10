@@ -554,7 +554,7 @@
             const [allPlans, setAllPlans] = useState([]);
             const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
-            const [dashboardView, setDashboardView] = useState('plans');
+            const [filterType, setFilterType] = useState('active');
 
             useEffect(() => {
                 if (!agents.length) {
@@ -590,8 +590,8 @@
             }, [agents]);
             
             const totalPlans = allPlans.length;
-            const passedPlans = allPlans.filter(p => p.status === 'Passed').length;
-            const failedPlans = allPlans.filter(p => p.status === 'Failed').length;
+            const passedPlans = allPlans.filter(p => p.status === 'Passed');
+            const failedPlans = allPlans.filter(p => p.status === 'Failed');
             const activePlans = allPlans.filter(p => p.status === 'Active');
             const totalWarnings = allWarnings.length;
 
@@ -603,6 +603,22 @@
                 }
             };
             
+            const { title, items } = useMemo(() => {
+                switch (filterType) {
+                    case 'total':
+                        return { title: 'All Plans', items: allPlans };
+                    case 'passed':
+                        return { title: 'Passed Plans', items: passedPlans };
+                    case 'failed':
+                        return { title: 'Failed Plans', items: failedPlans };
+                    case 'warnings':
+                        return { title: 'All Warnings', items: allWarnings };
+                    case 'active':
+                    default:
+                        return { title: 'Active Plans', items: activePlans };
+                }
+            }, [filterType, allPlans, allWarnings]);
+
             return (
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h2>
@@ -610,62 +626,55 @@
                     <div className="mb-8">
                         {loading ? <p>Loading stats...</p> :
                         <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                            <StatCard title="Total Plans" value={totalPlans} icon={<FileTextIcon />} colorClass="text-gray-500" />
-                            <StatCard title="Passed Plans" value={passedPlans} icon={<CheckCircleIcon />} colorClass="text-green-500" />
-                            <StatCard title="Failed Plans" value={failedPlans} icon={<XIcon />} colorClass="text-red-500" />
-                            <StatCard title="Active Plans" value={activePlans.length} icon={<FileTextIcon />} colorClass="text-blue-500" />
-                            <StatCard title="Total Warnings" value={totalWarnings} icon={<AlertTriangleIcon />} colorClass="text-yellow-500" />
+                            <StatCard title="Total Plans" value={totalPlans} icon={<FileTextIcon />} colorClass="text-gray-500" onClick={() => setFilterType('total')} isActive={filterType === 'total'} />
+                            <StatCard title="Passed Plans" value={passedPlans.length} icon={<CheckCircleIcon />} colorClass="text-green-500" onClick={() => setFilterType('passed')} isActive={filterType === 'passed'} />
+                            <StatCard title="Failed Plans" value={failedPlans.length} icon={<XIcon />} colorClass="text-red-500" onClick={() => setFilterType('failed')} isActive={filterType === 'failed'} />
+                            <StatCard title="Active Plans" value={activePlans.length} icon={<FileTextIcon />} colorClass="text-blue-500" onClick={() => setFilterType('active')} isActive={filterType === 'active'} />
+                            <StatCard title="Total Warnings" value={totalWarnings} icon={<AlertTriangleIcon />} colorClass="text-yellow-500" onClick={() => setFilterType('warnings')} isActive={filterType === 'warnings'} />
                         </section>
                         }
                     </div>
 
                     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
-                            <button 
-                                onClick={() => setDashboardView('plans')} 
-                                className={`w-1/2 p-2 text-sm font-semibold rounded-l-md ${dashboardView === 'plans' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                            >
-                                Active Plans
-                            </button>
-                            <button 
-                                onClick={() => setDashboardView('warnings')} 
-                                className={`w-1/2 p-2 text-sm font-semibold rounded-r-md ${dashboardView === 'warnings' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                            >
-                                All Warnings
-                            </button>
-                        </div>
+                        <h3 className="text-xl font-semibold mb-4">{title}</h3>
                         
                         {loading ? <p>Loading data...</p> : 
-                            dashboardView === 'plans' ? (
-                                activePlans.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400">There are no active plans across all agents.</p> :
-                                <div className="space-y-2">
-                                  {activePlans.sort((a,b) => new Date(a.endDate || 0) - new Date(b.endDate || 0)).map(plan => (
-                                      <div key={plan.id} onClick={() => goToAgent(plan)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                          <p className="font-bold">{plan.agentName}</p>
-                                          <p className="text-sm">{plan.type}: {plan.areasOfFocus && plan.areasOfFocus[0] ? plan.areasOfFocus[0].title : 'General Plan'}</p>
-                                          <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {new Date(plan.endDate).toLocaleDateString()}</p>
-                                      </div>
-                                  ))}
-                                </div>
-                            ) : (
-                                allWarnings.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400">There are no warnings on record for any agent.</p> :
-                                <div className="space-y-2">
-                                    {allWarnings.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).map(warning => (
-                                        <div key={warning.id} onClick={() => goToAgent(warning)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
-                                            <p className="font-bold">{warning.agentName}</p>
-                                            <p className="text-sm truncate">{warning.type}: {warning.summaryOfConcerns || 'No summary'}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Date: {new Date(warning.date).toLocaleDateString()}</p>
+                            items.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400">No items match the criteria.</p> :
+                            <div className="space-y-2">
+                                {items.sort((a,b) => new Date(b.date || b.endDate || 0) - new Date(a.date || a.endDate || 0)).map(item => (
+                                    filterType === 'warnings' ? (
+                                        <div key={item.id} onClick={() => goToAgent(item)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <p className="font-bold">{item.agentName}</p>
+                                            <p className="text-sm truncate">{item.type}: {item.summaryOfConcerns || 'No summary'}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Date: {new Date(item.date).toLocaleDateString()}</p>
                                         </div>
-                                    ))}
-                                </div>
-                            )
+                                    ) : (
+                                        <div key={item.id} onClick={() => goToAgent(item)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                            <p className="font-bold">{item.agentName}</p>
+                                            <p className="text-sm">{item.type}: {item.areasOfFocus && item.areasOfFocus[0] ? item.areasOfFocus[0].title : 'General Plan'}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {item.endDate ? new Date(item.endDate).toLocaleDateString() : 'N/A'}</p>
+                                        </div>
+                                    )
+                                ))}
+                            </div>
                         }
                     </div>
                 </div>
             );
         };
 
-        const StatCard = ({ title, value, icon, colorClass }) => ( <div className={`bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center gap-4`}><div className={`text-3xl ${colorClass}`}>{icon}</div><div><p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p><p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p></div></div> );
+        const StatCard = ({ title, value, icon, colorClass, onClick, isActive }) => {
+            const activeClass = isActive ? 'ring-2 ring-blue-500 shadow-lg' : 'shadow';
+            return (
+                <button onClick={onClick} className={`bg-white dark:bg-gray-800 p-6 rounded-lg flex items-center gap-4 w-full text-left transition-all hover:shadow-xl ${activeClass}`}>
+                    <div className={`text-3xl ${colorClass}`}>{icon}</div>
+                    <div>
+                        <p className="text-4xl font-bold text-gray-800 dark:text-gray-100">{value}</p>
+                        <p className="text-sm font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">{title}</p>
+                    </div>
+                </button>
+            );
+        };
         const DashboardStats = ({ plans, warnings }) => {
             const activePlans = plans.filter(p => p.status === 'Active').length;
             const totalWarnings = warnings.length;
@@ -896,4 +905,5 @@
     </script>
 </body>
 </html>
+
 
