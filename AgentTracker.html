@@ -91,7 +91,8 @@
         const LogOutIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>;
         const SunIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>;
         const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
-        const MessageSquareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+        const MessageSquareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
+        const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
 
         // --- Main App Controller ---
         function Main() {
@@ -246,12 +247,14 @@
             const [selectedAgent, setSelectedAgent] = useState(null);
             const [plans, setPlans] = useState([]);
             const [warnings, setWarnings] = useState([]);
+            const [coachingSessions, setCoachingSessions] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
 
             const agentsPath = `agents`;
             const getPlansPath = (agentId) => `agents/${agentId}/plans`;
             const getWarningsPath = (agentId) => `agents/${agentId}/warnings`;
+            const getCoachingPath = (agentId) => `agents/${agentId}/coaching`;
             
             useEffect(() => {
                 const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
@@ -262,24 +265,35 @@
             }, []);
 
             useEffect(() => {
-                if (!selectedAgent) { setPlans([]); setWarnings([]); return; }
-                const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).onSnapshot((snapshot) => setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-                const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).onSnapshot((snapshot) => setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-                return () => { unsubPlans(); unsubWarnings(); };
+                if (!selectedAgent) { 
+                    setPlans([]); 
+                    setWarnings([]);
+                    setCoachingSessions([]); 
+                    return; 
+                }
+                const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).orderBy('startDate', 'desc').onSnapshot((snapshot) => setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+                const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).orderBy('date', 'desc').onSnapshot((snapshot) => setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+                const unsubCoaching = db.collection(getCoachingPath(selectedAgent.id)).orderBy('date', 'desc').onSnapshot((snapshot) => setCoachingSessions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
+                return () => { unsubPlans(); unsubWarnings(); unsubCoaching(); };
             }, [selectedAgent]);
 
             const handleSaveData = async (type, data) => {
-                const isPlan = type === 'plan';
-                if (!isPlan && type !== 'agent' && !selectedAgent) return;
-                const path = type === 'agent' ? agentsPath : isPlan ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
-                const collectionRef = db.collection(path);
+                const collectionMap = {
+                    'plan': getPlansPath(selectedAgent.id),
+                    'warning': getWarningsPath(selectedAgent.id),
+                    'coaching': getCoachingPath(selectedAgent.id),
+                    'agent': agentsPath,
+                };
+                if (!collectionMap[type] || (type !== 'agent' && !selectedAgent)) return;
+                
+                const collectionRef = db.collection(collectionMap[type]);
                 try {
                     const dataToSave = { ...data, lastModifiedBy: user.email };
                     delete dataToSave.id;
                     if (modal.data?.id) {
                         await collectionRef.doc(modal.data.id).update(dataToSave);
                     } else {
-                        await collectionRef.add({ ...dataToSave, createdAt: new Date().toISOString() });
+                        await collectionRef.add({ ...dataToSave, createdBy: user.email, createdAt: new Date().toISOString() });
                     }
                     closeModal();
                 } catch (error) { console.error(`Error saving ${type}:`, error); }
@@ -287,12 +301,16 @@
 
             const handleDelete = async (type, id) => {
                if (!selectedAgent) return;
+                const collectionMap = {
+                    'plan': getPlansPath(selectedAgent.id),
+                    'warning': getWarningsPath(selectedAgent.id),
+                    'coaching': getCoachingPath(selectedAgent.id),
+                };
                openModal('CONFIRM_DELETE', { 
                    title: `Delete ${type}`,
                    message: `Are you sure you want to delete this ${type}?`,
                    onConfirm: async () => {
-                       const path = type === 'plan' ? getPlansPath(selectedAgent.id) : getWarningsPath(selectedAgent.id);
-                       await db.collection(path).doc(id).delete();
+                       await db.collection(collectionMap[type]).doc(id).delete();
                        closeModal();
                    }
                });
@@ -301,12 +319,15 @@
             const handleDeleteAgent = (agent) => {
                 openModal('CONFIRM_DELETE', {
                     title: `Delete Agent: ${agent.name}`,
-                    message: `This will also delete all associated plans and warnings. This cannot be undone.`,
+                    message: `This will also delete all associated plans, warnings, and coaching sessions. This cannot be undone.`,
                     onConfirm: async () => {
                         const plansSnapshot = await db.collection(getPlansPath(agent.id)).get();
                         await Promise.all(plansSnapshot.docs.map(doc => doc.ref.delete()));
                         const warningsSnapshot = await db.collection(getWarningsPath(agent.id)).get();
                         await Promise.all(warningsSnapshot.docs.map(doc => doc.ref.delete()));
+                        const coachingSnapshot = await db.collection(getCoachingPath(agent.id)).get();
+                        await Promise.all(coachingSnapshot.docs.map(doc => doc.ref.delete()));
+                        
                         await db.collection(agentsPath).doc(agent.id).delete();
                         if (selectedAgent?.id === agent.id) setSelectedAgent(null);
                         closeModal();
@@ -361,7 +382,20 @@
                                      <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
                                  </header>
                                  <DashboardStats plans={plans} warnings={warnings} />
-                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                 <div className="space-y-8">
+                                     <section>
+                                         <div className="flex items-center justify-between mb-4">
+                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><MessageSquareIcon /> Coaching Sessions</h3>
+                                             <button onClick={() => openModal('EDIT_COACHING')} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
+                                                 <PlusCircleIcon /> Create Session
+                                             </button>
+                                         </div>
+                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                             {coachingSessions.length > 0 ? coachingSessions.map(session => (
+                                                 <CoachingListItem key={session.id} doc={session} onEdit={() => openModal('EDIT_COACHING', session)} onView={() => openModal('VIEW_COACHING', session)} onDelete={() => handleDelete('coaching', session.id)} isAdmin={true} user={user} />
+                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No coaching sessions for this agent.</p>}
+                                         </div>
+                                     </section>
                                      <section>
                                          <div className="flex items-center justify-between mb-4">
                                              <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
@@ -398,14 +432,27 @@
                          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
                              <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
                                  <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
-                                     <h3 className="text-xl font-semibold">{ modal.type === 'ADD_AGENT' ? 'Add New Agent' : modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : (modal.data?.title || 'Confirm Deletion') }</h3>
+                                     <h3 className="text-xl font-semibold">{ 
+                                         modal.type === 'ADD_AGENT' ? 'Add New Agent' : 
+                                         modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : 
+                                         modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : 
+                                         modal.type === 'EDIT_COACHING' ? (modal.data?.id ? 'Edit Coaching Session' : 'Create Coaching Session') : 
+                                         modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : 
+                                         modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : 
+                                         modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
+                                         (modal.data?.title || 'Confirm Deletion') 
+                                     }</h3>
                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                  </div>
                                  <div className="p-6 overflow-y-auto flex-grow">
                                      {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
                                      {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
                                      {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
-                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} getPlansPath={getPlansPath} />}
+                                     {modal.type === 'EDIT_COACHING' && <CoachingForm onSubmit={(data) => handleSaveData('coaching', data)} onCancel={closeModal} initialData={modal.data} />}
+
+                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} />}
+                                     {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+
                                       {modal.type === 'CONFIRM_DELETE' && (
                                          <div>
                                              <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
@@ -425,6 +472,7 @@
             const [agentData, setAgentData] = useState(null);
             const [plans, setPlans] = useState([]);
             const [warnings, setWarnings] = useState([]);
+            const [coachingSessions, setCoachingSessions] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             const [error, setError] = useState(null);
@@ -438,17 +486,18 @@
                 setIsLoading(true);
                 setError(null);
                 
-                let unsubscribePlans = () => {};
-                let unsubscribeWarnings = () => {};
+                let unsubscribes = [];
 
                 const agentDocRef = db.collection('agents').doc(agentId);
-                const unsubscribeAgent = agentDocRef.onSnapshot(agentDoc => {
+                unsubscribes.push(agentDocRef.onSnapshot(agentDoc => {
                     setIsLoading(false);
                     if (agentDoc.exists) {
                         setAgentData({ id: agentDoc.id, ...agentDoc.data() });
                         
-                        unsubscribePlans = db.collection(`agents/${agentId}/plans`).onSnapshot(snap => setPlans(snap.docs.map(d => ({id:d.id, ...d.data()}))));
-                        unsubscribeWarnings = db.collection(`agents/${agentId}/warnings`).onSnapshot(snap => setWarnings(snap.docs.map(d => ({id:d.id, ...d.data()}))));
+                        unsubscribes.push(db.collection(`agents/${agentId}/plans`).orderBy('startDate', 'desc').onSnapshot(snap => setPlans(snap.docs.map(d => ({id:d.id, ...d.data()})))));
+                        unsubscribes.push(db.collection(`agents/${agentId}/warnings`).orderBy('date', 'desc').onSnapshot(snap => setWarnings(snap.docs.map(d => ({id:d.id, ...d.data()})))));
+                        unsubscribes.push(db.collection(`agents/${agentId}/coaching`).orderBy('date', 'desc').onSnapshot(snap => setCoachingSessions(snap.docs.map(d => ({id:d.id, ...d.data()})))));
+
                     } else {
                         setAgentData(null);
                     }
@@ -456,13 +505,11 @@
                       console.error("Error fetching agent profile:", err);
                       setError("Could not load your profile due to a database permissions error. Please contact an admin.");
                       setIsLoading(false);
-                });
+                }));
 
 
                 return () => {
-                    unsubscribeAgent();
-                    unsubscribePlans();
-                    unsubscribeWarnings();
+                    unsubscribes.forEach(unsub => unsub());
                 };
             }, [agentId]);
             
@@ -503,7 +550,15 @@
                       </header>
                       <main className="p-4 md:p-8">
                           <DashboardStats plans={plans} warnings={warnings} />
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          <div className="space-y-8">
+                               <section>
+                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
+                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                      {coachingSessions.length > 0 ? coachingSessions.map(session => (
+                                          <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
+                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions on record.</p>}
+                                  </div>
+                              </section>
                               <section>
                                   <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
                                   <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -526,11 +581,17 @@
                           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
                               <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] relative flex flex-col`}>
                                   <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
-                                      <h3 className="text-xl font-semibold">{modal.type === 'VIEW_PLAN' ? 'Viewing Plan' : 'Viewing Warning'}</h3>
+                                      <h3 className="text-xl font-semibold">{
+                                          modal.type === 'VIEW_PLAN' ? 'Viewing Plan' :
+                                          modal.type === 'VIEW_WARNING' ? 'Viewing Warning' :
+                                          modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
+                                          'Viewing Document'
+                                      }</h3>
                                       <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
                                   </div>
                                   <div className="p-6 overflow-y-auto flex-grow">
-                                      <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />
+                                      {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
                                   </div>
                               </div>
                           </div>
@@ -710,7 +771,28 @@
                 </div>
             );
         };
-        const DocumentViewer = ({ data, type, agent, user, isAdmin, getPlansPath }) => {
+        const CoachingListItem = ({ doc, onView, onEdit, onDelete, isAdmin, user }) => {
+            const isOwner = user && user.email === doc.createdBy;
+            return (
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <div className="flex-1 overflow-hidden">
+                        <p className="text-xs font-bold uppercase text-purple-500">{doc.coachType} - {doc.sessionType}</p>
+                        <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">Session on {new Date(doc.date).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-500">By: {doc.lastModifiedBy || doc.createdBy || 'N/A'}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>
+                        {isAdmin && isOwner && (
+                            <>
+                                <button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button>
+                                <button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+        const DocumentViewer = ({ data, type, agent, user, isAdmin }) => {
             const [coachingNotes, setCoachingNotes] = useState([]);
             const [newNote, setNewNote] = useState("");
             const [noteType, setNoteType] = useState('Note'); // 'Note', 'Bullets', 'Email'
@@ -781,8 +863,6 @@
                 }
             };
             
-            const handleDownloadDocx = () => { /* ... existing download logic ... */ };
-            const printContent = () => { /* ... existing print logic ... */ };
             const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
             const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
             
@@ -886,10 +966,142 @@
                  </div>
             );
         };
+        const CoachingViewer = ({ data }) => {
+            const [copySuccess, setCopySuccess] = useState('');
+
+            const handleCopy = () => {
+                // Create a temporary element to render the HTML content to plain text
+                const tempDiv = document.createElement('div');
+                
+                const richTextToPlain = (html) => {
+                    if (!html) return '';
+                    tempDiv.innerHTML = html;
+                    // Replace list items with bullet points
+                    tempDiv.querySelectorAll('li').forEach(li => {
+                        li.textContent = `• ${li.textContent}\n`;
+                    });
+                    return tempDiv.textContent || tempDiv.innerText || '';
+                };
+                
+                const textToCopy = `
+Coaching Session: ${new Date(data.date).toLocaleDateString()}
+Coach: ${data.lastModifiedBy || data.createdBy || 'N/A'}
+Coach Type: ${data.coachType || 'N/A'}
+Session Type: ${data.sessionType}
+
+--- STRENGTHS ---
+${richTextToPlain(data.strengths)}
+
+--- OPPORTUNITIES ---
+${richTextToPlain(data.opportunities)}
+
+--- ACTION PLAN ---
+${richTextToPlain(data.actionPlan)}
+
+--- NOTES ---
+${richTextToPlain(data.notes)}
+                `.trim();
+
+                const textArea = document.createElement("textarea");
+                textArea.value = textToCopy;
+                textArea.style.position = "fixed";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                try {
+                    document.execCommand('copy');
+                    setCopySuccess('Copied!');
+                } catch (err) {
+                    setCopySuccess('Failed to copy.');
+                }
+                document.body.removeChild(textArea);
+                setTimeout(() => setCopySuccess(''), 2000);
+            };
+
+            const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
+            const renderSection = (title, content) => ( 
+                <div className="mt-6">
+                    <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4>
+                    {/* Render the saved HTML content from the rich text editor */}
+                    <div 
+                        className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300" 
+                        dangerouslySetInnerHTML={{ __html: content || 'N/A' }} 
+                    />
+                </div>
+            );
+
+            return (
+                <div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
+                        {renderField("Date", new Date(data.date).toLocaleDateString())}
+                        {renderField("Coach Type", data.coachType || 'Not specified')}
+                        {renderField("Session Type", data.sessionType)}
+                        {renderField("Submitted By", data.lastModifiedBy || data.createdBy || 'N/A')}
+                    </div>
+                    {renderSection("Strengths", data.strengths)}
+                    {renderSection("Opportunities", data.opportunities)}
+                    {renderSection("Action Plan", data.actionPlan)}
+                    {renderSection("Notes", data.notes)}
+
+                     <div className="flex justify-end mt-6 pt-4 border-t dark:border-gray-700">
+                        <button onClick={handleCopy} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                            <ClipboardIcon /> {copySuccess || 'Copy Content'}
+                        </button>
+                    </div>
+                </div>
+            );
+        };
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
         const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
         const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
-        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } if (mode === 'fill') { prompt = `Analyze and extract information from the text into a valid JSON object based on the schema.\n\nText:\n${text}`; } else { prompt = `Generate a professional ${formType === 'plan' ? 'PIP' : 'Warning'} for: "${text}". The output must be a valid JSON object following the schema.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
+        
+        const RichTextInput = ({ label, value, onChange }) => {
+            const editorRef = React.useRef(null);
+            
+            // Use a specific icon for the list button
+            const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
+
+            const handleCommand = (command) => {
+                document.execCommand(command, false, null);
+                if (editorRef.current) {
+                    editorRef.current.focus(); // Keep focus in the editor
+                    onChange(editorRef.current.innerHTML); // Update state
+                }
+            };
+
+            const handleInput = (e) => {
+                onChange(e.target.innerHTML);
+            };
+
+            useEffect(() => {
+                if (editorRef.current && editorRef.current.innerHTML !== value) {
+                    editorRef.current.innerHTML = value;
+                }
+            }, [value]);
+
+            return (
+                <div>
+                    <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label>
+                    <div className="w-full border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600">
+                        <div className="flex items-center gap-1 p-1 border-b dark:border-gray-700">
+                            <button type="button" title="Bold" onClick={() => handleCommand('bold')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 font-bold">B</button>
+                            <button type="button" title="Italic" onClick={() => handleCommand('italic')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 italic">I</button>
+                            <button type="button" title="Underline" onClick={() => handleCommand('underline')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 underline">U</button>
+                            <button type="button" title="Bulleted List" onClick={() => handleCommand('insertUnorderedList')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"><ListIcon /></button>
+                        </div>
+                        <div
+                            ref={editorRef}
+                            contentEditable={true}
+                            onInput={handleInput}
+                            className="p-2 min-h-[100px] text-gray-800 dark:text-gray-200 focus:outline-none"
+                            dangerouslySetInnerHTML={{ __html: value }}
+                        />
+                    </div>
+                </div>
+            );
+        };
+
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else if (formType === 'warning') { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } else if (formType === 'coaching') { schema = { type: 'OBJECT', properties: { strengths: { type: 'STRING', description: "Positive points and things the agent is doing well. Format with HTML using <strong> and <ul><li> tags." }, opportunities: { type: 'STRING', description: "Areas for improvement and key discussion points. Format with HTML using <strong> and <ul><li> tags." }, actionPlan: { type: 'STRING', description: "A clear, itemized list of next steps for the agent. Format with HTML using <strong> and <ul><li> tags." }, notes: { type: 'STRING', description: "General summary, encouragement, or other notes. Format with HTML using <strong> tags for emphasis." } } }; } if (mode === 'fill') { prompt = `Analyze the following text and extract the information into a valid JSON object based on the schema. Convert key points into HTML lists (<ul><li>) and bold important terms with <strong>.\n\nText:\n${text}`; } else { prompt = `Generate a professional, well-structured coaching session recap based on the following points: "${text}". The output must be a valid JSON object following the schema. For the 'strengths', 'opportunities', and 'actionPlan' fields, format the content as clear, professional text. Use HTML tags like <strong> for bolding key phrases and <ul> and <li> for bullet points to structure the text where appropriate. Ensure a professional and encouraging tone.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
@@ -899,11 +1111,81 @@
         };
         const PlanForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div><FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required /><FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required /><FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border dark:border-gray-600 rounded-md relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full p-1 leading-none">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Area</button></FormSection><FormTextarea label="Support Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required /><FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required /><FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} className="mt-6 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full disabled:opacity-50" disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-green-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Plan'}</button></div></form>;};
         const WarningForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div><FormTextarea label="Summary" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required /><FormTextarea label="Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required /><FormTextarea label="Next Action" name="nextAction" value={formData.nextAction} onChange={handleChange} required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-yellow-500 text-white">{initialData?.id ? 'Save Changes' : 'Create Warning'}</button></div></form>; };
+        const CoachingForm = ({ onSubmit, onCancel, initialData }) => {
+            const today = new Date().toISOString().split('T')[0];
+            const [formData, setFormData] = useState({
+                date: today,
+                sessionType: '1-to-1',
+                coachType: 'Team Leader',
+                strengths: '',
+                opportunities: '',
+                actionPlan: '',
+                notes: '',
+                ...initialData
+            });
+
+            const handleChange = (e) => {
+                const { name, value } = e.target;
+                setFormData(prev => ({ ...prev, [name]: value }));
+            };
+
+            const handleRichTextChange = (name, html) => {
+                setFormData(prev => ({...prev, [name]: html}));
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onSubmit(formData);
+            };
+            
+            const handleAiPopulate = (aiData) => {
+                setFormData(prev => ({...prev, ...aiData}));
+            };
+
+            return (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                     <AITools formType="coaching" onPopulate={handleAiPopulate} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required />
+                        <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Coach Type</label>
+                            <select name="coachType" value={formData.coachType} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                <option>Team Leader</option>
+                                <option>QA Coach</option>
+                                <option>Mentor</option>
+                                <option>Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Session Type</label>
+                            <select name="sessionType" value={formData.sessionType} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                <option>1-to-1</option>
+                                <option>Email Recap</option>
+                                <option>Observation</option>
+                                <option>General Note</option>
+                            </select>
+                        </div>
+                    </div>
+                    <RichTextInput label="Strengths" value={formData.strengths} onChange={(html) => handleRichTextChange('strengths', html)} />
+                    <RichTextInput label="Opportunities" value={formData.opportunities} onChange={(html) => handleRichTextChange('opportunities', html)} />
+                    <RichTextInput label="Action Plan" value={formData.actionPlan} onChange={(html) => handleRichTextChange('actionPlan', html)} />
+                    <RichTextInput label="Additional Notes" value={formData.notes} onChange={(html) => handleRichTextChange('notes', html)} />
+                    <div className="flex justify-end gap-2 pt-4">
+                        <button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button>
+                        <button type="submit" className="py-2 px-4 rounded-md bg-purple-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Session'}</button>
+                    </div>
+                </form>
+            );
+        };
+
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ThemeProvider><Main /></ThemeProvider>);
     </script>
 </body>
 </html>
+
+
+
 
 
