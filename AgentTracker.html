@@ -9,6 +9,33 @@
     <script>
       tailwind.config = {
         darkMode: 'class', // or 'media'
+        theme: {
+            extend: {
+                typography: ({ theme }) => ({
+                    DEFAULT: {
+                        css: {
+                           a: {
+                             color: theme('colors.blue.600'),
+                             textDecoration: 'underline',
+                             '&:hover': {
+                               color: theme('colors.blue.700'),
+                             },
+                           },
+                        }
+                    },
+                    invert: {
+                        css: {
+                           a: {
+                             color: theme('colors.blue.400'),
+                             '&:hover': {
+                               color: theme('colors.blue.500'),
+                             },
+                           },
+                        }
+                    }
+                })
+            }
+        }
       }
     </script>
     
@@ -27,6 +54,45 @@
     <!-- Libraries for DOCX download -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.5.0/docx.min.js"></script>
+    <style>
+        /* Styles to mimic Tailwind Prose for better rendering of raw HTML */
+        .prose {
+            color: #374151; /* gray-700 */
+        }
+        .dark .prose {
+            color: #d1d5db; /* gray-300 */
+        }
+        .prose a {
+          color: #2563eb; /* A default blue link color */
+          text-decoration: underline;
+        }
+        .dark .prose a {
+          color: #60a5fa; /* A lighter blue for dark mode */
+        }
+        .prose strong {
+            font-weight: 600;
+        }
+        .prose ul, .prose ol {
+            margin-top: 1em;
+            margin-bottom: 1em;
+            padding-left: 1.5em;
+        }
+        .prose ul {
+            list-style-type: disc;
+        }
+         .prose ol {
+            list-style-type: decimal;
+        }
+        .prose li {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+        }
+        /* Fix for contentEditable divs */
+        .rich-text-editor div, .rich-text-editor p, .rich-text-editor br {
+             margin: 0 !important;
+             padding: 0 !important;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900">
     <div id="root"></div>
@@ -93,6 +159,7 @@
         const MoonIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>;
         const MessageSquareIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
         const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
+        const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>;
 
         // --- Main App Controller ---
         function Main() {
@@ -250,6 +317,8 @@
             const [coachingSessions, setCoachingSessions] = useState([]);
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
+            const [agentDetailView, setAgentDetailView] = useState('coaching');
+            const [coachFilter, setCoachFilter] = useState('All');
 
             const agentsPath = `agents`;
             const getPlansPath = (agentId) => `agents/${agentId}/plans`;
@@ -271,6 +340,10 @@
                     setCoachingSessions([]); 
                     return; 
                 }
+                // Reset views when changing agents
+                // setAgentDetailView('coaching'); // Let's not reset the view, so the navigation from dashboard works
+                setCoachFilter('All');
+
                 const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).orderBy('startDate', 'desc').onSnapshot((snapshot) => setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
                 const unsubWarnings = db.collection(getWarningsPath(selectedAgent.id)).orderBy('date', 'desc').onSnapshot((snapshot) => setWarnings(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
                 const unsubCoaching = db.collection(getCoachingPath(selectedAgent.id)).orderBy('date', 'desc').onSnapshot((snapshot) => setCoachingSessions(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
@@ -374,7 +447,7 @@
                          )}
                      </aside>
                      <main className="flex-1 p-4 md:p-8 overflow-auto">
-                         {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} /> : 
+                         {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} /> : 
                            selectedAgent ? (
                              <div>
                                  <header className="mb-8">
@@ -382,46 +455,51 @@
                                      <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
                                  </header>
                                  <DashboardStats plans={plans} warnings={warnings} />
+                                 <div className="mb-6">
+                                    <div className="flex border border-gray-200 dark:border-gray-700 rounded-md">
+                                        <button onClick={() => setAgentDetailView('coaching')} className={`w-1/3 p-2 text-sm font-semibold rounded-l-md transition-colors ${agentDetailView === 'coaching' ? 'bg-purple-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                            Coaching
+                                        </button>
+                                        <button onClick={() => setAgentDetailView('plans')} className={`w-1/3 p-2 text-sm font-semibold border-l border-r border-gray-200 dark:border-gray-700 transition-colors ${agentDetailView === 'plans' ? 'bg-green-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                            Plans
+                                        </button>
+                                        <button onClick={() => setAgentDetailView('warnings')} className={`w-1/3 p-2 text-sm font-semibold rounded-r-md transition-colors ${agentDetailView === 'warnings' ? 'bg-yellow-500 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                            Warnings
+                                        </button>
+                                    </div>
+                                  </div>
                                  <div className="space-y-8">
-                                     <section>
-                                         <div className="flex items-center justify-between mb-4">
-                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><MessageSquareIcon /> Coaching Sessions</h3>
-                                             <button onClick={() => openModal('EDIT_COACHING')} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
-                                                 <PlusCircleIcon /> Create Session
-                                             </button>
-                                         </div>
-                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                             {coachingSessions.length > 0 ? coachingSessions.map(session => (
-                                                 <CoachingListItem key={session.id} doc={session} onEdit={() => openModal('EDIT_COACHING', session)} onView={() => openModal('VIEW_COACHING', session)} onDelete={() => handleDelete('coaching', session.id)} isAdmin={true} user={user} />
-                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No coaching sessions for this agent.</p>}
-                                         </div>
-                                     </section>
-                                     <section>
-                                         <div className="flex items-center justify-between mb-4">
-                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
-                                             <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-                                                 <PlusCircleIcon /> Create Plan
-                                             </button>
-                                         </div>
-                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                             {plans.length > 0 ? plans.map(plan => (
-                                                 <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
-                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
-                                         </div>
-                                     </section>
-                                     <section>
-                                         <div className="flex items-center justify-between mb-4">
-                                             <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
-                                             <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
-                                                 <PlusCircleIcon /> Create Warning
-                                             </button>
-                                         </div>
-                                         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                            {warnings.length > 0 ? warnings.map(warning => (
-                                                 <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
-                                             )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
-                                         </div>
-                                     </section>
+                                     {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={coachingSessions} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
+                                     {agentDetailView === 'plans' && (
+                                         <section>
+                                             <div className="flex items-center justify-between mb-4">
+                                                 <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
+                                                 <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                                     <PlusCircleIcon /> Create Plan
+                                                 </button>
+                                             </div>
+                                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                                 {plans.length > 0 ? plans.map(plan => (
+                                                     <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
+                                                 )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
+                                             </div>
+                                         </section>
+                                     )}
+                                     {agentDetailView === 'warnings' && (
+                                         <section>
+                                             <div className="flex items-center justify-between mb-4">
+                                                 <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
+                                                 <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                                                     <PlusCircleIcon /> Create Warning
+                                                 </button>
+                                             </div>
+                                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                                {warnings.length > 0 ? warnings.map(warning => (
+                                                     <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
+                                                 )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
+                                             </div>
+                                         </section>
+                                     )}
                                  </div>
                              </div>
                          ) : (
@@ -476,6 +554,7 @@
             const [isLoading, setIsLoading] = useState(true);
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             const [error, setError] = useState(null);
+            const [agentDashboardView, setAgentDashboardView] = useState('coaching');
 
             useEffect(() => {
                 if (!agentId) {
@@ -550,31 +629,50 @@
                       </header>
                       <main className="p-4 md:p-8">
                           <DashboardStats plans={plans} warnings={warnings} />
+                          <div className="mb-6">
+                            <div className="flex border border-gray-200 dark:border-gray-700 rounded-md">
+                                <button onClick={() => setAgentDashboardView('coaching')} className={`w-1/3 p-2 text-sm font-semibold rounded-l-md transition-colors ${agentDashboardView === 'coaching' ? 'bg-purple-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                    Coaching
+                                </button>
+                                <button onClick={() => setAgentDashboardView('plans')} className={`w-1/3 p-2 text-sm font-semibold border-l border-r border-gray-200 dark:border-gray-700 transition-colors ${agentDashboardView === 'plans' ? 'bg-green-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                    Plans
+                                </button>
+                                <button onClick={() => setAgentDashboardView('warnings')} className={`w-1/3 p-2 text-sm font-semibold rounded-r-md transition-colors ${agentDashboardView === 'warnings' ? 'bg-yellow-500 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
+                                    Warnings
+                                </button>
+                            </div>
+                          </div>
                           <div className="space-y-8">
-                               <section>
-                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
-                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                      {coachingSessions.length > 0 ? coachingSessions.map(session => (
-                                          <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
-                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions on record.</p>}
-                                  </div>
-                              </section>
-                              <section>
-                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
-                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                      {plans.length > 0 ? plans.map(plan => (
-                                          <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
-                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
-                                  </div>
-                              </section>
-                              <section>
-                                  <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
-                                  <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                      {warnings.length > 0 ? warnings.map(warning => (
-                                          <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
-                                      )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
-                                  </div>
-                              </section>
+                               {agentDashboardView === 'coaching' && (
+                                   <section>
+                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                          {coachingSessions.length > 0 ? coachingSessions.map(session => (
+                                              <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
+                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions on record.</p>}
+                                      </div>
+                                  </section>
+                               )}
+                               {agentDashboardView === 'plans' && (
+                                  <section>
+                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                          {plans.length > 0 ? plans.map(plan => (
+                                              <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
+                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
+                                      </div>
+                                  </section>
+                               )}
+                               {agentDashboardView === 'warnings' && (
+                                  <section>
+                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
+                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                          {warnings.length > 0 ? warnings.map(warning => (
+                                              <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
+                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
+                                      </div>
+                                  </section>
+                               )}
                           </div>
                       </main>
                       {modal.isOpen && (
@@ -601,6 +699,46 @@
         }
         
         // --- Shared Components ---
+
+        const CoachingSectionForAdmin = ({ user, coachingSessions, coachFilter, setCoachFilter, openModal, handleDelete }) => {
+            const coachTypes = useMemo(() => ['All', ...new Set(coachingSessions.map(s => s.coachType).filter(Boolean))], [coachingSessions]);
+            
+            const filteredCoachingSessions = useMemo(() => {
+                if (coachFilter === 'All') return coachingSessions;
+                return coachingSessions.filter(s => s.coachType === coachFilter);
+            }, [coachFilter, coachingSessions]);
+
+            return (
+                <section>
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-2xl font-semibold flex items-center gap-2"><MessageSquareIcon /> Coaching Sessions</h3>
+                        <button onClick={() => openModal('EDIT_COACHING')} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
+                            <PlusCircleIcon /> Create Session
+                        </button>
+                    </div>
+                    
+                    {coachTypes.length > 1 && (
+                        <div className="flex flex-wrap gap-2 mb-4 border-b dark:border-gray-700 pb-4">
+                            {coachTypes.map(type => (
+                                <button 
+                                    key={type}
+                                    onClick={() => setCoachFilter(type)}
+                                    className={`px-3 py-1 text-sm rounded-full transition-colors ${coachFilter === type ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                >
+                                    {type}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                        {filteredCoachingSessions.length > 0 ? filteredCoachingSessions.map(session => (
+                            <CoachingListItem key={session.id} doc={session} onEdit={() => openModal('EDIT_COACHING', session)} onView={() => openModal('VIEW_COACHING', session)} onDelete={() => handleDelete('coaching', session.id)} isAdmin={true} user={user} />
+                        )) : <p className="text-gray-500 dark:text-gray-400 p-4">No coaching sessions match the current filter.</p>}
+                    </div>
+                </section>
+            );
+        };
         
         const ThemeToggleButton = () => {
             const { theme, toggleTheme } = useTheme();
@@ -611,7 +749,7 @@
             );
         };
 
-        const AdminDashboard = ({ agents, setSelectedAgent, setView }) => {
+        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView }) => {
             const [allPlans, setAllPlans] = useState([]);
             const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -656,10 +794,11 @@
             const activePlans = allPlans.filter(p => p.status === 'Active');
             const totalWarnings = allWarnings.length;
 
-            const goToAgent = (item) => {
+            const goToAgent = (item, viewType) => {
                 const agent = agents.find(a => a.id === item.agentId);
                 if (agent) {
                     setSelectedAgent(agent);
+                    setAgentDetailView(viewType); // Set the correct tab before switching view
                     setView('tracker');
                 }
             };
@@ -704,13 +843,13 @@
                             <div className="space-y-2">
                                 {items.sort((a,b) => new Date(b.date || b.endDate || 0) - new Date(a.date || a.endDate || 0)).map(item => (
                                     filterType === 'warnings' ? (
-                                        <div key={item.id} onClick={() => goToAgent(item)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                        <div key={item.id} onClick={() => goToAgent(item, 'warnings')} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                                             <p className="font-bold">{item.agentName}</p>
                                             <p className="text-sm truncate">{item.type}: {item.summaryOfConcerns || 'No summary'}</p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">Date: {new Date(item.date).toLocaleDateString()}</p>
                                         </div>
                                     ) : (
-                                        <div key={item.id} onClick={() => goToAgent(item)} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                                        <div key={item.id} onClick={() => goToAgent(item, 'plans')} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                                             <p className="font-bold">{item.agentName}</p>
                                             <p className="text-sm">{item.type}: {item.areasOfFocus && item.areasOfFocus[0] ? item.areasOfFocus[0].title : 'General Plan'}</p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {item.endDate ? new Date(item.endDate).toLocaleDateString() : 'N/A'}</p>
@@ -864,17 +1003,25 @@
             };
             
             const renderField = (label, value) => ( <div className="flex flex-col sm:flex-row mb-2"><p className="w-full sm:w-1/4 font-semibold text-gray-600 dark:text-gray-400">{label}:</p><p className="w-full sm:w-3/4 text-gray-800 dark:text-gray-200">{value}</p></div> );
-            const renderSection = (title, content) => ( <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4><p className="whitespace-pre-wrap text-gray-700 dark:text-gray-300">{content}</p></div> );
+            const renderSection = (title, content) => ( 
+                <div className="mt-6">
+                    <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2 text-gray-800 dark:text-gray-200">{title}</h4>
+                    <div 
+                        className="prose dark:prose-invert max-w-none text-gray-700 dark:text-gray-300" 
+                        dangerouslySetInnerHTML={{ __html: content || 'N/A' }} 
+                    />
+                </div>
+            );
             
             const renderNoteContent = (note) => {
                 switch(note.type) {
                     case 'Email':
-                        return <div><p className="font-bold">{note.content.subject}</p><p>{note.content.body}</p></div>;
+                        return <div><p className="font-bold">{note.content.subject}</p><div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{__html: note.content.body}} /></div>;
                     case 'Bullets':
                         return <ul className="list-disc list-inside">{note.content.map((pt, i) => <li key={i}>{pt}</li>)}</ul>;
                     case 'Note':
                     default:
-                        return <p>{note.content}</p>;
+                        return <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{__html: note.content}} />;
                 }
             };
             
@@ -889,9 +1036,27 @@
                              {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
                          </div>
                          
-                         {type === 'warning' && ( <> {renderSection("Summary", data.summaryOfConcerns)} {renderSection("Action Plan", data.improvementActionPlan)} {renderSection("Next Action", data.nextAction)} </> )}
+                         {type === 'warning' && ( <> 
+                            {renderSection("Summary", data.summaryOfConcerns)} 
+                            {renderSection("Action Plan", data.improvementActionPlan)} 
+                            {renderSection("Next Action", data.nextAction)} 
+                         </> )}
                          
-                         {type === 'plan' && ( <> {renderSection("Introduction", data.introduction)} {renderSection("Empowerment", data.empowermentStatement)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4"><h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Expectation:</span> {area.expectation}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Action Plan:</span> {area.actionPlan}</p><p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p></div> ))}</div> {renderSection("Support Plan", data.supportPlan)} {renderSection("Consequences", data.consequences)} <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> </> )}
+                         {type === 'plan' && ( <> 
+                            {renderSection("Introduction", data.introduction)} 
+                            {renderSection("Empowerment", data.empowermentStatement)} 
+                            <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( 
+                                <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4">
+                                    <h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5>
+                                    <div className="mt-1"><strong className="text-gray-600 dark:text-gray-400">Expectation:</strong> <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.expectation || ''}} /></div>
+                                    <div className="mt-1"><strong className="text-gray-600 dark:text-gray-400">Action Plan:</strong> <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.actionPlan || ''}} /></div>
+                                    <p className="text-gray-700 dark:text-gray-300"><span className="font-semibold">Goal:</span> {area.goal}</p>
+                                </div> 
+                            ))}</div> 
+                            {renderSection("Support Plan", data.supportPlan)} 
+                            {renderSection("Consequences", data.consequences)} 
+                            <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> 
+                         </> )}
                          
                          {type === 'plan' && (
                              <div className="mt-6 no-print">
@@ -913,7 +1078,7 @@
                                                      <button type="button" onClick={handleAddBulletPoint} className="text-sm text-blue-600">+ Add Point</button>
                                                  </div>
                                              ) : (
-                                                 <FormTextarea label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={e => setNewNote(e.target.value)} />
+                                                <RichTextInput label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={setNewNote} />
                                              )}
                                              <button type="submit" className="mt-2 py-2 px-4 bg-blue-600 text-white rounded-md">Add Note</button>
                                          </form>
@@ -1053,55 +1218,89 @@ ${richTextToPlain(data.notes)}
         };
         const FormSection = ({ title, children }) => <div className="space-y-2 p-3 border rounded-md dark:border-gray-600"><h4 className="font-semibold text-gray-700 dark:text-gray-300">{title}</h4>{children}</div>;
         const FormInput = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><input {...props} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
-        const FormTextarea = ({ label, ...props }) => <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label><textarea {...props} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600 text-gray-800 dark:text-gray-200" /></div>;
         
         const RichTextInput = ({ label, value, onChange }) => {
             const editorRef = React.useRef(null);
             
-            // Use a specific icon for the list button
             const ListIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>;
 
             const handleCommand = (command) => {
                 document.execCommand(command, false, null);
                 if (editorRef.current) {
-                    editorRef.current.focus(); // Keep focus in the editor
-                    onChange(editorRef.current.innerHTML); // Update state
+                    editorRef.current.focus();
+                    onChange(editorRef.current.innerHTML);
+                }
+            };
+
+            const handleLink = () => {
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+                const range = selection.getRangeAt(0);
+                const selectedText = range.toString();
+
+                let url = prompt('Enter the URL:', 'https://');
+                if (url) {
+                    // Restore selection before creating link
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    document.execCommand('createLink', false, url);
+                    if (editorRef.current) {
+                        editorRef.current.focus();
+                        onChange(editorRef.current.innerHTML);
+                    }
                 }
             };
 
             const handleInput = (e) => {
                 onChange(e.target.innerHTML);
             };
+            
+            const handlePaste = (e) => {
+                e.preventDefault();
+                const paste = (e.clipboardData || window.clipboardData).getData('text/html') 
+                    || (e.clipboardData || window.clipboardData).getData('text/plain');
+                
+                const selection = window.getSelection();
+                if (!selection.rangeCount) return;
+                selection.deleteFromDocument();
+                selection.getRangeAt(0).insertNode(document.createRange().createContextualFragment(paste));
+                selection.collapseToEnd();
+
+                onChange(e.currentTarget.innerHTML);
+            };
 
             useEffect(() => {
-                if (editorRef.current && editorRef.current.innerHTML !== value) {
-                    editorRef.current.innerHTML = value;
+                // Only update if the content is actually different, to avoid cursor jumps.
+                if (editorRef.current && value !== editorRef.current.innerHTML) {
+                    editorRef.current.innerHTML = value || '';
                 }
             }, [value]);
+
 
             return (
                 <div>
                     <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">{label}</label>
                     <div className="w-full border rounded-md bg-white dark:bg-gray-800 dark:border-gray-600">
                         <div className="flex items-center gap-1 p-1 border-b dark:border-gray-700">
-                            <button type="button" title="Bold" onClick={() => handleCommand('bold')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 font-bold">B</button>
-                            <button type="button" title="Italic" onClick={() => handleCommand('italic')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 italic">I</button>
-                            <button type="button" title="Underline" onClick={() => handleCommand('underline')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 underline">U</button>
-                            <button type="button" title="Bulleted List" onClick={() => handleCommand('insertUnorderedList')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"><ListIcon /></button>
+                            <button type="button" title="Bold" onMouseDown={e => e.preventDefault()} onClick={() => handleCommand('bold')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 font-bold">B</button>
+                            <button type="button" title="Italic" onMouseDown={e => e.preventDefault()} onClick={() => handleCommand('italic')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 italic">I</button>
+                            <button type="button" title="Underline" onMouseDown={e => e.preventDefault()} onClick={() => handleCommand('underline')} className="px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-600 underline">U</button>
+                            <button type="button" title="Bulleted List" onMouseDown={e => e.preventDefault()} onClick={() => handleCommand('insertUnorderedList')} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"><ListIcon /></button>
+                            <button type="button" title="Link" onMouseDown={e => e.preventDefault()} onClick={handleLink} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600"><LinkIcon /></button>
                         </div>
                         <div
                             ref={editorRef}
                             contentEditable={true}
                             onInput={handleInput}
-                            className="p-2 min-h-[100px] text-gray-800 dark:text-gray-200 focus:outline-none"
-                            dangerouslySetInnerHTML={{ __html: value }}
-                        />
+                            onPaste={handlePaste}
+                            className="p-2 min-h-[100px] text-gray-800 dark:text-gray-200 focus:outline-none rich-text-editor"
+                        ></div>
                     </div>
                 </div>
             );
         };
 
-        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else if (formType === 'warning') { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } else if (formType === 'coaching') { schema = { type: 'OBJECT', properties: { strengths: { type: 'STRING', description: "Positive points and things the agent is doing well. Format with HTML using <strong> and <ul><li> tags." }, opportunities: { type: 'STRING', description: "Areas for improvement and key discussion points. Format with HTML using <strong> and <ul><li> tags." }, actionPlan: { type: 'STRING', description: "A clear, itemized list of next steps for the agent. Format with HTML using <strong> and <ul><li> tags." }, notes: { type: 'STRING', description: "General summary, encouragement, or other notes. Format with HTML using <strong> tags for emphasis." } } }; } if (mode === 'fill') { prompt = `Analyze the following text and extract the information into a valid JSON object based on the schema. Convert key points into HTML lists (<ul><li>) and bold important terms with <strong>.\n\nText:\n${text}`; } else { prompt = `Generate a professional, well-structured coaching session recap based on the following points: "${text}". The output must be a valid JSON object following the schema. For the 'strengths', 'opportunities', and 'actionPlan' fields, format the content as clear, professional text. Use HTML tags like <strong> for bolding key phrases and <ul> and <li> for bullet points to structure the text where appropriate. Ensure a professional and encouraging tone.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'STRING' }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else if (formType === 'warning') { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } else if (formType === 'coaching') { schema = { type: 'OBJECT', properties: { strengths: { type: 'STRING', description: "Positive points and things the agent is doing well. Format with HTML using <strong> and <ul><li> tags." }, opportunities: { type: 'STRING', description: "Areas for improvement and key discussion points. Format with HTML using <strong> and <ul><li> tags." }, actionPlan: { type: 'STRING', description: "A clear, itemized list of next steps for the agent. Format with HTML using <strong> and <ul><li> tags." }, notes: { type: 'STRING', description: "General summary, encouragement, or other notes. Format with HTML using <strong> tags for emphasis." } } }; } if (mode === 'fill') { prompt = `You are an expert administrative assistant. Analyze the following text and extract the information into a valid JSON object based on the provided schema. It is crucial that you identify and convert bullet points, numbered items, and distinct paragraphs into clean, structured HTML using tags like <ul>, <ol>, <li>, <p>, and <strong> for bolding. Retain any hyperlinks found in the original text.\n\nText:\n${text}`; } else { prompt = `You are a professional team leader. Generate a well-structured coaching session recap based on these notes: "${text}". The output must be a valid JSON object following the schema. Format the content with professional and encouraging language. Use HTML to structure the text: use <strong> for emphasis, and use <ul> or <ol> for lists, especially in the opportunities and action plan sections.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
@@ -1109,8 +1308,54 @@ ${richTextToPlain(data.notes)}
             const handleSubmit = (e) => { e.preventDefault(); onSubmit({ name, employeeId, email }); };
             return ( <form onSubmit={handleSubmit} className="space-y-4"><FormInput label="Agent Name" type="text" value={name} onChange={e => setName(e.target.value)} required /><FormInput label="Employee ID" type="text" value={employeeId} onChange={e => setEmployeeId(e.target.value)} required /><FormInput label="Agent's Email" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="The email they registered with" required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white">Add Agent</button></div></form> );
         };
-        const PlanForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div><FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required /><FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required /></div><FormTextarea label="Introduction" name="introduction" value={formData.introduction} onChange={handleChange} required /><FormTextarea label="Empowerment Statement" name="empowermentStatement" value={formData.empowermentStatement} onChange={handleChange} required /><FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border dark:border-gray-600 rounded-md relative"><FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Expectation" name="expectation" value={area.expectation} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormTextarea label="Action Plan" name="actionPlan" value={area.actionPlan} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} /><FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />{formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full p-1 leading-none">&times;</button>}</div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Area</button></FormSection><FormTextarea label="Support Plan" name="supportPlan" value={formData.supportPlan} onChange={handleChange} required /><FormTextarea label="Consequences" name="consequences" value={formData.consequences} onChange={handleChange} required /><FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} className="mt-6 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full disabled:opacity-50" disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-green-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Plan'}</button></div></form>;};
-        const WarningForm = ({ onSubmit, onCancel, initialData }) => { const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4"><AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} /><div className="grid grid-cols-1 md:grid-cols-2 gap-4"><FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required /><div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div><FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required /></div><FormTextarea label="Summary" name="summaryOfConcerns" value={formData.summaryOfConcerns} onChange={handleChange} required /><FormTextarea label="Action Plan" name="improvementActionPlan" value={formData.improvementActionPlan} onChange={handleChange} required /><FormTextarea label="Next Action" name="nextAction" value={formData.nextAction} onChange={handleChange} required /><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-yellow-500 text-white">{initialData?.id ? 'Save Changes' : 'Create Warning'}</button></div></form>; };
+        const PlanForm = ({ onSubmit, onCancel, initialData }) => { 
+            const [formData, setFormData] = useState({ type: 'PIP', managerName: '', startDate: '', endDate: '', introduction: '', empowermentStatement: '', areasOfFocus: [{ title: '', expectation: '', actionPlan: '', goal: '' }], supportPlan: '', consequences: '', qaTargets: [{ week: '', required: '', achieved: '' }], ...initialData }); 
+            const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); 
+            const handleRichTextChange = (name, html) => {
+                setFormData(prev => ({...prev, [name]: html}));
+            };
+            const handleDynamicChange = (index, e, section) => { const list = [...formData[section]]; list[index][e.target.name] = e.target.value; setFormData(p => ({ ...p, [section]: list })); }; const addDynamicItem = (section, item) => setFormData(p => ({ ...p, [section]: [...p[section], item] })); const removeDynamicItem = (index, section) => { const list = [...formData[section]]; list.splice(index, 1); setFormData(p => ({ ...p, [section]: list })); }; 
+            return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4">
+                <AITools formType="plan" onPopulate={(data) => setFormData(p => ({...p, ...data}))} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput label="Manager Name" name="managerName" value={formData.managerName} onChange={handleChange} required />
+                    <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Plan Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option value="PIP">PIP</option><option value="QIP">QIP</option></select></div>
+                    <FormInput label="Start Date" name="startDate" type="date" value={formData.startDate} onChange={handleChange} required />
+                    <FormInput label="End Date" name="endDate" type="date" value={formData.endDate} onChange={handleChange} required />
+                </div>
+                <RichTextInput label="Introduction" value={formData.introduction} onChange={(html) => handleRichTextChange('introduction', html)} />
+                <RichTextInput label="Empowerment Statement" value={formData.empowermentStatement} onChange={(html) => handleRichTextChange('empowermentStatement', html)} />
+                <FormSection title="Areas of Focus">{formData.areasOfFocus.map((area, index) => ( <div key={index} className="space-y-2 p-2 border dark:border-gray-600 rounded-md relative">
+                    <FormInput label="Focus Title" name="title" value={area.title} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />
+                    <RichTextInput label="Expectation" value={area.expectation} onChange={(html) => { const list = [...formData.areasOfFocus]; list[index].expectation = html; setFormData(p => ({ ...p, areasOfFocus: list })); }} />
+                    <RichTextInput label="Action Plan" value={area.actionPlan} onChange={(html) => { const list = [...formData.areasOfFocus]; list[index].actionPlan = html; setFormData(p => ({ ...p, areasOfFocus: list })); }} />
+                    <FormInput label="Goal" name="goal" value={area.goal} onChange={e => handleDynamicChange(index, e, 'areasOfFocus')} />
+                    {formData.areasOfFocus.length > 1 && <button type="button" onClick={() => removeDynamicItem(index, 'areasOfFocus')} className="absolute top-1 right-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full p-1 leading-none">&times;</button>}
+                </div> ))}<button type="button" onClick={() => addDynamicItem('areasOfFocus', { title: '', expectation: '', actionPlan: '', goal: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Area</button></FormSection>
+                <RichTextInput label="Support Plan" value={formData.supportPlan} onChange={(html) => handleRichTextChange('supportPlan', html)} />
+                <RichTextInput label="Consequences" value={formData.consequences} onChange={(html) => handleRichTextChange('consequences', html)} />
+                <FormSection title="QA Targets">{formData.qaTargets.map((target, index) => ( <div key={index} className="grid grid-cols-4 gap-2 items-center"><FormInput label="Week" name="week" value={target.week} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Required" name="required" value={target.required} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><FormInput label="Achieved" name="achieved" value={target.achieved} onChange={e => handleDynamicChange(index, e, 'qaTargets')} /><button type="button" onClick={() => removeDynamicItem(index, 'qaTargets')} className="mt-6 text-red-500 hover:bg-red-100 dark:hover:bg-red-900 rounded-full disabled:opacity-50" disabled={formData.qaTargets.length <= 1}>&times;</button></div> ))}<button type="button" onClick={() => addDynamicItem('qaTargets', { week: '', required: '', achieved: '' })} className="text-sm text-blue-600 hover:underline mt-2">+ Add Target</button></FormSection><div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-green-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Plan'}</button></div>
+            </form>
+        };
+        const WarningForm = ({ onSubmit, onCancel, initialData }) => { 
+            const [formData, setFormData] = useState({ type: 'Verbal', manager: '', date: '', summaryOfConcerns: '', improvementActionPlan: '', nextAction: '', ...initialData }); 
+            const handleChange = (e) => setFormData(p => ({ ...p, [e.target.name]: e.target.value })); 
+            const handleRichTextChange = (name, html) => {
+                setFormData(prev => ({...prev, [name]: html}));
+            };
+            return <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="space-y-4">
+                <AITools formType="warning" onPopulate={(data) => setFormData(p => ({...p, ...data}))} />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormInput label="Manager" name="manager" value={formData.manager} onChange={handleChange} required />
+                    <div><label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Warning Type</label><select name="type" value={formData.type} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"><option>Verbal</option><option>Written</option><option>Final Written Warning</option></select></div>
+                    <FormInput label="Date" name="date" type="date" value={formData.date} onChange={handleChange} required />
+                </div>
+                <RichTextInput label="Summary" value={formData.summaryOfConcerns} onChange={(html) => handleRichTextChange('summaryOfConcerns', html)} />
+                <RichTextInput label="Action Plan" value={formData.improvementActionPlan} onChange={(html) => handleRichTextChange('improvementActionPlan', html)} />
+                <RichTextInput label="Next Action" value={formData.nextAction} onChange={(html) => handleRichTextChange('nextAction', html)} />
+                <div className="flex justify-end gap-2 pt-4"><button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="submit" className="py-2 px-4 rounded-md bg-yellow-500 text-white">{initialData?.id ? 'Save Changes' : 'Create Warning'}</button></div>
+            </form>
+        };
         const CoachingForm = ({ onSubmit, onCancel, initialData }) => {
             const today = new Date().toISOString().split('T')[0];
             const [formData, setFormData] = useState({
@@ -1184,8 +1429,4 @@ ${richTextToPlain(data.notes)}
     </script>
 </body>
 </html>
-
-
-
-
 
