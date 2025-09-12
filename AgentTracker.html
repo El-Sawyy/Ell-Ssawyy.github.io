@@ -14,23 +14,23 @@
                 typography: ({ theme }) => ({
                     DEFAULT: {
                         css: {
-                           a: {
-                             color: theme('colors.blue.600'),
-                             textDecoration: 'underline',
-                             '&:hover': {
-                               color: theme('colors.blue.700'),
-                             },
-                           },
+                            a: {
+                              color: theme('colors.blue.600'),
+                              textDecoration: 'underline',
+                              '&:hover': {
+                                color: theme('colors.blue.700'),
+                              },
+                            },
                         }
                     },
                     invert: {
                         css: {
-                           a: {
-                             color: theme('colors.blue.400'),
-                             '&:hover': {
-                               color: theme('colors.blue.500'),
-                             },
-                           },
+                            a: {
+                              color: theme('colors.blue.400'),
+                              '&:hover': {
+                                color: theme('colors.blue.500'),
+                              },
+                            },
                         }
                     }
                 })
@@ -412,49 +412,49 @@
 
             return (
                  <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row transition-colors duration-300">
-                     <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
-                         <div className="flex justify-between items-center mb-4">
-                            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
-                             <div className="flex items-center gap-2">
-                                 <ThemeToggleButton />
-                                 <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
-                             </div>
-                         </div>
-                         <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
+                      <aside className="w-full md:w-72 bg-white dark:bg-gray-800 p-4 border-r border-gray-200 dark:border-gray-700 flex-shrink-0">
+                          <div className="flex justify-between items-center mb-4">
+                              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Admin Tracker</h1>
+                               <div className="flex items-center gap-2">
+                                   <ThemeToggleButton />
+                                   <button onClick={() => auth.signOut()} title="Log Out" className="text-gray-500 hover:text-red-500"><LogOutIcon /></button>
+                               </div>
+                          </div>
+                          <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
                            <button onClick={() => setView('dashboard')} className={`w-1/2 p-2 text-sm font-semibold rounded-l-md ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Dashboard</button>
                            <button onClick={() => setView('tracker')} className={`w-1/2 p-2 text-sm font-semibold rounded-r-md ${view === 'tracker' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Agents</button>
-                         </div>
-                         {view === 'tracker' && (
-                           <>
-                             <nav className="space-y-1">
-                                 {isLoading ? <p>Loading...</p> : agents.map(agent => (
-                                     <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
-                                         <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
-                                             <UserIcon />
-                                             <div>
-                                                 <span className="font-semibold">{agent.name}</span>
-                                                 <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
-                                             </div>
-                                         </a>
-                                         <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
-                                             <TrashIcon />
-                                         </button>
-                                     </div>
-                                 ))}
-                             </nav>
-                           </>
-                         )}
-                     </aside>
-                     <main className="flex-1 p-4 md:p-8 overflow-auto">
-                         {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} /> : 
+                          </div>
+                          {view === 'tracker' && (
+                              <>
+                                <nav className="space-y-1">
+                                    {isLoading ? <p>Loading...</p> : agents.map(agent => (
+                                        <div key={agent.id} className={`group flex items-center justify-between p-2 rounded-lg ${selectedAgent?.id === agent.id ? 'bg-blue-100 dark:bg-blue-900' : 'hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
+                                            <a href="#" onClick={(e) => { e.preventDefault(); setSelectedAgent(agent); }} className="flex items-center gap-3 flex-grow">
+                                                <UserIcon />
+                                                <div>
+                                                    <span className="font-semibold">{agent.name}</span>
+                                                    <span className="text-xs text-gray-500 dark:text-gray-400 block">ID: {agent.employeeId}</span>
+                                                </div>
+                                            </a>
+                                            <button onClick={() => handleDeleteAgent(agent)} className="opacity-0 group-hover:opacity-100 text-gray-500 hover:text-red-600 p-1 rounded-full">
+                                                <TrashIcon />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </nav>
+                              </>
+                          )}
+                      </aside>
+                      <main className="flex-1 p-4 md:p-8 overflow-auto">
+                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} /> : 
                            selectedAgent ? (
-                             <div>
-                                 <header className="mb-8">
-                                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
-                                     <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
-                                 </header>
-                                 <DashboardStats plans={plans} warnings={warnings} />
-                                 <div className="mb-6">
+                              <div>
+                                  <header className="mb-8">
+                                      <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
+                                      <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
+                                  </header>
+                                  <DashboardStats plans={plans} warnings={warnings} />
+                                  <div className="mb-6">
                                     <div className="flex border border-gray-200 dark:border-gray-700 rounded-md">
                                         <button onClick={() => setAgentDetailView('coaching')} className={`w-1/3 p-2 text-sm font-semibold rounded-l-md transition-colors ${agentDetailView === 'coaching' ? 'bg-purple-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
                                             Coaching
@@ -467,79 +467,79 @@
                                         </button>
                                     </div>
                                   </div>
-                                 <div className="space-y-8">
-                                     {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={coachingSessions} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
-                                     {agentDetailView === 'plans' && (
-                                         <section>
-                                             <div className="flex items-center justify-between mb-4">
-                                                 <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
-                                                 <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
-                                                     <PlusCircleIcon /> Create Plan
-                                                 </button>
-                                             </div>
-                                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                                 {plans.length > 0 ? plans.map(plan => (
-                                                     <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
-                                                 )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
-                                             </div>
-                                         </section>
-                                     )}
-                                     {agentDetailView === 'warnings' && (
-                                         <section>
-                                             <div className="flex items-center justify-between mb-4">
-                                                 <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
-                                                 <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
-                                                     <PlusCircleIcon /> Create Warning
-                                                 </button>
-                                             </div>
-                                             <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                                {warnings.length > 0 ? warnings.map(warning => (
-                                                     <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
-                                                 )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
-                                             </div>
-                                         </section>
-                                     )}
-                                 </div>
-                             </div>
-                         ) : (
-                             <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
-                         )}
-                     </main>
-                     {modal.isOpen && (
-                         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-                             <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
-                                 <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
-                                     <h3 className="text-xl font-semibold">{ 
-                                         modal.type === 'ADD_AGENT' ? 'Add New Agent' : 
-                                         modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : 
-                                         modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : 
-                                         modal.type === 'EDIT_COACHING' ? (modal.data?.id ? 'Edit Coaching Session' : 'Create Coaching Session') : 
-                                         modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : 
-                                         modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : 
-                                         modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
-                                         (modal.data?.title || 'Confirm Deletion') 
-                                     }</h3>
-                                     <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
-                                 </div>
-                                 <div className="p-6 overflow-y-auto flex-grow">
-                                     {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
-                                     {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
-                                     {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
-                                     {modal.type === 'EDIT_COACHING' && <CoachingForm onSubmit={(data) => handleSaveData('coaching', data)} onCancel={closeModal} initialData={modal.data} />}
+                                  <div className="space-y-8">
+                                      {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={coachingSessions} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
+                                      {agentDetailView === 'plans' && (
+                                          <section>
+                                              <div className="flex items-center justify-between mb-4">
+                                                  <h3 className="text-2xl font-semibold flex items-center gap-2"><FileTextIcon /> Plans (PIP/QIP)</h3>
+                                                  <button onClick={() => openModal('EDIT_PLAN')} className="bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2">
+                                                      <PlusCircleIcon /> Create Plan
+                                                  </button>
+                                              </div>
+                                              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                                  {plans.length > 0 ? plans.map(plan => (
+                                                      <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
+                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
+                                              </div>
+                                          </section>
+                                      )}
+                                      {agentDetailView === 'warnings' && (
+                                          <section>
+                                              <div className="flex items-center justify-between mb-4">
+                                                  <h3 className="text-2xl font-semibold flex items-center gap-2"><AlertTriangleIcon /> Warnings</h3>
+                                                  <button onClick={() => openModal('EDIT_WARNING')} className="bg-yellow-500 text-white py-2 px-4 rounded-lg hover:bg-yellow-600 transition-colors flex items-center gap-2">
+                                                      <PlusCircleIcon /> Create Warning
+                                                  </button>
+                                              </div>
+                                              <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                                 {warnings.length > 0 ? warnings.map(warning => (
+                                                      <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
+                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
+                                              </div>
+                                          </section>
+                                      )}
+                                  </div>
+                              </div>
+                          ) : (
+                              <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
+                          )}
+                      </main>
+                      {modal.isOpen && (
+                          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+                              <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
+                                  <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
+                                      <h3 className="text-xl font-semibold">{ 
+                                          modal.type === 'ADD_AGENT' ? 'Add New Agent' : 
+                                          modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : 
+                                          modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : 
+                                          modal.type === 'EDIT_COACHING' ? (modal.data?.id ? 'Edit Coaching Session' : 'Create Coaching Session') : 
+                                          modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : 
+                                          modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : 
+                                          modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
+                                          (modal.data?.title || 'Confirm Deletion') 
+                                      }</h3>
+                                      <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
+                                  </div>
+                                  <div className="p-6 overflow-y-auto flex-grow">
+                                      {modal.type === 'ADD_AGENT' && <AgentForm onSubmit={(data) => handleSaveData('agent', data)} onCancel={closeModal} />}
+                                      {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
+                                      {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
+                                      {modal.type === 'EDIT_COACHING' && <CoachingForm onSubmit={(data) => handleSaveData('coaching', data)} onCancel={closeModal} initialData={modal.data} />}
 
-                                     {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} />}
-                                     {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+                                      {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
 
-                                      {modal.type === 'CONFIRM_DELETE' && (
-                                         <div>
-                                             <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
-                                             <div className="flex justify-end gap-2 mt-4"><button onClick={closeModal} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button><button onClick={modal.data.onConfirm} className="py-2 px-4 rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button></div>
-                                         </div>
-                                     )}
-                                 </div>
-                             </div>
-                         </div>
-                     )}
+                                       {modal.type === 'CONFIRM_DELETE' && (
+                                           <div>
+                                               <p>{modal.data?.message || 'Are you sure you want to delete this item?'}</p>
+                                               <div className="flex justify-end gap-2 mt-4"><button onClick={closeModal} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500">Cancel</button><button onClick={modal.data.onConfirm} className="py-2 px-4 rounded-md bg-red-600 text-white hover:bg-red-700">Delete</button></div>
+                                           </div>
+                                       )}
+                                  </div>
+                              </div>
+                          </div>
+                      )}
                  </div>
             )
         }
@@ -554,6 +554,14 @@
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             const [error, setError] = useState(null);
             const [agentDashboardView, setAgentDashboardView] = useState('coaching');
+            const [coachFilter, setCoachFilter] = useState('All');
+
+            const coachTypes = useMemo(() => ['All', ...new Set(coachingSessions.map(s => s.coachType).filter(Boolean))], [coachingSessions]);
+            
+            const filteredCoachingSessions = useMemo(() => {
+                if (coachFilter === 'All') return coachingSessions;
+                return coachingSessions.filter(s => s.coachType === coachFilter);
+            }, [coachFilter, coachingSessions]);
 
             useEffect(() => {
                 if (!agentId) {
@@ -580,9 +588,9 @@
                         setAgentData(null);
                     }
                 }, err => {
-                      console.error("Error fetching agent profile:", err);
-                      setError("Could not load your profile due to a database permissions error. Please contact an admin.");
-                      setIsLoading(false);
+                     console.error("Error fetching agent profile:", err);
+                     setError("Could not load your profile due to a database permissions error. Please contact an admin.");
+                     setIsLoading(false);
                 }));
 
 
@@ -642,36 +650,49 @@
                             </div>
                           </div>
                           <div className="space-y-8">
-                               {agentDashboardView === 'coaching' && (
-                                   <section>
-                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
-                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                          {coachingSessions.length > 0 ? coachingSessions.map(session => (
-                                              <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
-                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions on record.</p>}
-                                      </div>
-                                  </section>
-                               )}
-                               {agentDashboardView === 'plans' && (
+                              {agentDashboardView === 'coaching' && (
                                   <section>
-                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
-                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                          {plans.length > 0 ? plans.map(plan => (
-                                              <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
-                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
-                                      </div>
+                                    <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
+                                    {coachTypes.length > 1 && (
+                                        <div className="flex flex-wrap gap-2 mb-4 border-b dark:border-gray-700 pb-4">
+                                            {coachTypes.map(type => (
+                                                <button 
+                                                    key={type}
+                                                    onClick={() => setCoachFilter(type)}
+                                                    className={`px-3 py-1 text-sm rounded-full transition-colors ${coachFilter === type ? 'bg-purple-600 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'}`}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                        {filteredCoachingSessions.length > 0 ? filteredCoachingSessions.map(session => (
+                                            <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
+                                        )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions for the selected filter.</p>}
+                                    </div>
                                   </section>
-                               )}
-                               {agentDashboardView === 'warnings' && (
-                                  <section>
-                                      <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
-                                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                          {warnings.length > 0 ? warnings.map(warning => (
-                                              <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
-                                          )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
-                                      </div>
-                                  </section>
-                               )}
+                              )}
+                              {agentDashboardView === 'plans' && (
+                                <section>
+                                    <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><FileTextIcon /> Your Plans</h3>
+                                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                        {plans.length > 0 ? plans.map(plan => (
+                                            <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} isAdmin={false} />
+                                        )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no performance plans on record.</p>}
+                                    </div>
+                                </section>
+                              )}
+                              {agentDashboardView === 'warnings' && (
+                                <section>
+                                    <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><AlertTriangleIcon /> Your Warnings</h3>
+                                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                                        {warnings.length > 0 ? warnings.map(warning => (
+                                            <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} isAdmin={false} />
+                                        )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no warnings on record.</p>}
+                                    </div>
+                                </section>
+                              )}
                           </div>
                       </main>
                       {modal.isOpen && (
@@ -893,10 +914,10 @@
 
             if (type === 'warning') {
                 return (
-                     <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                         <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
-                         <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
-                     </div>
+                       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                           <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
+                           <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
+                       </div>
                 );
             }
             
@@ -945,8 +966,8 @@
                 if(type !== 'plan' || !docRef) return;
                  const unsubscribe = docRef.collection('coachingNotes').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
                      setCoachingNotes(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
-                  });
-                  return () => unsubscribe();
+                 });
+                 return () => unsubscribe();
             }, [data, type, agent]);
             
             const handleAddBulletPoint = () => setBulletPoints([...bulletPoints, ""]);
@@ -1017,7 +1038,7 @@
                 if (type === 'plan') {
                     const actionPlanText = Array.isArray(data.actionPlan)
                         ? (data.actionPlan || []).map(task => `     - [${task.completed ? 'x' : ' '}] ${task.text}`).join('\n')
-                        : `     ${richTextToPlain(data.actionPlan)}`;
+                        : `   ${richTextToPlain(data.actionPlan)}`;
 
                     textToCopy = `
 Performance Improvement Plan (${data.type})
@@ -1108,125 +1129,125 @@ ${richTextToPlain(data.nextAction)}
             
             return (
                  <div>
-                     <div id="printable-document">
-                         <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2>
-                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
-                             {renderField("Employee Name", agent.name)}
-                             {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
-                             {renderField("Manager", data.managerName || data.manager)}
-                             {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
-                         </div>
-                         
-                         {type === 'warning' && ( <> 
-                            {renderSection("Summary", data.summaryOfConcerns)} 
-                            {renderSection("Action Plan", data.improvementActionPlan)} 
-                            {renderSection("Next Action", data.nextAction)} 
-                         </> )}
-                         
-                         {type === 'plan' && ( <> 
-                            {renderSection("Introduction", data.introduction)} 
-                            {renderSection("Empowerment", data.empowermentStatement)} 
-                            <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( 
-                                <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4">
-                                    <h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5>
-                                    <div className="mt-2"><strong className="text-gray-600 dark:text-gray-400 block mb-1">Expectation:</strong> <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.expectation || ''}} /></div>
-                                    <div className="mt-2"><strong className="text-gray-600 dark:text-gray-400 block mb-1">Action Plan:</strong>
-                                         {Array.isArray(area.actionPlan) ? (
-                                            <div className="space-y-1 mt-1">
-                                                {(area.actionPlan || []).map((task, taskIndex) => (
-                                                    <div key={taskIndex} className={`flex items-center ${task.completed ? 'line-through text-gray-500' : ''}`}>
-                                                        {task.completed ? <CheckCircleIcon /> : <CheckboxIcon />}
-                                                        <span className="ml-2">{task.text}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.actionPlan || ''}} />
-                                        )}
-                                    </div>
-                                    <p className="text-gray-700 dark:text-gray-300 mt-2"><span className="font-semibold">Goal:</span> {area.goal}</p>
-                                </div> 
-                            ))}</div> 
-                            {renderSection("Support Plan", data.supportPlan)} 
-                            {renderSection("Consequences", data.consequences)} 
-                            <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> 
-                         </> )}
-                         
-                         {type === 'plan' && (
-                             <div className="mt-6 no-print">
-                                 <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>
-                                 {isAdmin && (
-                                     <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
-                                         <div className="flex gap-2 mb-2">
-                                             <button onClick={() => setNoteType('Note')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Note' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Note</button>
-                                             <button onClick={() => setNoteType('Bullets')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Bullets' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Points</button>
-                                             <button onClick={() => setNoteType('Email')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Email' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Email</button>
-                                         </div>
-                                         <form onSubmit={handleAddCoachingNote}>
-                                             {noteType === 'Email' && <FormInput label="Subject" value={noteSubject} onChange={e => setNoteSubject(e.target.value)} className="mb-2" />}
-                                             {noteType === 'Bullets' ? (
-                                                 <div className="space-y-2">
-                                                     {bulletPoints.map((point, index) => (
-                                                         <input key={index} type="text" value={point} onChange={e => handleBulletPointChange(index, e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800" placeholder={`Point ${index + 1}`}/>
-                                                     ))}
-                                                     <button type="button" onClick={handleAddBulletPoint} className="text-sm text-blue-600">+ Add Point</button>
-                                                 </div>
-                                             ) : (
-                                                <RichTextInput label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={setNewNote} />
-                                             )}
-                                             <button type="submit" className="mt-2 py-2 px-4 bg-blue-600 text-white rounded-md">Add Note</button>
-                                         </form>
-                                     </div>
-                                 )}
-                                  {coachingNotes.length > 0 ? (
-                                     <div className="space-y-3">
-                                         {coachingNotes.map(note => (
-                                             <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                                                 <div className="text-sm text-gray-800 dark:text-gray-200">{renderNoteContent(note)}</div>
-                                                 <p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p>
-                                             </div>
-                                         ))}
-                                     </div>
-                                 ) : <p className="text-gray-500 dark:text-gray-400">No coaching notes yet.</p>}
-                             </div>
-                         )}
+                      <div id="printable-document">
+                          <h2 className="text-2xl font-bold text-center text-gray-800 dark:text-gray-200">{type === 'plan' ? `Plan (${data.type})` : 'Warning'}</h2>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 text-sm">
+                              {renderField("Employee Name", agent.name)}
+                              {renderField("Date", new Date(data.date || data.startDate).toLocaleDateString())}
+                              {renderField("Manager", data.managerName || data.manager)}
+                              {type === 'plan' ? renderField("End Date", new Date(data.endDate).toLocaleDateString()) : renderField("Warning Type", data.type)}
+                          </div>
+                          
+                          {type === 'warning' && ( <> 
+                              {renderSection("Summary", data.summaryOfConcerns)} 
+                              {renderSection("Action Plan", data.improvementActionPlan)} 
+                              {renderSection("Next Action", data.nextAction)} 
+                          </> )}
+                          
+                          {type === 'plan' && ( <> 
+                              {renderSection("Introduction", data.introduction)} 
+                              {renderSection("Empowerment", data.empowermentStatement)} 
+                              <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Areas of Focus</h4>{data.areasOfFocus?.map((area, index) => ( 
+                                  <div key={index} className="mb-4 p-2 border-l-2 border-blue-500 pl-4">
+                                      <h5 className="font-bold text-gray-800 dark:text-gray-200">{index + 1}. {area.title}</h5>
+                                      <div className="mt-2"><strong className="text-gray-600 dark:text-gray-400 block mb-1">Expectation:</strong> <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.expectation || ''}} /></div>
+                                      <div className="mt-2"><strong className="text-gray-600 dark:text-gray-400 block mb-1">Action Plan:</strong>
+                                           {Array.isArray(area.actionPlan) ? (
+                                                <div className="space-y-1 mt-1">
+                                                    {(area.actionPlan || []).map((task, taskIndex) => (
+                                                        <div key={taskIndex} className={`flex items-center ${task.completed ? 'line-through text-gray-500' : ''}`}>
+                                                             {task.completed ? <CheckCircleIcon /> : <CheckboxIcon />}
+                                                             <span className="ml-2">{task.text}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                           ) : (
+                                                <div className="prose dark:prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: area.actionPlan || ''}} />
+                                           )}
+                                      </div>
+                                      <p className="text-gray-700 dark:text-gray-300 mt-2"><span className="font-semibold">Goal:</span> {area.goal}</p>
+                                  </div> 
+                              ))}</div> 
+                              {renderSection("Support Plan", data.supportPlan)} 
+                              {renderSection("Consequences", data.consequences)} 
+                              <div className="mt-6"><h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">QA Targets</h4><table className="w-full text-left table-auto"><thead><tr className="border-b dark:border-gray-600"><th className="pb-2">Week</th><th className="pb-2">Required</th><th className="pb-2">Achieved</th></tr></thead><tbody>{data.qaTargets?.map((target, index) => ( <tr key={index} className="border-b dark:border-gray-700"><td className="py-2">{target.week}</td><td className="py-2">{target.required}</td><td className="py-2">{target.achieved}</td></tr> ))}</tbody></table></div> 
+                          </> )}
+                          
+                          {type === 'plan' && (
+                              <div className="mt-6 no-print">
+                                  <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Coaching Notes</h4>
+                                  {isAdmin && (
+                                      <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg mb-4">
+                                          <div className="flex gap-2 mb-2">
+                                              <button onClick={() => setNoteType('Note')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Note' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Note</button>
+                                              <button onClick={() => setNoteType('Bullets')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Bullets' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Points</button>
+                                              <button onClick={() => setNoteType('Email')} className={`px-3 py-1 text-sm rounded-md ${noteType === 'Email' ? 'bg-blue-600 text-white' : 'bg-gray-200 dark:bg-gray-600'}`}>Email</button>
+                                          </div>
+                                          <form onSubmit={handleAddCoachingNote}>
+                                              {noteType === 'Email' && <FormInput label="Subject" value={noteSubject} onChange={e => setNoteSubject(e.target.value)} className="mb-2" />}
+                                              {noteType === 'Bullets' ? (
+                                                   <div className="space-y-2">
+                                                       {bulletPoints.map((point, index) => (
+                                                           <input key={index} type="text" value={point} onChange={e => handleBulletPointChange(index, e.target.value)} className="w-full p-2 border rounded-md bg-white dark:bg-gray-800" placeholder={`Point ${index + 1}`}/>
+                                                       ))}
+                                                       <button type="button" onClick={handleAddBulletPoint} className="text-sm text-blue-600">+ Add Point</button>
+                                                   </div>
+                                              ) : (
+                                               <RichTextInput label={noteType === 'Email' ? 'Body' : 'Add new note'} value={newNote} onChange={setNewNote} />
+                                              )}
+                                              <button type="submit" className="mt-2 py-2 px-4 bg-blue-600 text-white rounded-md">Add Note</button>
+                                          </form>
+                                      </div>
+                                  )}
+                                   {coachingNotes.length > 0 ? (
+                                      <div className="space-y-3">
+                                          {coachingNotes.map(note => (
+                                              <div key={note.id} className="p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                                  <div className="text-sm text-gray-800 dark:text-gray-200">{renderNoteContent(note)}</div>
+                                                  <p className="text-xs text-gray-500 dark:text-gray-400 text-right">-{note.author} on {new Date(note.createdAt).toLocaleString()}</p>
+                                              </div>
+                                          ))}
+                                      </div>
+                                   ) : <p className="text-gray-500 dark:text-gray-400">No coaching notes yet.</p>}
+                              </div>
+                          )}
 
-                         <div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600">
-                              <div>
-                                 <p>Employee's Signature</p>
-                                 {data.agentSignature ? (
-                                     <div className="mt-2">
-                                         <p className="font-semibold text-lg">{data.agentSignature.name}</p>
-                                         <p className="text-xs text-gray-500">Signed on {new Date(data.agentSignature.date).toLocaleString()}</p>
-                                     </div>
-                                 ) : !isAdmin ? (
-                                     <div className="flex gap-2 items-center mt-2">
-                                         <FormInput placeholder="Type your full name" value={agentSignName} onChange={e => setAgentSignName(e.target.value)} />
-                                         <button onClick={() => handleSign('agent')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
-                                     </div>
-                                 ) : <p className="mt-8">____________________</p>}
-                             </div>
-                             <div>
-                                 <p>Leader's Signature</p>
-                                 {data.leaderSignature ? (
-                                      <div className="mt-2 text-right">
-                                         <p className="font-semibold text-lg">{data.leaderSignature.name}</p>
-                                         <p className="text-xs text-gray-500">Signed on {new Date(data.leaderSignature.date).toLocaleString()}</p>
-                                     </div>
-                                 ) : isAdmin ? (
-                                     <div className="flex gap-2 items-center mt-2">
-                                         <FormInput placeholder="Type your full name" value={leaderSignName} onChange={e => setLeaderSignName(e.target.value)} />
-                                         <button onClick={() => handleSign('leader')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
-                                     </div>
-                                 ) : <p className="mt-8">____________________</p>}
-                             </div>
-                         </div>
-                     </div>
-                      <div className="flex justify-end mt-6 pt-4 border-t dark:border-gray-700">
-                        <button onClick={handleCopy} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                            <ClipboardIcon /> {copySuccess || 'Copy Content'}
-                        </button>
-                    </div>
+                          <div className="flex justify-between mt-16 pt-8 border-t dark:border-gray-600">
+                               <div>
+                                   <p>Employee's Signature</p>
+                                   {data.agentSignature ? (
+                                       <div className="mt-2">
+                                           <p className="font-semibold text-lg">{data.agentSignature.name}</p>
+                                           <p className="text-xs text-gray-500">Signed on {new Date(data.agentSignature.date).toLocaleString()}</p>
+                                       </div>
+                                   ) : !isAdmin ? (
+                                       <div className="flex gap-2 items-center mt-2">
+                                           <FormInput placeholder="Type your full name" value={agentSignName} onChange={e => setAgentSignName(e.target.value)} />
+                                           <button onClick={() => handleSign('agent')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
+                                       </div>
+                                   ) : <p className="mt-8">____________________</p>}
+                               </div>
+                               <div>
+                                   <p>Leader's Signature</p>
+                                   {data.leaderSignature ? (
+                                        <div className="mt-2 text-right">
+                                           <p className="font-semibold text-lg">{data.leaderSignature.name}</p>
+                                           <p className="text-xs text-gray-500">Signed on {new Date(data.leaderSignature.date).toLocaleString()}</p>
+                                       </div>
+                                   ) : isAdmin ? (
+                                       <div className="flex gap-2 items-center mt-2">
+                                           <FormInput placeholder="Type your full name" value={leaderSignName} onChange={e => setLeaderSignName(e.target.value)} />
+                                           <button onClick={() => handleSign('leader')} className="py-2 px-4 bg-green-600 text-white rounded-md">Sign</button>
+                                       </div>
+                                   ) : <p className="mt-8">____________________</p>}
+                               </div>
+                          </div>
+                      </div>
+                       <div className="flex justify-end mt-6 pt-4 border-t dark:border-gray-700">
+                           <button onClick={handleCopy} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                               <ClipboardIcon /> {copySuccess || 'Copy Content'}
+                           </button>
+                       </div>
                  </div>
             );
         };
@@ -1247,12 +1268,33 @@ ${richTextToPlain(data.nextAction)}
                     return tempDiv.textContent || tempDiv.innerText || '';
                 };
                 
-                const textToCopy = `
+                let textToCopy = '';
+
+                if (data.sessionType === 'Feedback') {
+                    textToCopy = `
+Coaching Session (Feedback): ${new Date(data.date).toLocaleDateString()}
+Coach: ${data.lastModifiedBy || data.createdBy || 'N/A'}
+
+--- CONTEXT ---
+${richTextToPlain(data.context)}
+
+--- OBSERVED BEHAVIOR ---
+${richTextToPlain(data.observedBehavior)}
+
+--- IMPACT ---
+${richTextToPlain(data.impact)}
+
+--- NEXT STEPS ---
+${richTextToPlain(data.nextSteps)}
+                    `.trim();
+                } else {
+                    textToCopy = `
 Coaching Session: ${new Date(data.date).toLocaleDateString()}
 Coach: ${data.lastModifiedBy || data.createdBy || 'N/A'}
 Coach Type: ${data.coachType || 'N/A'}
 Session Type: ${data.sessionType}
 
+${data.lastWeekPerformance ? `--- LAST WEEK'S PERFORMANCE ---\n${richTextToPlain(data.lastWeekPerformance)}\n` : ''}
 --- STRENGTHS ---
 ${richTextToPlain(data.strengths)}
 
@@ -1264,7 +1306,8 @@ ${richTextToPlain(data.actionPlan)}
 
 --- NOTES ---
 ${richTextToPlain(data.notes)}
-                `.trim();
+                    `.trim();
+                }
 
                 const textArea = document.createElement("textarea");
                 textArea.value = textToCopy;
@@ -1302,16 +1345,28 @@ ${richTextToPlain(data.notes)}
                         {renderField("Session Type", data.sessionType)}
                         {renderField("Submitted By", data.lastModifiedBy || data.createdBy || 'N/A')}
                     </div>
-                    {renderSection("Strengths", data.strengths)}
-                    {renderSection("Opportunities", data.opportunities)}
-                    {renderSection("Action Plan", data.actionPlan)}
-                    {renderSection("Notes", data.notes)}
+                    { data.sessionType === 'Feedback' ? (
+                        <>
+                            {renderSection("Context", data.context)}
+                            {renderSection("Observed Behavior", data.observedBehavior)}
+                            {renderSection("Impact", data.impact)}
+                            {renderSection("Next Steps", data.nextSteps)}
+                        </>
+                    ) : (
+                         <>
+                            {data.lastWeekPerformance && renderSection("Last Week's Performance", data.lastWeekPerformance)}
+                            {renderSection("Strengths", data.strengths)}
+                            {renderSection("Opportunities", data.opportunities)}
+                            {renderSection("Action Plan", data.actionPlan)}
+                            {renderSection("Notes", data.notes)}
+                        </>
+                    )}
 
                      <div className="flex justify-end mt-6 pt-4 border-t dark:border-gray-700">
-                        <button onClick={handleCopy} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                            <ClipboardIcon /> {copySuccess || 'Copy Content'}
-                        </button>
-                    </div>
+                         <button onClick={handleCopy} className="flex items-center gap-2 py-2 px-4 rounded-md bg-blue-600 text-white hover:bg-blue-700">
+                             <ClipboardIcon /> {copySuccess || 'Copy Content'}
+                         </button>
+                     </div>
                 </div>
             );
         };
@@ -1356,16 +1411,43 @@ ${richTextToPlain(data.notes)}
             
             const handlePaste = (e) => {
                 e.preventDefault();
-                const paste = (e.clipboardData || window.clipboardData).getData('text/html') 
-                    || (e.clipboardData || window.clipboardData).getData('text/plain');
-                
-                const selection = window.getSelection();
-                if (!selection.rangeCount) return;
-                selection.deleteFromDocument();
-                selection.getRangeAt(0).insertNode(document.createRange().createContextualFragment(paste));
-                selection.collapseToEnd();
+                let html = (e.clipboardData || window.clipboardData).getData('text/html');
 
-                onChange(e.currentTarget.innerHTML);
+                // If no HTML, fall back to plain text and convert newlines to <br>
+                if (!html) {
+                    let text = (e.clipboardData || window.clipboardData).getData('text/plain');
+                    html = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/(\r\n|\n|\r)/gm, '<br>');
+                }
+
+                // Sanitize the HTML
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                // Remove unwanted inline styles and attributes from all elements
+                tempDiv.querySelectorAll('*').forEach(el => {
+                    el.removeAttribute('class');
+                    el.style.backgroundColor = '';
+                    el.style.background = '';
+                    el.style.color = ''; // Let it inherit color
+                    el.style.fontFamily = ''; // Let it inherit font
+                    el.style.fontSize = ''; // Let it inherit font size
+                    el.style.lineHeight = '';
+
+                    // If the style attribute is now empty, remove it completely
+                    if (el.getAttribute('style') === '') {
+                        el.removeAttribute('style');
+                    }
+                });
+                
+                const sanitizedHtml = tempDiv.innerHTML;
+                
+                // Use execCommand to insert the sanitized HTML
+                document.execCommand('insertHTML', false, sanitizedHtml);
+                
+                // Trigger the state update
+                if(e.currentTarget) {
+                   onChange(e.currentTarget.innerHTML);
+                }
             };
 
             useEffect(() => {
@@ -1399,7 +1481,7 @@ ${richTextToPlain(data.notes)}
             );
         };
 
-        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'ARRAY', items: {type: 'OBJECT', properties: {text: {type: 'STRING'}, completed: {type: 'BOOLEAN'}}} }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else if (formType === 'warning') { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } else if (formType === 'coaching') { schema = { type: 'OBJECT', properties: { strengths: { type: 'STRING', description: "Positive points and things the agent is doing well. Format with HTML using <strong> and <ul><li> tags." }, opportunities: { type: 'STRING', description: "Areas for improvement and key discussion points. Format with HTML using <strong> and <ul><li> tags." }, actionPlan: { type: 'STRING', description: "A clear, itemized list of next steps for the agent. Format with HTML using <strong> and <ul><li> tags." }, notes: { type: 'STRING', description: "General summary, encouragement, or other notes. Format with HTML using <strong> tags for emphasis." } } }; } if (mode === 'fill') { prompt = `You are an expert administrative assistant. Analyze the following text and extract the information into a valid JSON object based on the provided schema. It is crucial that you identify and convert bullet points, numbered items, and distinct paragraphs into clean, structured HTML using tags like <ul>, <ol>, <li>, <p>, and <strong> for bolding. Retain any hyperlinks found in the original text. For 'actionPlan' in a plan, break it down into an array of objects with 'text' and 'completed' properties.\n\nText:\n${text}`; } else { prompt = `You are a professional team leader. Generate a well-structured document based on these notes: "${text}". The output must be a valid JSON object following the schema. Format the content with professional and encouraging language. Use HTML to structure the text: use <strong> for emphasis, and use <ul> or <ol> for lists. For an 'actionPlan' in a plan, create an array of objects with 'text' and a default 'completed: false'.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
+        const AITools = ({ formType, onPopulate, disabled }) => { const [mode, setMode] = useState(null); const [text, setText] = useState(''); const [isProcessing, setIsProcessing] = useState(false); const [error, setError] = useState(''); const handleProcess = async () => { setIsProcessing(true); setError(''); const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`; let prompt, schema; if (formType === 'plan') { schema = { type: 'OBJECT', properties: { managerName: { type: 'STRING' }, startDate: { type: 'STRING' }, endDate: { type: 'STRING' }, introduction: { type: 'STRING' }, empowermentStatement: { type: 'STRING' }, areasOfFocus: { type: 'ARRAY', items: { type: 'OBJECT', properties: { title: { type: 'STRING' }, expectation: { type: 'STRING' }, actionPlan: { type: 'ARRAY', items: {type: 'OBJECT', properties: {text: {type: 'STRING'}, completed: {type: 'BOOLEAN'}}} }, goal: { type: 'STRING' } } } }, supportPlan: { type: 'STRING' }, consequences: { type: 'STRING' }, qaTargets: { type: 'ARRAY', items: { type: 'OBJECT', properties: { week: { type: 'STRING' }, required: { type: 'STRING' }, achieved: { type: 'STRING' } } } } } }; } else if (formType === 'warning') { schema = { type: 'OBJECT', properties: { manager: { type: 'STRING' }, date: { type: 'STRING' }, summaryOfConcerns: { type: 'STRING' }, improvementActionPlan: { type: 'STRING' }, nextAction: { type: 'STRING' } } }; } else if (formType === 'coaching') { schema = { type: 'OBJECT', properties: { lastWeekPerformance: { type: 'STRING', description: "Summary of agent's performance from the previous week. Format with HTML using <strong> and <ul><li> tags." }, strengths: { type: 'STRING', description: "Positive points and things the agent is doing well. Format with HTML using <strong> and <ul><li> tags." }, opportunities: { type: 'STRING', description: "Areas for improvement and key discussion points. Format with HTML using <strong> and <ul><li> tags." }, actionPlan: { type: 'STRING', description: "A clear, itemized list of next steps for the agent. Format with HTML using <strong> and <ul><li> tags." }, notes: { type: 'STRING', description: "General summary, encouragement, or other notes. Format with HTML using <strong> tags for emphasis." }, context: { type: 'STRING', description: "The context or situation for the feedback. Format with HTML." }, observedBehavior: { type: 'STRING', description: "Specific, observable actions or behaviors. Format with HTML." }, impact: { type: 'STRING', description: "The impact of the observed behavior. Format with HTML." }, nextSteps: { type: 'STRING', description: "Next steps or consequences if behavior repeats. Format with HTML." } } }; } if (mode === 'fill') { prompt = `You are an expert administrative assistant. Analyze the following text and extract the information into a valid JSON object based on the provided schema. The text could be for a regular coaching session (with strengths, opportunities, etc.) or for a structured feedback session (with context, behavior, impact, next steps). Populate only the relevant fields for the type of session described. It is crucial that you identify and convert bullet points, numbered items, and distinct paragraphs into clean, structured HTML using tags like <ul>, <ol>, <li>, <p>, and <strong> for bolding. Retain any hyperlinks found in the original text.\n\nText:\n${text}`; } else { prompt = `You are a professional team leader. Generate a well-structured coaching document based on these notes: "${text}". The output must be a valid JSON object following the schema. Determine if the notes describe a standard coaching session or a structured feedback session and populate only the relevant fields. Format the content with professional and encouraging language. Use HTML to structure the text: use <strong> for emphasis, and use <ul> or <ol> for lists.`; } const payload = { contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json", responseSchema: schema } }; try { const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }); if (!response.ok) throw new Error(`API error: ${response.statusText}`); const result = await response.json(); const jsonText = result.candidates?.[0]?.content?.parts?.[0]?.text; if (!jsonText) throw new Error("No content from API."); onPopulate(JSON.parse(jsonText)); setMode(null); } catch (err) { setError(`Failed. ${err.message}`); } finally { setIsProcessing(false); } }; if (!mode) { return <div className="my-4 pt-4 border-t dark:border-gray-700 flex gap-2"><button type="button" onClick={() => setMode('fill')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 hover:bg-indigo-200 dark:hover:bg-indigo-800 disabled:opacity-50"><SparklesIcon /> Auto-fill from Text</button><button type="button" onClick={() => setMode('generate')} className="w-full flex items-center justify-center gap-2 text-sm py-2 px-4 rounded-md bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 disabled:opacity-50"><SparklesIcon /> Generate with AI</button></div>; } return <div className="my-4 pt-4 border-t dark:border-gray-700 space-y-2"><label className="block text-gray-700 dark:text-gray-300">{mode === 'fill' ? 'Paste text:' : 'Describe issue:'}</label>{mode === 'fill' ? <textarea value={text} onChange={e => setText(e.target.value)} rows="8" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" /> : <input type="text" value={text} onChange={e => setText(e.target.value)} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600" />} {error && <p className="text-sm text-red-500">{error}</p>} <div className="flex justify-end gap-2"><button type="button" onClick={() => setMode(null)} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button><button type="button" onClick={handleProcess} disabled={isProcessing || !text} className="py-2 px-4 rounded-md bg-blue-600 text-white">{isProcessing ? 'Processing...' : 'Go'}</button></div></div>;};
         const AgentForm = ({ onSubmit, onCancel }) => {
             const [name, setName] = useState('');
             const [employeeId, setEmployeeId] = useState('');
@@ -1524,12 +1606,41 @@ ${richTextToPlain(data.notes)}
                 date: today,
                 sessionType: '1-to-1',
                 coachType: 'Team Leader',
+                lastWeekPerformance: '',
                 strengths: '',
                 opportunities: '',
                 actionPlan: '',
                 notes: '',
+                context: '',
+                observedBehavior: '',
+                impact: '',
+                nextSteps: '',
                 ...initialData
             });
+
+            useEffect(() => {
+                if (initialData) return; 
+                setFormData(prev => {
+                    if (prev.sessionType === 'Feedback') {
+                        return {
+                            ...prev,
+                            lastWeekPerformance: '',
+                            strengths: '',
+                            opportunities: '',
+                            actionPlan: '',
+                            notes: ''
+                        };
+                    } else {
+                         return {
+                            ...prev,
+                            context: '',
+                            observedBehavior: '',
+                            impact: '',
+                            nextSteps: ''
+                        };
+                    }
+                });
+            }, [formData.sessionType, initialData]);
 
             const handleChange = (e) => {
                 const { name, value } = e.target;
@@ -1567,16 +1678,27 @@ ${richTextToPlain(data.notes)}
                             <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Session Type</label>
                             <select name="sessionType" value={formData.sessionType} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
                                 <option>1-to-1</option>
-                                <option>Email Recap</option>
-                                <option>Observation</option>
-                                <option>General Note</option>
+                                <option>QA Coaching</option>
+                                <option>Feedback</option>
                             </select>
                         </div>
                     </div>
-                    <RichTextInput label="Strengths" value={formData.strengths} onChange={(html) => handleRichTextChange('strengths', html)} />
-                    <RichTextInput label="Opportunities" value={formData.opportunities} onChange={(html) => handleRichTextChange('opportunities', html)} />
-                    <RichTextInput label="Action Plan" value={formData.actionPlan} onChange={(html) => handleRichTextChange('actionPlan', html)} />
-                    <RichTextInput label="Additional Notes" value={formData.notes} onChange={(html) => handleRichTextChange('notes', html)} />
+                    { (formData.sessionType === '1-to-1' || formData.sessionType === 'QA Coaching') ? (
+                        <>
+                            <RichTextInput label="Last Week's Performance" value={formData.lastWeekPerformance} onChange={(html) => handleRichTextChange('lastWeekPerformance', html)} />
+                            <RichTextInput label="Strengths" value={formData.strengths} onChange={(html) => handleRichTextChange('strengths', html)} />
+                            <RichTextInput label="Opportunities" value={formData.opportunities} onChange={(html) => handleRichTextChange('opportunities', html)} />
+                            <RichTextInput label="Action Plan" value={formData.actionPlan} onChange={(html) => handleRichTextChange('actionPlan', html)} />
+                            <RichTextInput label="Additional Notes" value={formData.notes} onChange={(html) => handleRichTextChange('notes', html)} />
+                        </>
+                    ) : (
+                        <>
+                            <RichTextInput label="Context" value={formData.context} onChange={(html) => handleRichTextChange('context', html)} />
+                            <RichTextInput label="Observed Behavior" value={formData.observedBehavior} onChange={(html) => handleRichTextChange('observedBehavior', html)} />
+                            <RichTextInput label="Impact" value={formData.impact} onChange={(html) => handleRichTextChange('impact', html)} />
+                            <RichTextInput label="Next Steps" value={formData.nextSteps} onChange={(html) => handleRichTextChange('nextSteps', html)} />
+                        </>
+                    )}
                     <div className="flex justify-end gap-2 pt-4">
                         <button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button>
                         <button type="submit" className="py-2 px-4 rounded-md bg-purple-600 text-white">{initialData?.id ? 'Save Changes' : 'Create Session'}</button>
@@ -1591,3 +1713,4 @@ ${richTextToPlain(data.notes)}
     </script>
 </body>
 </html>
+
