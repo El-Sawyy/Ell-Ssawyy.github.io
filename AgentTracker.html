@@ -318,11 +318,37 @@
             const [modal, setModal] = useState({ isOpen: false, type: '', data: null });
             const [agentDetailView, setAgentDetailView] = useState('coaching');
             const [coachFilter, setCoachFilter] = useState('All');
+            const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+            const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
             const agentsPath = `agents`;
             const getPlansPath = (agentId) => `agents/${agentId}/plans`;
             const getWarningsPath = (agentId) => `agents/${agentId}/warnings`;
             const getCoachingPath = (agentId) => `agents/${agentId}/coaching`;
+            
+            const filteredPlans = useMemo(() => {
+                if (!plans) return [];
+                return plans.filter(p => {
+                    const itemDate = new Date(p.startDate || p.date);
+                    return itemDate.getMonth() === selectedMonth && itemDate.getFullYear() === selectedYear;
+                });
+            }, [plans, selectedMonth, selectedYear]);
+
+            const filteredWarnings = useMemo(() => {
+                if (!warnings) return [];
+                return warnings.filter(w => {
+                    const itemDate = new Date(w.date);
+                    return itemDate.getMonth() === selectedMonth && itemDate.getFullYear() === selectedYear;
+                });
+            }, [warnings, selectedMonth, selectedYear]);
+
+            const filteredCoaching = useMemo(() => {
+                if (!coachingSessions) return [];
+                return coachingSessions.filter(c => {
+                    const itemDate = new Date(c.date);
+                    return itemDate.getMonth() === selectedMonth && itemDate.getFullYear() === selectedYear;
+                });
+            }, [coachingSessions, selectedMonth, selectedYear]);
             
             useEffect(() => {
                 const unsubscribe = db.collection(agentsPath).onSnapshot((snapshot) => {
@@ -339,8 +365,6 @@
                     setCoachingSessions([]); 
                     return; 
                 }
-                // Reset views when changing agents
-                // setAgentDetailView('coaching'); // Let's not reset the view, so the navigation from dashboard works
                 setCoachFilter('All');
 
                 const unsubPlans = db.collection(getPlansPath(selectedAgent.id)).orderBy('startDate', 'desc').onSnapshot((snapshot) => setPlans(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
@@ -409,6 +433,10 @@
             
             const openModal = (type, data = null) => setModal({ isOpen: true, type, data });
             const closeModal = () => setModal({ isOpen: false, type: '', data: null });
+            
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const years = [...new Set(coachingSessions.concat(plans, warnings).map(s => new Date(s.date || s.startDate).getFullYear()))].sort((a,b) => b-a);
+
 
             return (
                  <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans flex flex-col md:flex-row transition-colors duration-300">
@@ -446,7 +474,7 @@
                           )}
                       </aside>
                       <main className="flex-1 p-4 md:p-8 overflow-auto">
-                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} /> : 
+                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} selectedYear={selectedYear} setSelectedYear={setSelectedYear} /> : 
                            selectedAgent ? (
                               <div>
                                   <header className="mb-8">
@@ -454,6 +482,17 @@
                                       <p className="text-gray-500 dark:text-gray-400">Employee ID: {selectedAgent.employeeId}</p>
                                   </header>
                                   <DashboardStats plans={plans} warnings={warnings} />
+
+                                  <div className="flex justify-end items-center gap-2 mb-4">
+                                      <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter by month:</span>
+                                      <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                          {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
+                                      </select>
+                                      <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                          {years.map(year => <option key={year} value={year}>{year}</option>)}
+                                      </select>
+                                  </div>
+
                                   <div className="mb-6">
                                     <div className="flex border border-gray-200 dark:border-gray-700 rounded-md">
                                         <button onClick={() => setAgentDetailView('coaching')} className={`w-1/3 p-2 text-sm font-semibold rounded-l-md transition-colors ${agentDetailView === 'coaching' ? 'bg-purple-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>
@@ -468,7 +507,7 @@
                                     </div>
                                   </div>
                                   <div className="space-y-8">
-                                      {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={coachingSessions} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
+                                      {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={filteredCoaching} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
                                       {agentDetailView === 'plans' && (
                                           <section>
                                               <div className="flex items-center justify-between mb-4">
@@ -478,9 +517,9 @@
                                                   </button>
                                               </div>
                                               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                                  {plans.length > 0 ? plans.map(plan => (
+                                                  {filteredPlans.length > 0 ? filteredPlans.map(plan => (
                                                       <DocumentListItem key={plan.id} doc={plan} type="plan" onView={() => openModal('VIEW_PLAN', plan)} onEdit={() => openModal('EDIT_PLAN', plan)} onDelete={() => handleDelete('plan', plan.id)} selectedAgent={selectedAgent} getPlansPath={getPlansPath} isAdmin={true} />
-                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No active plans for this agent.</p>}
+                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No plans for this agent for the selected period.</p>}
                                               </div>
                                           </section>
                                       )}
@@ -493,9 +532,9 @@
                                                   </button>
                                               </div>
                                               <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-                                                 {warnings.length > 0 ? warnings.map(warning => (
+                                                 {filteredWarnings.length > 0 ? filteredWarnings.map(warning => (
                                                       <DocumentListItem key={warning.id} doc={warning} type="warning" onView={() => openModal('VIEW_WARNING', warning)} onEdit={() => openModal('EDIT_WARNING', warning)} onDelete={() => handleDelete('warning', warning.id)} isAdmin={true}/>
-                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent.</p>}
+                                                  )) : <p className="text-gray-500 dark:text-gray-400 p-4">No warnings on record for this agent for the selected period.</p>}
                                               </div>
                                           </section>
                                       )}
@@ -555,13 +594,22 @@
             const [error, setError] = useState(null);
             const [agentDashboardView, setAgentDashboardView] = useState('coaching');
             const [coachFilter, setCoachFilter] = useState('All');
+            const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+            const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
-            const coachTypes = useMemo(() => ['All', ...new Set(coachingSessions.map(s => s.coachType).filter(Boolean))], [coachingSessions]);
+            const monthlyFilteredSessions = useMemo(() => {
+                return coachingSessions.filter(session => {
+                    const sessionDate = new Date(session.date);
+                    return sessionDate.getMonth() === selectedMonth && sessionDate.getFullYear() === selectedYear;
+                });
+            }, [coachingSessions, selectedMonth, selectedYear]);
+
+            const coachTypes = useMemo(() => ['All', ...new Set(monthlyFilteredSessions.map(s => s.coachType).filter(Boolean))], [monthlyFilteredSessions]);
             
             const filteredCoachingSessions = useMemo(() => {
-                if (coachFilter === 'All') return coachingSessions;
-                return coachingSessions.filter(s => s.coachType === coachFilter);
-            }, [coachFilter, coachingSessions]);
+                if (coachFilter === 'All') return monthlyFilteredSessions;
+                return monthlyFilteredSessions.filter(s => s.coachType === coachFilter);
+            }, [coachFilter, monthlyFilteredSessions]);
 
             useEffect(() => {
                 if (!agentId) {
@@ -622,6 +670,9 @@
                 );
             }
 
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const years = [...new Set(coachingSessions.map(s => new Date(s.date).getFullYear()))].sort((a,b) => b-a);
+
             return (
                  <div className="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen font-sans transition-colors duration-300">
                       <header className="bg-white dark:bg-gray-800 shadow p-4 flex justify-between items-center">
@@ -652,7 +703,17 @@
                           <div className="space-y-8">
                               {agentDashboardView === 'coaching' && (
                                   <section>
-                                    <h3 className="text-2xl font-semibold flex items-center gap-2 mb-4"><MessageSquareIcon /> Your Coaching Sessions</h3>
+                                      <div className="flex justify-between items-center mb-4">
+                                        <h3 className="text-2xl font-semibold flex items-center gap-2"><MessageSquareIcon /> Your Coaching Sessions</h3>
+                                        <div className="flex gap-2">
+                                            <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                                {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
+                                            </select>
+                                            <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                                {years.map(year => <option key={year} value={year}>{year}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
                                     {coachTypes.length > 1 && (
                                         <div className="flex flex-wrap gap-2 mb-4 border-b dark:border-gray-700 pb-4">
                                             {coachTypes.map(type => (
@@ -669,7 +730,7 @@
                                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                         {filteredCoachingSessions.length > 0 ? filteredCoachingSessions.map(session => (
                                             <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
-                                        )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions for the selected filter.</p>}
+                                        )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions for the selected period.</p>}
                                     </div>
                                   </section>
                               )}
@@ -769,37 +830,33 @@
             );
         };
 
-        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView }) => {
+        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView, selectedMonth, setSelectedMonth, selectedYear, setSelectedYear }) => {
             const [allPlans, setAllPlans] = useState([]);
             const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
             const [filterType, setFilterType] = useState('active');
+            const [allCoaching, setAllCoaching] = useState([]);
+            const [coachPerformance, setCoachPerformance] = useState([]);
 
             useEffect(() => {
                 if (!agents.length) {
                     setLoading(false);
                     setAllPlans([]);
                     setAllWarnings([]);
+                    setAllCoaching([]);
                     return;
                 }
 
                 setLoading(true);
-                // Using one-time fetches for the dashboard stats.
-                const plansPromises = agents.map(agent => 
-                    db.collection(`agents/${agent.id}/plans`).get().then(snapshot => 
-                        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))
-                    )
-                );
-                const warningsPromises = agents.map(agent => 
-                    db.collection(`agents/${agent.id}/warnings`).get().then(snapshot => 
-                        snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))
-                    )
-                );
+                const plansPromises = agents.map(agent => db.collection(`agents/${agent.id}/plans`).get().then(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))));
+                const warningsPromises = agents.map(agent => db.collection(`agents/${agent.id}/warnings`).get().then(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))));
+                const coachingPromises = agents.map(agent => db.collection(`agents/${agent.id}/coaching`).get().then(snap => snap.docs.map(doc => ({ ...doc.data(), id: doc.id, agentId: agent.id, agentName: agent.name }))));
 
-                Promise.all([Promise.all(plansPromises), Promise.all(warningsPromises)])
-                    .then(([plansArrays, warningsArrays]) => {
+                Promise.all([Promise.all(plansPromises), Promise.all(warningsPromises), Promise.all(coachingPromises)])
+                    .then(([plansArrays, warningsArrays, coachingArrays]) => {
                         setAllPlans(plansArrays.flat());
                         setAllWarnings(warningsArrays.flat());
+                        setAllCoaching(coachingArrays.flat());
                         setLoading(false);
                     })
                     .catch(error => {
@@ -808,58 +865,135 @@
                     });
             }, [agents]);
             
-            const totalPlans = allPlans.length;
-            const passedPlans = allPlans.filter(p => p.status === 'Passed');
-            const failedPlans = allPlans.filter(p => p.status === 'Failed');
-            const activePlans = allPlans.filter(p => p.status === 'Active');
-            const totalWarnings = allWarnings.length;
+            const filteredDataForStats = useMemo(() => {
+                const yearFilter = (item) => new Date(item.date || item.startDate).getFullYear() === selectedYear;
+                const monthFilter = (item) => new Date(item.date || item.startDate).getMonth() === selectedMonth;
+
+                const plansForYear = allPlans.filter(yearFilter);
+                const warningsForYear = allWarnings.filter(yearFilter);
+
+                if (selectedMonth === -1) { // "All Months" selected
+                    return {
+                        plans: plansForYear,
+                        warnings: warningsForYear
+                    };
+                }
+                
+                return {
+                    plans: plansForYear.filter(monthFilter),
+                    warnings: warningsForYear.filter(monthFilter)
+                };
+
+            }, [allPlans, allWarnings, selectedMonth, selectedYear]);
+            
+            useEffect(() => {
+                const performance = {};
+                const dataToProcess = selectedMonth === -1 
+                    ? allCoaching.filter(c => new Date(c.date).getFullYear() === selectedYear)
+                    : allCoaching.filter(session => {
+                        const sessionDate = new Date(session.date);
+                        return sessionDate.getMonth() === selectedMonth && sessionDate.getFullYear() === selectedYear;
+                    });
+
+                dataToProcess.forEach(session => {
+                    const coach = session.lastModifiedBy || session.createdBy;
+                    if (!coach) return;
+                    if (!performance[coach]) {
+                        performance[coach] = { total: 0, '1-to-1': 0, 'QA Coaching': 0, 'Feedback': 0 };
+                    }
+                    performance[coach].total++;
+                    if (performance[coach][session.sessionType] !== undefined) {
+                        performance[coach][session.sessionType]++;
+                    }
+                });
+                setCoachPerformance(Object.entries(performance).map(([coach, data]) => ({ coach, ...data })));
+            }, [allCoaching, selectedMonth, selectedYear]);
+
+            const { totalPlans, passedPlans, failedPlans, activePlans, totalWarnings } = useMemo(() => {
+                const plans = filteredDataForStats.plans;
+                const warnings = filteredDataForStats.warnings;
+                return {
+                    totalPlans: plans.length,
+                    passedPlans: plans.filter(p => p.status === 'Passed').length,
+                    failedPlans: plans.filter(p => p.status === 'Failed').length,
+                    activePlans: plans.filter(p => p.status === 'Active').length,
+                    totalWarnings: warnings.length
+                };
+            }, [filteredDataForStats]);
 
             const goToAgent = (item, viewType) => {
                 const agent = agents.find(a => a.id === item.agentId);
                 if (agent) {
+                    const itemDate = new Date(item.date || item.startDate);
+                    setSelectedMonth(itemDate.getMonth());
+                    setSelectedYear(itemDate.getFullYear());
+
                     setSelectedAgent(agent);
-                    setAgentDetailView(viewType); // Set the correct tab before switching view
+                    setAgentDetailView(viewType);
                     setView('tracker');
                 }
             };
             
-            const { title, items } = useMemo(() => {
+            const { title, items: allItemsOfFilterType } = useMemo(() => {
                 switch (filterType) {
-                    case 'total':
-                        return { title: 'All Plans', items: allPlans };
-                    case 'passed':
-                        return { title: 'Passed Plans', items: passedPlans };
-                    case 'failed':
-                        return { title: 'Failed Plans', items: failedPlans };
-                    case 'warnings':
-                        return { title: 'All Warnings', items: allWarnings };
+                    case 'total': return { title: 'All Plans', items: allPlans };
+                    case 'passed': return { title: 'Passed Plans', items: allPlans.filter(p => p.status === 'Passed') };
+                    case 'failed': return { title: 'Failed Plans', items: allPlans.filter(p => p.status === 'Failed') };
+                    case 'warnings': return { title: 'All Warnings', items: allWarnings };
                     case 'active':
-                    default:
-                        return { title: 'Active Plans', items: activePlans };
+                    default: return { title: 'Active Plans', items: allPlans.filter(p => p.status === 'Active') };
                 }
             }, [filterType, allPlans, allWarnings]);
+
+            const items = useMemo(() => {
+                const yearFilter = (item) => new Date(item.date || item.startDate).getFullYear() === selectedYear;
+                const monthFilter = (item) => new Date(item.date || item.startDate).getMonth() === selectedMonth;
+                
+                const forYear = allItemsOfFilterType.filter(yearFilter);
+                if(selectedMonth === -1) return forYear;
+                return forYear.filter(monthFilter);
+
+            }, [allItemsOfFilterType, selectedMonth, selectedYear]);
+
+
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const years = [...new Set(allCoaching.concat(allPlans, allWarnings).map(s => {
+                const date = s.date || s.startDate;
+                return date ? new Date(date).getFullYear() : null;
+            }).filter(Boolean))].sort((a,b) => b-a);
 
             return (
                 <div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h2>
-                    
+                     <div className="flex justify-end items-center gap-2 mb-4">
+                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter by period:</span>
+                        <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <option value={-1}>All Months</option>
+                            {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
+                        </select>
+                        <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            {years.map(year => <option key={year} value={year}>{year}</option>)}
+                        </select>
+                    </div>
                     <div className="mb-8">
                         {loading ? <p>Loading stats...</p> :
                         <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
                             <StatCard title="Total Plans" value={totalPlans} icon={<FileTextIcon />} colorClass="text-gray-500" onClick={() => setFilterType('total')} isActive={filterType === 'total'} />
-                            <StatCard title="Passed Plans" value={passedPlans.length} icon={<CheckCircleIcon />} colorClass="text-green-500" onClick={() => setFilterType('passed')} isActive={filterType === 'passed'} />
-                            <StatCard title="Failed Plans" value={failedPlans.length} icon={<XIcon />} colorClass="text-red-500" onClick={() => setFilterType('failed')} isActive={filterType === 'failed'} />
-                            <StatCard title="Active Plans" value={activePlans.length} icon={<FileTextIcon />} colorClass="text-blue-500" onClick={() => setFilterType('active')} isActive={filterType === 'active'} />
+                            <StatCard title="Passed Plans" value={passedPlans} icon={<CheckCircleIcon />} colorClass="text-green-500" onClick={() => setFilterType('passed')} isActive={filterType === 'passed'} />
+                            <StatCard title="Failed Plans" value={failedPlans} icon={<XIcon />} colorClass="text-red-500" onClick={() => setFilterType('failed')} isActive={filterType === 'failed'} />
+                            <StatCard title="Active Plans" value={activePlans} icon={<FileTextIcon />} colorClass="text-blue-500" onClick={() => setFilterType('active')} isActive={filterType === 'active'} />
                             <StatCard title="Total Warnings" value={totalWarnings} icon={<AlertTriangleIcon />} colorClass="text-yellow-500" onClick={() => setFilterType('warnings')} isActive={filterType === 'warnings'} />
                         </section>
                         }
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <h3 className="text-xl font-semibold mb-4">{title}</h3>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold">{title}</h3>
+                        </div>
                         
                         {loading ? <p>Loading data...</p> : 
-                            items.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400">No items match the criteria.</p> :
+                            items.length === 0 ? <p className="text-center text-gray-500 dark:text-gray-400">No items match the criteria for the selected period.</p> :
                             <div className="space-y-2">
                                 {items.sort((a,b) => new Date(b.date || b.endDate || 0) - new Date(a.date || a.endDate || 0)).map(item => (
                                     filterType === 'warnings' ? (
@@ -877,6 +1011,38 @@
                                     )
                                 ))}
                             </div>
+                        }
+                    </div>
+                    
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-xl font-semibold">Coach Performance</h3>
+                        </div>
+                        {loading ? <p>Loading performance data...</p> :
+                            coachPerformance.length > 0 ? (
+                                <table className="w-full text-left table-auto">
+                                    <thead>
+                                        <tr className="border-b dark:border-gray-600">
+                                            <th className="pb-2">Coach</th>
+                                            <th className="pb-2 text-center">1-to-1</th>
+                                            <th className="pb-2 text-center">QA Coaching</th>
+                                            <th className="pb-2 text-center">Feedback</th>
+                                            <th className="pb-2 text-center font-bold">Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {coachPerformance.map(perf => (
+                                            <tr key={perf.coach} className="border-b dark:border-gray-700">
+                                                <td className="py-2 font-semibold">{perf.coach}</td>
+                                                <td className="py-2 text-center">{perf['1-to-1']}</td>
+                                                <td className="py-2 text-center">{perf['QA Coaching']}</td>
+                                                <td className="py-2 text-center">{perf['Feedback']}</td>
+                                                <td className="py-2 text-center font-bold">{perf.total}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            ) : <p className="text-center text-gray-500 dark:text-gray-400">No coaching sessions found for the selected period.</p>
                         }
                     </div>
                 </div>
