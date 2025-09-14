@@ -1911,7 +1911,10 @@ ${richTextToPlain(data.notes)}
                         <div>
                             <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Coach Type</label>
                             <select name="coachType" value={formData.coachType} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+                                <option>Team Leader</option>
+                                <option>QA Coach</option>
+                                <option>Mentor</option>
+                                <option>Managment</option>
                             </select>
                         </div>
                         <div>
