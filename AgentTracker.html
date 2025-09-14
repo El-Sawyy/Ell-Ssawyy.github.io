@@ -349,12 +349,6 @@
                 }, {});
                 return Object.keys(groups).sort().reduce((acc, key) => ({...acc, [key]: groups[key]}), {});
             }, [agents]);
-
-            useEffect(() => {
-                // Pre-expand all teams by default
-                const allTeams = agents.reduce((acc, agent) => ({...acc, [agent.team || 'Unassigned']: true }), {});
-                setExpandedTeams(allTeams);
-            }, [agents]);
             
             const toggleTeam = (teamName) => {
                 setExpandedTeams(prev => ({...prev, [teamName]: !prev[teamName]}));
@@ -520,7 +514,7 @@
                           )}
                       </aside>
                       <main className="flex-1 p-4 md:p-8 overflow-auto">
-                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} selectedYear={selectedYear} setSelectedYear={setSelectedYear} /> : 
+                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} selectedYear={selectedYear} setSelectedYear={setSelectedYear} setExpandedTeams={setExpandedTeams} /> : 
                            selectedAgent ? (
                               <div>
                                   <header className="mb-8">
@@ -876,7 +870,7 @@
             );
         };
 
-        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView, selectedMonth, setSelectedMonth, selectedYear, setSelectedYear }) => {
+        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView, selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, setExpandedTeams }) => {
             const [allPlans, setAllPlans] = useState([]);
             const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
@@ -973,6 +967,7 @@
                     const itemDate = new Date(item.date || item.startDate);
                     setSelectedMonth(itemDate.getMonth());
                     setSelectedYear(itemDate.getFullYear());
+                    setExpandedTeams(prev => ({...prev, [agent.team || 'Unassigned']: true}));
 
                     setSelectedAgent(agent);
                     setAgentDetailView(viewType);
@@ -1045,14 +1040,17 @@
                                     filterType === 'warnings' ? (
                                         <div key={item.id} onClick={() => goToAgent(item, 'warnings')} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                                             <p className="font-bold">{item.agentName}</p>
-                                            <p className="text-sm truncate">{item.type}: {item.summaryOfConcerns || 'No summary'}</p>
+                                            <p className="text-sm">{item.type}</p>
                                             <p className="text-xs text-gray-500 dark:text-gray-400">Date: {new Date(item.date).toLocaleDateString()}</p>
                                         </div>
                                     ) : (
                                         <div key={item.id} onClick={() => goToAgent(item, 'plans')} className="p-4 border dark:border-gray-700 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
                                             <p className="font-bold">{item.agentName}</p>
-                                            <p className="text-sm">{item.type}: {item.areasOfFocus && item.areasOfFocus[0] ? item.areasOfFocus[0].title : 'General Plan'}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400">Ends: {item.endDate ? new Date(item.endDate).toLocaleDateString() : 'N/A'}</p>
+                                            <p className="text-sm">{item.type}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                {item.startDate ? `Start: ${new Date(item.startDate).toLocaleDateString()}` : ''}
+                                                {item.endDate ? ` | End: ${new Date(item.endDate).toLocaleDateString()}` : ''}
+                                            </p>
                                         </div>
                                     )
                                 ))}
@@ -1126,17 +1124,25 @@
 
             if (type === 'warning') {
                 return (
-                       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                           <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-yellow-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{doc.summaryOfConcerns || 'No summary'}</p></div>
-                           <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
-                       </div>
+                    <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                        <div className="flex-1 overflow-hidden">
+                            <p className="font-semibold text-gray-800 dark:text-gray-200">{doc.type}</p>
+                            <p className="text-sm text-gray-500">Date: {new Date(doc.date).toLocaleDateString()}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
+                    </div>
                 );
             }
             
-            const title = (doc.areasOfFocus && doc.areasOfFocus[0] ? doc.areasOfFocus[0].title : 'PIP/QIP');
             return (
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <div className="flex-1 overflow-hidden"><p className="text-xs font-bold uppercase text-indigo-500">{doc.type}</p><p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{title}</p><p className="text-sm text-gray-500">{doc.startDate ? `Start: ${new Date(doc.startDate).toLocaleDateString()} | End: ${new Date(doc.endDate).toLocaleDateString()}` : ''}</p></div>
+                    <div className="flex-1 overflow-hidden">
+                         <p className="font-semibold text-gray-800 dark:text-gray-200">{doc.type}</p>
+                         <p className="text-sm text-gray-500">
+                             {doc.startDate ? `Start: ${new Date(doc.startDate).toLocaleDateString()}` : ''}
+                             {doc.endDate ? ` | End: ${new Date(doc.endDate).toLocaleDateString()}` : ''}
+                         </p>
+                    </div>
                     {isAdmin ? <select value={doc.status} onChange={(e) => handleUpdatePlanStatus(doc.id, e.target.value)} className={`appearance-none flex-shrink-0 text-xs p-1 rounded-md border-none mx-4 ${statusColor[doc.status]} dark:bg-gray-700 dark:text-gray-200`}><option>Active</option><option>Passed</option><option>Failed</option><option>Extended</option><option>Completed</option></select> : <span className={`flex-shrink-0 text-xs font-bold px-2 py-1 rounded-full mx-4 ${statusColor[doc.status]}`}>{doc.status}</span>}
                     <div className="flex items-center gap-2 flex-shrink-0"><button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>{isAdmin && <><button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button><button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button></>}</div>
                 </div>
