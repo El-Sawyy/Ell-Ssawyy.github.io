@@ -115,6 +115,22 @@
 
         const { useState, useEffect, useCallback, createContext, useContext, useMemo } = React;
 
+        // --- App Constants ---
+        const TEAMS = ['T2 Order Support', 'Social Media Team', 'T2 Product Support', 'Member Experience Team', 'Unassigned'];
+        const COACH_TYPES = ['Team Leader', 'QA Coach', 'Mentor', 'Managment'];
+        const AUDITOR_EMAILS = ['ahmed.elsawy@tempo.fit', 'khaledsabban@tempo.fit']; // Add emails of authorized auditors here
+        const TRIAD_QUESTIONS = [
+            { question: "Was the coach prepared & the conversation structured/organized?", description: "Did the coach prepare all points and structure the conversation in an easy-to-understand way?", weight: 25 },
+            { question: "Did the coach correctly open the conversation?", description: "Ice breaker, and friendly/professional attitude.", weight: 5 },
+            { question: "Did the coach give the coachee the opportunity to express themselves & their areas of improvement?", description: "Did the coach ask twice 'What went well?'. The coach should demonstrate their active listening skills and the coachee should prove his/her self assessment skills.", weight: 25 },
+            { question: "Did the coach empower the agent during the coaching?", description: "Did the coach give them accountability for their performance and ask for a follow-up assignment?", weight: 15 },
+            { question: "Did the coach tackle the agents performance from the customer's prospective?", description: "We aim to prioritize the member's experience. Our coaches need to start tailoring their advice to put the customer at the center of everything.", weight: 10 },
+            { question: "Did the coach summarize the conversation & offered support?", description: "Did the coach include actions that should be taken, current status and required performance?", weight: 10 },
+            { question: "Did the coach take control of the conversation, while keeping it a two way discussion?", description: "Maintaining the session in-control, and the ability/skill to keep it a 2-ways conversation.", weight: 5 },
+            { question: "Was the coach's tone of voice firm and friendly?", description: "Keeping a friendly, yet, professional tone of voice throughout the whole session.", weight: 5 },
+        ];
+
+
         // --- Theme Context and Provider ---
         const ThemeContext = createContext();
 
@@ -160,8 +176,7 @@
         const ClipboardIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>;
         const LinkIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.72"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.72-1.72"></path></svg>;
         const CheckboxIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>;
-
-        const TEAMS = ['T2 Order Support', 'Social Media Team', 'T2 Product Support', 'Member Experience Team', 'Unassigned'];
+        const StarIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 
         // --- Main App Controller ---
         function Main() {
@@ -224,8 +239,8 @@
             if (!user) {
                 return <LoginPage />;
             }
-            if (userRole === 'admin') {
-                return <AdminView user={user}/>;
+            if (userRole === 'admin' || AUDITOR_EMAILS.includes(user.email)) {
+                return <AdminView user={user} userRole={userRole}/>;
             }
             if (userRole === 'agent') {
                 return <AgentView user={user} agentId={agentId} />;
@@ -316,9 +331,80 @@
                 </div>
             );
         }
+        
+        const CoachingTriadForm = ({ session, agentId, onCancel, user }) => {
+            const initialAnswers = session.triadScore?.answers || Array(TRIAD_QUESTIONS.length).fill('No');
+            const [answers, setAnswers] = useState(initialAnswers);
+            const [comment, setComment] = useState(session.triadScore?.comment || '');
+
+            const handleAnswerChange = (index, value) => {
+                const newAnswers = [...answers];
+                newAnswers[index] = value;
+                setAnswers(newAnswers);
+            };
+
+            const totalScore = useMemo(() => {
+                return TRIAD_QUESTIONS.reduce((total, question, index) => {
+                    return answers[index] === 'Yes' ? total + question.weight : total;
+                }, 0);
+            }, [answers]);
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                const triadScore = {
+                    answers,
+                    totalScore,
+                    auditorEmail: user.email,
+                    comment,
+                    scoredAt: new Date().toISOString()
+                };
+                
+                db.collection(`agents/${agentId}/coaching`).doc(session.id).update({triadScore})
+                    .then(() => onCancel()) // Close modal on success
+                    .catch(err => console.error("Error updating score:", err));
+            };
+
+            return (
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    {TRIAD_QUESTIONS.map((q, index) => (
+                        <div key={index} className="p-4 border rounded-lg dark:border-gray-700">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-bold">{q.question} ({q.weight}%)</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{q.description}</p>
+                                </div>
+                                <div className="flex gap-4 ml-4 flex-shrink-0">
+                                    <label className="flex items-center gap-2">
+                                        <input type="radio" name={`q-${index}`} value="Yes" checked={answers[index] === 'Yes'} onChange={() => handleAnswerChange(index, 'Yes')} className="form-radio h-5 w-5 text-green-600"/>
+                                        <span className="text-green-600">Yes</span>
+                                    </label>
+                                    <label className="flex items-center gap-2">
+                                        <input type="radio" name={`q-${index}`} value="No" checked={answers[index] === 'No'} onChange={() => handleAnswerChange(index, 'No')} className="form-radio h-5 w-5 text-red-600"/>
+                                        <span className="text-red-600">No</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    ))}
+                    <div className="pt-4 border-t dark:border-gray-700">
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Auditor Comment</label>
+                        <textarea value={comment} onChange={e => setComment(e.target.value)} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                    </div>
+                    <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700">
+                        <p className="text-xl font-bold">Total Score: <span className={totalScore >= 85 ? 'text-green-500' : totalScore >= 70 ? 'text-yellow-500' : 'text-red-500'}>{totalScore}%</span></p>
+                        <div className="flex justify-end gap-2">
+                            <button type="button" onClick={onCancel} className="py-2 px-4 rounded-md bg-gray-200 dark:bg-gray-600">Cancel</button>
+                            <button type="submit" className="py-2 px-4 rounded-md bg-blue-600 text-white">Save Score</button>
+                        </div>
+                    </div>
+                </form>
+            )
+
+        };
+
 
         // --- Admin View Component ---
-        function AdminView({ user }) {
+        function AdminView({ user, userRole }) {
             const [view, setView] = useState('dashboard');
             const [agents, setAgents] = useState([]);
             const [selectedAgent, setSelectedAgent] = useState(null);
@@ -418,7 +504,12 @@
                     if (id) {
                          await collectionRef.doc(id).update({...dataToSave, lastModifiedBy: user.email});
                     } else {
-                         await collectionRef.add({ ...dataToSave, createdBy: user.email, createdAt: new Date().toISOString() });
+                         const docRef = await collectionRef.add({ ...dataToSave, createdBy: user.email, createdAt: new Date().toISOString() });
+                         if (type === 'coaching' || type === 'plan' || type === 'warning') {
+                             const newDate = new Date(dataToSave.date || dataToSave.startDate);
+                             setSelectedMonth(newDate.getMonth());
+                             setSelectedYear(newDate.getFullYear());
+                         }
                     }
                     closeModal();
                 } catch (error) { console.error(`Error saving ${type}:`, error); }
@@ -478,8 +569,9 @@
                                </div>
                           </div>
                           <div className="flex border border-gray-200 dark:border-gray-700 rounded-md mb-4">
-                           <button onClick={() => setView('dashboard')} className={`w-1/2 p-2 text-sm font-semibold rounded-l-md ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Dashboard</button>
-                           <button onClick={() => setView('tracker')} className={`w-1/2 p-2 text-sm font-semibold rounded-r-md ${view === 'tracker' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Agents</button>
+                           <button onClick={() => setView('dashboard')} className={`w-1/3 p-2 text-sm font-semibold rounded-l-md ${view === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Dashboard</button>
+                           <button onClick={() => setView('tracker')} className={`w-1/3 p-2 text-sm font-semibold border-x dark:border-gray-600 ${view === 'tracker' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Agents</button>
+                           <button onClick={() => setView('audits')} className={`w-1/3 p-2 text-sm font-semibold rounded-r-md ${view === 'audits' ? 'bg-blue-600 text-white' : 'bg-transparent text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Audits</button>
                           </div>
                           {view === 'tracker' && (
                               <nav className="space-y-1">
@@ -514,8 +606,9 @@
                           )}
                       </aside>
                       <main className="flex-1 p-4 md:p-8 overflow-auto">
-                          {view === 'dashboard' ? <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} selectedYear={selectedYear} setSelectedYear={setSelectedYear} setExpandedTeams={setExpandedTeams} /> : 
-                           selectedAgent ? (
+                          {view === 'dashboard' && <AdminDashboard agents={agents} setSelectedAgent={setSelectedAgent} setView={setView} setAgentDetailView={setAgentDetailView} selectedMonth={selectedMonth} setSelectedMonth={setSelectedMonth} selectedYear={selectedYear} setSelectedYear={setSelectedYear} setExpandedTeams={setExpandedTeams} openModal={openModal} />}
+                          {view === 'audits' && <AuditDashboard agents={agents} user={user} />}
+                          {view === 'tracker' && ( selectedAgent ? (
                               <div>
                                   <header className="mb-8">
                                       <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-1">{selectedAgent.name}'s Dashboard</h2>
@@ -547,7 +640,7 @@
                                     </div>
                                   </div>
                                   <div className="space-y-8">
-                                      {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} coachingSessions={filteredCoaching} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} handleDelete={handleDelete} />}
+                                      {agentDetailView === 'coaching' && <CoachingSectionForAdmin user={user} userRole={userRole} agentId={selectedAgent.id} coachingSessions={filteredCoaching} coachFilter={coachFilter} setCoachFilter={setCoachFilter} openModal={openModal} closeModal={closeModal} handleDelete={handleDelete} />}
                                       {agentDetailView === 'plans' && (
                                           <section>
                                               <div className="flex items-center justify-between mb-4">
@@ -582,20 +675,22 @@
                               </div>
                           ) : (
                               <div className="flex items-center justify-center h-full"><div className="text-center"><h2 className="text-2xl font-semibold text-gray-600 dark:text-gray-300">Select an agent to view their details</h2></div></div>
-                          )}
+                          ))}
                       </main>
                       {modal.isOpen && (
                           <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
-                              <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
+                              <div className={`bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full ${modal.type.startsWith('VIEW') || modal.type === 'SCORE_COACHING' ? 'max-w-4xl' : 'max-w-2xl'} max-h-[90vh] relative flex flex-col`}>
                                   <div className="flex-shrink-0 flex justify-between items-center p-4 border-b dark:border-gray-700">
                                       <h3 className="text-xl font-semibold">{ 
                                           modal.type === 'EDIT_AGENT' ? (modal.data?.id ? 'Edit Agent' : 'Add New Agent') : 
                                           modal.type === 'EDIT_PLAN' ? (modal.data?.id ? 'Edit Plan' : 'Create New Plan') : 
                                           modal.type === 'EDIT_WARNING' ? (modal.data?.id ? 'Edit Warning' : 'Create New Warning') : 
                                           modal.type === 'EDIT_COACHING' ? (modal.data?.id ? 'Edit Coaching Session' : 'Create Coaching Session') : 
+                                          modal.type === 'SCORE_COACHING' ? 'Coaching Triad Scorecard' :
                                           modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : 
                                           modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : 
                                           modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
+                                          modal.type === 'COACH_DETAILS' ? `All Sessions by ${modal.data.coachEmail}`:
                                           (modal.data?.title || 'Confirm Deletion') 
                                       }</h3>
                                       <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
@@ -605,9 +700,11 @@
                                       {modal.type === 'EDIT_PLAN' && <PlanForm onSubmit={(data) => handleSaveData('plan', data)} onCancel={closeModal} initialData={modal.data} />}
                                       {modal.type === 'EDIT_WARNING' && <WarningForm onSubmit={(data) => handleSaveData('warning', data)} onCancel={closeModal} initialData={modal.data} />}
                                       {modal.type === 'EDIT_COACHING' && <CoachingForm onSubmit={(data) => handleSaveData('coaching', data)} onCancel={closeModal} initialData={modal.data} />}
+                                      {modal.type === 'SCORE_COACHING' && <CoachingTriadForm session={modal.data} agentId={selectedAgent.id} onCancel={closeModal} user={user} />}
+                                      {modal.type === 'COACH_DETAILS' && <CoachDetailsViewer data={modal.data} />}
 
                                       {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} />}
-                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} user={user}/>}
 
                                        {modal.type === 'CONFIRM_DELETE' && (
                                            <div>
@@ -769,7 +866,7 @@
                                     )}
                                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                                         {filteredCoachingSessions.length > 0 ? filteredCoachingSessions.map(session => (
-                                            <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} isAdmin={false} />
+                                            <CoachingListItem key={session.id} doc={session} onView={() => openModal('VIEW_COACHING', session)} user={user} userRole="agent" agentId={agentId} openModal={openModal} closeModal={closeModal}/>
                                         )) : <p className="p-4 text-gray-500 dark:text-gray-400">You have no coaching sessions for the selected period.</p>}
                                     </div>
                                   </section>
@@ -810,7 +907,7 @@
                                   </div>
                                   <div className="p-6 overflow-y-auto flex-grow">
                                       {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />}
-                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} user={user} />}
                                   </div>
                               </div>
                           </div>
@@ -820,8 +917,7 @@
         }
         
         // --- Shared Components ---
-
-        const CoachingSectionForAdmin = ({ user, coachingSessions, coachFilter, setCoachFilter, openModal, handleDelete }) => {
+        const CoachingSectionForAdmin = ({ user, userRole, agentId, coachingSessions, coachFilter, setCoachFilter, openModal, closeModal, handleDelete }) => {
             const coachTypes = useMemo(() => ['All', ...new Set(coachingSessions.map(s => s.coachType).filter(Boolean))], [coachingSessions]);
             
             const filteredCoachingSessions = useMemo(() => {
@@ -833,9 +929,11 @@
                 <section>
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-2xl font-semibold flex items-center gap-2"><MessageSquareIcon /> Coaching Sessions</h3>
-                        <button onClick={() => openModal('EDIT_COACHING')} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
-                            <PlusCircleIcon /> Create Session
-                        </button>
+                        {userRole === 'admin' &&
+                            <button onClick={() => openModal('EDIT_COACHING')} className="bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2">
+                                <PlusCircleIcon /> Create Session
+                            </button>
+                        }
                     </div>
                     
                     {coachTypes.length > 1 && (
@@ -854,7 +952,7 @@
 
                     <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
                         {filteredCoachingSessions.length > 0 ? filteredCoachingSessions.map(session => (
-                            <CoachingListItem key={session.id} doc={session} onEdit={() => openModal('EDIT_COACHING', session)} onView={() => openModal('VIEW_COACHING', session)} onDelete={() => handleDelete('coaching', session.id)} isAdmin={true} user={user} />
+                            <CoachingListItem key={session.id} doc={session} onEdit={() => openModal('EDIT_COACHING', session)} onView={() => openModal('VIEW_COACHING', session)} onDelete={() => handleDelete('coaching', session.id)} onScore={() => openModal('SCORE_COACHING', session)} userRole={userRole} user={user} agentId={agentId} openModal={openModal} closeModal={closeModal}/>
                         )) : <p className="text-gray-500 dark:text-gray-400 p-4">No coaching sessions match the current filter.</p>}
                     </div>
                 </section>
@@ -869,14 +967,140 @@
                 </button>
             );
         };
-
-        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView, selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, setExpandedTeams }) => {
+        const AuditDashboard = ({ agents, user }) => {
+            const [allCoaching, setAllCoaching] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
+            const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+        
+            useEffect(() => {
+                if (!agents.length) {
+                    setLoading(false);
+                    return;
+                }
+                setLoading(true);
+                const coachingPromises = agents.map(agent =>
+                    db.collection(`agents/${agent.id}/coaching`).get().then(snapshot =>
+                        snapshot.docs.map(doc => ({
+                            ...doc.data(),
+                            id: doc.id,
+                            agentName: agent.name,
+                            agentId: agent.id
+                        }))
+                    )
+                );
+        
+                Promise.all(coachingPromises)
+                    .then(coachingArrays => {
+                        const allSessions = coachingArrays.flat();
+                        setAllCoaching(allSessions);
+                        setLoading(false);
+                    })
+                    .catch(error => {
+                        console.error("Error fetching all coaching data:", error);
+                        setLoading(false);
+                    });
+            }, [agents]);
+        
+            const auditedSessions = useMemo(() => {
+                return allCoaching
+                    .filter(session => session.triadScore)
+                    .filter(session => {
+                        const sessionDate = new Date(session.date);
+                        const yearMatch = sessionDate.getFullYear() === selectedYear;
+                        const monthMatch = selectedMonth === -1 || sessionDate.getMonth() === selectedMonth;
+                        return yearMatch && monthMatch;
+                    })
+                    .sort((a, b) => new Date(b.date) - new Date(a.date));
+            }, [allCoaching, selectedMonth, selectedYear]);
+            
+            const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const years = [...new Set(allCoaching.map(s => new Date(s.date).getFullYear()))].sort((a,b) => b-a);
+        
+        
+            return (
+                <div>
+                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Audit Dashboard</h2>
+                    <div className="flex justify-end items-center gap-2 mb-4">
+                        <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            <option value={-1}>All Months</option>
+                            {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
+                        </select>
+                        <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                            {years.map(year => <option key={year} value={year}>{year}</option>)}
+                        </select>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                        {loading ? <p>Loading audits...</p> : auditedSessions.length > 0 ? (
+                            <table className="w-full text-left table-auto">
+                                <thead>
+                                    <tr className="border-b dark:border-gray-600">
+                                        <th className="pb-2">Agent</th>
+                                        <th className="pb-2">Coach</th>
+                                        <th className="pb-2">Auditor</th>
+                                        <th className="pb-2">Date</th>
+                                        <th className="pb-2 text-center">Score</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {auditedSessions.map(session => (
+                                        <tr key={session.id} className="border-b dark:border-gray-700">
+                                            <td className="py-2 font-semibold">{session.agentName}</td>
+                                            <td className="py-2">{session.createdBy}</td>
+                                            <td className="py-2">{session.triadScore.auditorEmail}</td>
+                                            <td className="py-2">{new Date(session.date).toLocaleDateString()}</td>
+                                            <td className="py-2 text-center font-bold text-lg">{session.triadScore.totalScore}%</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        ) : <p className="text-center text-gray-500 dark:text-gray-400">No audited sessions found for the selected period.</p>}
+                    </div>
+                </div>
+            );
+        };
+        const AdminDashboard = ({ agents, setSelectedAgent, setView, setAgentDetailView, selectedMonth, setSelectedMonth, selectedYear, setSelectedYear, setExpandedTeams, openModal }) => {
             const [allPlans, setAllPlans] = useState([]);
             const [allWarnings, setAllWarnings] = useState([]);
             const [loading, setLoading] = useState(true);
             const [filterType, setFilterType] = useState('active');
             const [allCoaching, setAllCoaching] = useState([]);
             const [coachPerformance, setCoachPerformance] = useState([]);
+            const [timeFilter, setTimeFilter] = useState('monthly');
+            const [weeks, setWeeks] = useState([]);
+            const [selectedWeek, setSelectedWeek] = useState('');
+
+
+            useEffect(() => {
+                const getWeeksInMonth = (year, month) => {
+                    const weeks = [];
+                    const firstOfMonth = new Date(year, month, 1);
+                    const lastOfMonth = new Date(year, month + 1, 0);
+                    let currentMonday = new Date(firstOfMonth);
+                    currentMonday.setDate(firstOfMonth.getDate() - (firstOfMonth.getDay() + 6) % 7);
+                
+                    while (currentMonday <= lastOfMonth) {
+                        let weekEnd = new Date(currentMonday);
+                        weekEnd.setDate(currentMonday.getDate() + 6);
+                
+                        if (weekEnd >= firstOfMonth && currentMonday <= lastOfMonth) {
+                             weeks.push({
+                                start: new Date(currentMonday),
+                                end: new Date(weekEnd),
+                                label: `${currentMonday.toLocaleDateString()} - ${weekEnd.toLocaleDateString()}`
+                             });
+                        }
+                        
+                        currentMonday.setDate(currentMonday.getDate() + 7);
+                    }
+                    return weeks;
+                }
+                if(timeFilter === 'weekly') {
+                    const currentWeeks = getWeeksInMonth(selectedYear, selectedMonth);
+                    setWeeks(currentWeeks);
+                    setSelectedWeek(currentWeeks.length > 0 ? 0 : '');
+                }
+            }, [selectedMonth, selectedYear, timeFilter]);
 
             useEffect(() => {
                 if (!agents.length) {
@@ -908,6 +1132,12 @@
             const filteredDataForStats = useMemo(() => {
                 const yearFilter = (item) => new Date(item.date || item.startDate).getFullYear() === selectedYear;
                 const monthFilter = (item) => new Date(item.date || item.startDate).getMonth() === selectedMonth;
+                const weekFilter = (item) => {
+                    if (timeFilter !== 'weekly' || selectedWeek === '' || !weeks[selectedWeek]) return true;
+                    const itemDate = new Date(item.date || item.startDate);
+                    const week = weeks[selectedWeek];
+                    return itemDate >= week.start && itemDate <= week.end;
+                };
 
                 const plansForYear = allPlans.filter(yearFilter);
                 const warningsForYear = allWarnings.filter(yearFilter);
@@ -920,34 +1150,43 @@
                 }
                 
                 return {
-                    plans: plansForYear.filter(monthFilter),
-                    warnings: warningsForYear.filter(monthFilter)
+                    plans: plansForYear.filter(monthFilter).filter(weekFilter),
+                    warnings: warningsForYear.filter(monthFilter).filter(weekFilter)
                 };
 
-            }, [allPlans, allWarnings, selectedMonth, selectedYear]);
+            }, [allPlans, allWarnings, selectedMonth, selectedYear, selectedWeek, timeFilter, weeks]);
             
             useEffect(() => {
                 const performance = {};
-                const dataToProcess = selectedMonth === -1 
-                    ? allCoaching.filter(c => new Date(c.date).getFullYear() === selectedYear)
-                    : allCoaching.filter(session => {
-                        const sessionDate = new Date(session.date);
-                        return sessionDate.getMonth() === selectedMonth && sessionDate.getFullYear() === selectedYear;
-                    });
+                
+                const dataToProcess = allCoaching.filter(session => {
+                    const sessionDate = new Date(session.date);
+                    if (sessionDate.getFullYear() !== selectedYear) return false;
+                    if(timeFilter === 'monthly') {
+                        return selectedMonth === -1 || sessionDate.getMonth() === selectedMonth;
+                    }
+                    if(timeFilter === 'weekly' && weeks[selectedWeek]) {
+                        const week = weeks[selectedWeek];
+                        return sessionDate >= week.start && sessionDate <= week.end;
+                    }
+                    return false;
+                });
+
 
                 dataToProcess.forEach(session => {
                     const coach = session.lastModifiedBy || session.createdBy;
                     if (!coach) return;
                     if (!performance[coach]) {
-                        performance[coach] = { total: 0, '1-to-1': 0, 'QA Coaching': 0, 'Feedback': 0 };
+                        performance[coach] = { total: 0, '1-to-1': 0, 'QA Coaching': 0, 'Feedback': 0, sessions: [] };
                     }
                     performance[coach].total++;
+                    performance[coach].sessions.push(session);
                     if (performance[coach][session.sessionType] !== undefined) {
                         performance[coach][session.sessionType]++;
                     }
                 });
                 setCoachPerformance(Object.entries(performance).map(([coach, data]) => ({ coach, ...data })));
-            }, [allCoaching, selectedMonth, selectedYear]);
+            }, [allCoaching, selectedMonth, selectedYear, selectedWeek, timeFilter, weeks]);
 
             const { totalPlans, passedPlans, failedPlans, activePlans, totalWarnings } = useMemo(() => {
                 const plans = filteredDataForStats.plans;
@@ -989,12 +1228,18 @@
             const items = useMemo(() => {
                 const yearFilter = (item) => new Date(item.date || item.startDate).getFullYear() === selectedYear;
                 const monthFilter = (item) => new Date(item.date || item.startDate).getMonth() === selectedMonth;
+                const weekFilter = (item) => {
+                    if (timeFilter !== 'weekly' || selectedWeek === '' || !weeks[selectedWeek]) return true;
+                    const itemDate = new Date(item.date || item.startDate);
+                    const week = weeks[selectedWeek];
+                    return itemDate >= week.start && itemDate <= week.end;
+                };
                 
                 const forYear = allItemsOfFilterType.filter(yearFilter);
                 if(selectedMonth === -1) return forYear;
-                return forYear.filter(monthFilter);
+                return forYear.filter(monthFilter).filter(weekFilter);
 
-            }, [allItemsOfFilterType, selectedMonth, selectedYear]);
+            }, [allItemsOfFilterType, selectedMonth, selectedYear, timeFilter, selectedWeek, weeks]);
 
 
             const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -1005,17 +1250,29 @@
 
             return (
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin Dashboard</h2>
-                     <div className="flex justify-end items-center gap-2 mb-4">
-                        <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter by period:</span>
-                        <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            <option value={-1}>All Months</option>
-                            {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
-                        </select>
-                        <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                            {years.map(year => <option key={year} value={year}>{year}</option>)}
-                        </select>
+                    <div className="flex justify-between items-center mb-6">
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h2>
+                         <div className="flex justify-end items-center gap-2">
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Filter by period:</span>
+                            <div className="flex bg-gray-200 dark:bg-gray-700 rounded-md p-1">
+                                <button onClick={() => setTimeFilter('monthly')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === 'monthly' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>Monthly</button>
+                                <button onClick={() => setTimeFilter('weekly')} className={`px-3 py-1 text-sm rounded-md ${timeFilter === 'weekly' ? 'bg-white dark:bg-gray-900 shadow' : ''}`}>Weekly</button>
+                            </div>
+                            {timeFilter === 'weekly' && (
+                                 <select value={selectedWeek} onChange={e => setSelectedWeek(e.target.value)} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                    {weeks.map((week, i) => <option key={i} value={i}>{week.label}</option>)}
+                                </select>
+                            )}
+                            <select value={selectedMonth} onChange={e => setSelectedMonth(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                <option value={-1}>All Months</option>
+                                {months.map((month, i) => <option key={month} value={i}>{month}</option>)}
+                            </select>
+                            <select value={selectedYear} onChange={e => setSelectedYear(parseInt(e.target.value))} className="p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
+                                {years.map(year => <option key={year} value={year}>{year}</option>)}
+                            </select>
+                        </div>
                     </div>
+
                     <div className="mb-8">
                         {loading ? <p>Loading stats...</p> :
                         <section className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
@@ -1058,41 +1315,62 @@
                         }
                     </div>
                     
-                    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="text-xl font-semibold">Coach Performance</h3>
-                        </div>
-                        {loading ? <p>Loading performance data...</p> :
+                     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
+                        <h3 className="text-xl font-semibold mb-4">Coach Performance</h3>
+                         {loading ? <p>Loading performance data...</p> :
                             coachPerformance.length > 0 ? (
-                                <table className="w-full text-left table-auto">
-                                    <thead>
-                                        <tr className="border-b dark:border-gray-600">
-                                            <th className="pb-2">Coach</th>
-                                            <th className="pb-2 text-center">1-to-1</th>
-                                            <th className="pb-2 text-center">QA Coaching</th>
-                                            <th className="pb-2 text-center">Feedback</th>
-                                            <th className="pb-2 text-center font-bold">Total</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {coachPerformance.map(perf => (
-                                            <tr key={perf.coach} className="border-b dark:border-gray-700">
-                                                <td className="py-2 font-semibold">{perf.coach}</td>
-                                                <td className="py-2 text-center">{perf['1-to-1']}</td>
-                                                <td className="py-2 text-center">{perf['QA Coaching']}</td>
-                                                <td className="py-2 text-center">{perf['Feedback']}</td>
-                                                <td className="py-2 text-center font-bold">{perf.total}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {coachPerformance.map(perf => <CoachPerformanceCard key={perf.coach} coachData={perf} openModal={openModal} />)}
+                                </div>
                             ) : <p className="text-center text-gray-500 dark:text-gray-400">No coaching sessions found for the selected period.</p>
                         }
                     </div>
                 </div>
             );
         };
-
+        const CoachPerformanceCard = ({ coachData, openModal }) => {
+            return (
+                <div className="bg-gray-50 dark:bg-gray-700/50 p-4 rounded-lg shadow">
+                    <h4 className="font-bold text-lg truncate">{coachData.coach}</h4>
+                    <div className="mt-2 grid grid-cols-2 gap-2 text-center">
+                        <div className="bg-blue-100 dark:bg-blue-900/50 p-2 rounded-md">
+                            <p className="text-2xl font-bold">{coachData['1-to-1']}</p>
+                            <p className="text-xs">1-to-1</p>
+                        </div>
+                        <div className="bg-green-100 dark:bg-green-900/50 p-2 rounded-md">
+                            <p className="text-2xl font-bold">{coachData['QA Coaching']}</p>
+                            <p className="text-xs">QA</p>
+                        </div>
+                        <div className="bg-yellow-100 dark:bg-yellow-900/50 p-2 rounded-md">
+                            <p className="text-2xl font-bold">{coachData['Feedback']}</p>
+                            <p className="text-xs">Feedback</p>
+                        </div>
+                        <div className="bg-gray-200 dark:bg-gray-800 p-2 rounded-md">
+                            <p className="text-2xl font-bold">{coachData.total}</p>
+                            <p className="text-xs">Total</p>
+                        </div>
+                    </div>
+                    <button onClick={() => openModal('COACH_DETAILS', { coachEmail: coachData.coach, sessions: coachData.sessions })} className="mt-4 w-full text-center text-sm py-2 px-4 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
+                        View Details
+                    </button>
+                </div>
+            )
+        };
+        const CoachDetailsViewer = ({ data }) => {
+            return (
+                <div>
+                    {data.sessions.length > 0 ? (
+                        <ul className="space-y-2">
+                           {data.sessions.map(s => (
+                               <li key={s.id} className="p-2 border-b dark:border-gray-700">
+                                  <span className="font-semibold">{s.agentName}</span> ({s.sessionType}) on {new Date(s.date).toLocaleDateString()}
+                               </li>
+                           ))}
+                        </ul>
+                    ) : <p>No sessions found for this period.</p>}
+                </div>
+            )
+        };
         const StatCard = ({ title, value, icon, colorClass, onClick, isActive }) => {
             const activeClass = isActive ? 'ring-2 ring-blue-500 shadow-lg' : 'shadow';
             return (
@@ -1148,8 +1426,29 @@
                 </div>
             );
         };
-        const CoachingListItem = ({ doc, onView, onEdit, onDelete, isAdmin, user }) => {
+        const CoachingListItem = ({ doc, onView, onEdit, onDelete, onScore, userRole, user, agentId, openModal, closeModal }) => {
             const isOwner = user && user.email === doc.createdBy;
+            const scoreColor = doc.triadScore?.totalScore >= 85 ? 'text-green-500' : doc.triadScore?.totalScore >= 70 ? 'text-yellow-500' : 'text-red-500';
+            const canDeleteScore = AUDITOR_EMAILS.includes(user.email) && doc.triadScore?.auditorEmail === user.email;
+
+            const handleDeleteScore = (e) => {
+                e.stopPropagation();
+                openModal('CONFIRM_DELETE', {
+                    title: 'Delete Audit Score',
+                    message: 'Are you sure you want to delete this audit score?',
+                    onConfirm: () => {
+                        db.collection(`agents/${agentId}/coaching`).doc(doc.id).update({
+                            triadScore: firebase.firestore.FieldValue.delete()
+                        })
+                        .then(() => closeModal())
+                        .catch(err => {
+                            console.error("Error deleting score:", err);
+                            closeModal();
+                        });
+                    }
+                });
+            };
+
             return (
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div className="flex-1 overflow-hidden">
@@ -1157,9 +1456,16 @@
                         <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">Session on {new Date(doc.date).toLocaleDateString()}</p>
                         <p className="text-xs text-gray-500">By: {doc.lastModifiedBy || doc.createdBy || 'N/A'}</p>
                     </div>
+                    {doc.triadScore && 
+                        <div className="flex items-center gap-2">
+                            <p className={`font-bold text-lg mx-4 ${scoreColor}`}>{doc.triadScore.totalScore}%</p>
+                            {canDeleteScore && <button onClick={handleDeleteScore} className="text-red-500 hover:text-red-700">&times;</button>}
+                        </div>
+                    }
                     <div className="flex items-center gap-2 flex-shrink-0">
                         <button onClick={onView} className="p-2 text-gray-500 hover:text-blue-600"><EyeIcon /></button>
-                        {isAdmin && isOwner && (
+                        {AUDITOR_EMAILS.includes(user.email) && <button onClick={onScore} className="p-2 text-gray-500 hover:text-yellow-500"><StarIcon /></button>}
+                        {isOwner && (
                             <>
                                 <button onClick={onEdit} className="p-2 text-gray-500 hover:text-green-600"><EditIcon /></button>
                                 <button onClick={onDelete} className="p-2 text-gray-500 hover:text-red-600"><TrashIcon /></button>
@@ -1469,8 +1775,10 @@ ${richTextToPlain(data.nextAction)}
                  </div>
             );
         };
-        const CoachingViewer = ({ data }) => {
+        const CoachingViewer = ({ data, user }) => {
             const [copySuccess, setCopySuccess] = useState('');
+            const isAuditor = AUDITOR_EMAILS.includes(user.email);
+            const isOwner = user.email === data.createdBy;
 
             const handleCopy = () => {
                 // Create a temporary element to render the HTML content to plain text
@@ -1578,6 +1886,20 @@ ${richTextToPlain(data.notes)}
                             {renderSection("Action Plan", data.actionPlan)}
                             {renderSection("Notes", data.notes)}
                         </>
+                    )}
+                    {(isAuditor || isOwner) && data.triadScore && (
+                        <div className="mt-6">
+                            <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Triad Score: {data.triadScore.totalScore}% by {data.triadScore.auditorEmail}</h4>
+                            {data.triadScore.comment && <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-md mb-2 italic">"{data.triadScore.comment}"</div>}
+                            <div className="space-y-2">
+                                {TRIAD_QUESTIONS.map((q, i) => (
+                                    <div key={i} className="flex justify-between items-center">
+                                        <p>{q.question}</p>
+                                        <p className={data.triadScore.answers[i] === 'Yes' ? 'text-green-500' : 'text-red-500'}>{data.triadScore.answers[i]}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
 
                      <div className="flex justify-end mt-6 pt-4 border-t dark:border-gray-700">
@@ -1911,10 +2233,7 @@ ${richTextToPlain(data.notes)}
                         <div>
                             <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Coach Type</label>
                             <select name="coachType" value={formData.coachType} onChange={handleChange} className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600">
-                                <option>Team Leader</option>
-                                <option>QA Coach</option>
-                                <option>Mentor</option>
-                                <option>Managment</option>
+                                {COACH_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
                         </div>
                         <div>
@@ -1949,10 +2268,11 @@ ${richTextToPlain(data.notes)}
                 </form>
             );
         };
-
+        
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<ThemeProvider><Main /></ThemeProvider>);
     </script>
 </body>
 </html>
+
