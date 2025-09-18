@@ -335,6 +335,7 @@
         const CoachingTriadForm = ({ session, agentId, onCancel, user }) => {
             const initialAnswers = session.triadScore?.answers || Array(TRIAD_QUESTIONS.length).fill('No');
             const [answers, setAnswers] = useState(initialAnswers);
+            const [comment, setComment] = useState(session.triadScore?.comment || '');
 
             const handleAnswerChange = (index, value) => {
                 const newAnswers = [...answers];
@@ -354,6 +355,7 @@
                     answers,
                     totalScore,
                     auditorEmail: user.email,
+                    comment,
                     scoredAt: new Date().toISOString()
                 };
                 
@@ -384,6 +386,10 @@
                             </div>
                         </div>
                     ))}
+                    <div className="pt-4 border-t dark:border-gray-700">
+                        <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Auditor Comment</label>
+                        <textarea value={comment} onChange={e => setComment(e.target.value)} rows="3" className="w-full p-2 border rounded-md bg-gray-50 dark:bg-gray-700 dark:border-gray-600"></textarea>
+                    </div>
                     <div className="flex justify-between items-center pt-4 border-t dark:border-gray-700">
                         <p className="text-xl font-bold">Total Score: <span className={totalScore >= 85 ? 'text-green-500' : totalScore >= 70 ? 'text-yellow-500' : 'text-red-500'}>{totalScore}%</span></p>
                         <div className="flex justify-end gap-2">
@@ -1345,25 +1351,23 @@
                         </div>
                     </div>
                     <button onClick={() => openModal('COACH_DETAILS', { coachEmail: coachData.coach, sessions: coachData.sessions })} className="mt-4 w-full text-center text-sm py-2 px-4 rounded-md bg-indigo-600 text-white hover:bg-indigo-700">
-                        View 1-to-1 Details
+                        View Details
                     </button>
                 </div>
             )
         };
         const CoachDetailsViewer = ({ data }) => {
-            const oneOnOneSessions = data.sessions.filter(s => s.sessionType === '1-to-1');
-
             return (
                 <div>
-                    {oneOnOneSessions.length > 0 ? (
+                    {data.sessions.length > 0 ? (
                         <ul className="space-y-2">
-                           {oneOnOneSessions.map(s => (
+                           {data.sessions.map(s => (
                                <li key={s.id} className="p-2 border-b dark:border-gray-700">
-                                  <span className="font-semibold">{s.agentName}</span> on {new Date(s.date).toLocaleDateString()}
+                                  <span className="font-semibold">{s.agentName}</span> ({s.sessionType}) on {new Date(s.date).toLocaleDateString()}
                                </li>
                            ))}
                         </ul>
-                    ) : <p>No 1-to-1 sessions found for this period.</p>}
+                    ) : <p>No sessions found for this period.</p>}
                 </div>
             )
         };
@@ -1884,6 +1888,7 @@ ${richTextToPlain(data.notes)}
                     {data.triadScore && (
                         <div className="mt-6">
                             <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Triad Score: {data.triadScore.totalScore}% by {data.triadScore.auditorEmail}</h4>
+                            {data.triadScore.comment && <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-md mb-2 italic">"{data.triadScore.comment}"</div>}
                             <div className="space-y-2">
                                 {TRIAD_QUESTIONS.map((q, i) => (
                                     <div key={i} className="flex justify-between items-center">
