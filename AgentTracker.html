@@ -690,7 +690,7 @@
                                           modal.type === 'VIEW_PLAN' ? `Viewing Plan: ${modal.data.type}` : 
                                           modal.type === 'VIEW_WARNING' ? `Viewing Warning: ${modal.data.type}` : 
                                           modal.type === 'VIEW_COACHING' ? `Viewing Session: ${new Date(modal.data.date).toLocaleDateString()}` :
-                                          modal.type === 'COACH_DETAILS' ? `1-to-1 Sessions by ${modal.data.coachEmail}`:
+                                          modal.type === 'COACH_DETAILS' ? `All Sessions by ${modal.data.coachEmail}`:
                                           (modal.data?.title || 'Confirm Deletion') 
                                       }</h3>
                                       <button onClick={closeModal} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"><XIcon /></button>
@@ -704,7 +704,7 @@
                                       {modal.type === 'COACH_DETAILS' && <CoachDetailsViewer data={modal.data} />}
 
                                       {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={selectedAgent} user={user} isAdmin={true} />}
-                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} user={user}/>}
 
                                        {modal.type === 'CONFIRM_DELETE' && (
                                            <div>
@@ -907,7 +907,7 @@
                                   </div>
                                   <div className="p-6 overflow-y-auto flex-grow">
                                       {(modal.type === 'VIEW_PLAN' || modal.type === 'VIEW_WARNING') && <DocumentViewer data={modal.data} type={modal.type.split('_')[1].toLowerCase()} agent={agentData} isAdmin={false} user={user} />}
-                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} />}
+                                      {modal.type === 'VIEW_COACHING' && <CoachingViewer data={modal.data} user={user} />}
                                   </div>
                               </div>
                           </div>
@@ -1775,8 +1775,10 @@ ${richTextToPlain(data.nextAction)}
                  </div>
             );
         };
-        const CoachingViewer = ({ data }) => {
+        const CoachingViewer = ({ data, user }) => {
             const [copySuccess, setCopySuccess] = useState('');
+            const isAuditor = AUDITOR_EMAILS.includes(user.email);
+            const isOwner = user.email === data.createdBy;
 
             const handleCopy = () => {
                 // Create a temporary element to render the HTML content to plain text
@@ -1885,7 +1887,7 @@ ${richTextToPlain(data.notes)}
                             {renderSection("Notes", data.notes)}
                         </>
                     )}
-                    {data.triadScore && (
+                    {(isAuditor || isOwner) && data.triadScore && (
                         <div className="mt-6">
                             <h4 className="text-lg font-bold border-b dark:border-gray-600 pb-1 mb-2">Triad Score: {data.triadScore.totalScore}% by {data.triadScore.auditorEmail}</h4>
                             {data.triadScore.comment && <div className="p-2 bg-yellow-100 dark:bg-yellow-900/50 rounded-md mb-2 italic">"{data.triadScore.comment}"</div>}
