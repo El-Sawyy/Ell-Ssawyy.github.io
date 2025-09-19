@@ -1,1300 +1,701 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Annual Performance Review Tool</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-        .sidebar-link {
-            transition: all 0.2s ease-in-out;
-        }
-        .sidebar-link:hover, .sidebar-link.active {
-            background-color: #374151;
-            color: #ffffff;
-        }
-        .review-card {
-            border-left-width: 4px;
-        }
-        .review-card-blue { border-color: #3b82f6; }
-        .review-card-green { border-color: #22c55e; }
-        .review-card-yellow { border-color: #f59e0b; }
-        .review-card-red { border-color: #ef4444; }
-        .phase-indicator.active {
-            border-color: #3b82f6;
-            background-color: #dbeafe;
-        }
-        .btn-primary {
-            background-color: #3b82f6;
-            color: white;
-            transition: background-color 0.3s;
-        }
-        .btn-primary:hover {
-            background-color: #2563eb;
-        }
-        .btn-secondary {
-            background-color: #6b7280;
-            color: white;
-            transition: background-color 0.3s;
-        }
-        .btn-secondary:hover {
-            background-color: #4b5563;
-        }
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3b82f6;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        /* Admin Dashboard Tabs */
-        .admin-tab {
-            cursor: pointer;
-            padding: 0.5rem 1rem;
-            border-bottom: 2px solid transparent;
-        }
-        .admin-tab.active {
-            border-color: #3b82f6;
-            color: #3b82f6;
-            font-weight: 600;
-        }
-    </style>
-</head>
-<body class="bg-gray-100 text-gray-800">
+import React, { useState, useEffect, useCallback } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-    <!-- App Container -->
-    <div id="app" class="h-screen w-screen flex flex-col">
+// --- Supabase Setup ---
+// We will dynamically import the client to avoid bundling issues.
+const supabaseUrl = 'https://hsvpxlbesgcmtutansaw.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhzdnB4bGJlc2djbXR1dGFuc2F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgyMjg4NjQsImV4cCI6MjA3MzgwNDg2NH0.P0N-pPIcj_29FmhUmzBRGJCJz_mmEBrlXupTRlbl02Q';
+let supabase; // will be initialized dynamically
 
-        <!-- Login Screen -->
-        <div id="login-screen" class="flex items-center justify-center h-full w-full bg-gray-200">
-            <div class="w-full max-w-md bg-white p-8 rounded-lg shadow-lg">
-                <h1 class="text-3xl font-bold text-center mb-2 text-gray-800">Performance Review</h1>
-                <p class="text-center text-gray-600 mb-6">Please sign in to continue</p>
-                <form id="login-form">
-                    <div class="mb-4">
-                        <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input type="email" id="email" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="you@example.com">
-                    </div>
-                    <div class="mb-6">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-                        <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required placeholder="••••••••">
-                    </div>
-                    <button type="submit" class="w-full btn-primary font-semibold py-2 rounded-md">Sign In</button>
-                    <p id="login-error" class="text-red-500 text-sm mt-4 text-center"></p>
-                </form>
-            </div>
-        </div>
+// --- Icon Components ---
+const File = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>;
+const ChevronRight = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"></path></svg>;
+const ChevronLeft = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"></path></svg>;
+const User = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
+const LayoutDashboard = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>;
+const Send = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"></path><path d="m22 2-11 11"></path></svg>;
+const Edit = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>;
+const Lock = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>;
+const Eye = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+const Download = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>;
+const Handshake = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88c-.37-.37-1.02-.37-1.39 0L12 12.01"/><path d="M10 16 7.5 13.5a1 1 0 1 0-3 3l3.88 3.88c.37.37 1.02.37 1.39 0l1.23-1.23"/><path d="M13 11 9 7l-.42-.42c-.37-.37-1.02-.37-1.39 0L5.04 8.73c-.37.37-.37 1.02 0 1.39l.42.42L10 15"/><path d="m3 21 3-3"/><path d="M21 3l-3 3"/></svg>;
+const Rocket = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.3.05-3.1S5.21 15.24 4.5 16.5Z"></path><path d="m12 15-3-3a9 9 0 0 1 3-13h3a9 9 0 0 1 13 3l-3 3-10 10Z"></path><path d="m9 12 2 2"></path><path d="m7 14 2 2"></path><path d="m21.5 21.5-3-3"></path></svg>;
+const CheckCircle = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>;
+const Clock = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>;
 
-        <!-- Main Application -->
-        <div id="main-app" class="hidden h-full w-full flex">
-            <!-- Sidebar -->
-            <nav id="sidebar" class="w-64 bg-gray-800 text-white flex flex-col">
-                <div class="p-4 border-b border-gray-700">
-                    <h2 class="text-xl font-bold">Tempo PR</h2>
-                    <p id="user-role" class="text-sm text-gray-400"></p>
-                </div>
-                <div class="flex-grow p-4 space-y-2" id="nav-links">
-                    <!-- Nav links will be injected here -->
-                </div>
-                <div class="p-4 border-t border-gray-700">
-                     <p id="user-name" class="text-sm font-semibold"></p>
-                    <button id="logout-button" class="w-full text-left mt-2 text-gray-300 hover:text-white transition-colors duration-200">Logout</button>
-                </div>
-            </nav>
+// --- Constants & Helpers ---
+const questionSets = {
+  'self': [
+    { id: 'q1', text: 'What did you accomplish over the past year?', type: 'textarea' },
+    { id: 'q2', text: 'What is one thing you are doing well that you want to keep doing?', type: 'textarea' },
+    { id: 'q3', text: 'What is one thing you would like to improve/develop?', type: 'textarea' },
+    { id: 'q4', text: 'Which of Tempo’s values do you incorporate into your work the most?', type: 'textarea' },
+    { id: 'q5', text: 'Which of Tempo’s values does your direct report need to develop the most?', type: 'textarea' },
+  ],
+  'downward-manager': [
+    { id: 'q1', text: 'Provide specific examples of how well your direct report has performed over the past year.', type: 'textarea' },
+    { id: 'q2', text: 'What is one thing this person has been doing well and should continue doing?', type: 'textarea' },
+    { id: 'q3', text: 'What is one thing this person should focus on improving over the next year?', type: 'textarea' },
+    { id: 'q4', text: 'Which of Tempo’s values does your direct report incorporate into their work the most?', type: 'textarea' },
+    { id: 'q5', text: 'Which of Tempo’s values does your direct report need to develop the most?', type: 'textarea' },
+    { id: 'q6', text: 'How would you rate your employee’s overall performance score?', type: 'score', options: ['Needs Improvement', 'Meeting Expectations', 'Exceeding Expectations', 'Top 10%'] },
+    { id: 'q7', text: 'Is this person an attrition risk?', type: 'boolean' },
+    { id: 'q8', text: 'Should this person be promoted now?', type: 'boolean' },
+    { id: 'q9', text: 'If recommending promotion, what should their new title be?', type: 'textarea' },
+    { id: 'q10', text: 'Any comments/suggestions about this person’s compensation (salary, bonus, equity)?', type: 'textarea' },
+  ],
+  'downward-qacoach': [
+    { id: 'q1', text: 'What is the agent doing particularly well in their role?', type: 'textarea' },
+    { id: 'q2', text: 'What specific skill or behavior should the agent focus on improving?', type: 'textarea' },
+    { id: 'q3', text: 'How would you rate the agent’s overall performance last year? (Provide comments)', type: 'textarea' },
+  ],
+  'upward-agent': [
+    { id: 'q1', text: 'How would you describe your manager’s communication and ability to support the team?', type: 'textarea' },
+    { id: 'q2', text: 'How does your manager ensure team goals align with company objectives?', type: 'textarea' },
+    { id: 'q3', text: 'How well does your manager provide constructive feedback to develop your skills?', type: 'textarea' },
+    { id: 'q4', text: 'How confident are you in your manager’s decision-making? Do they consider team input?', type: 'textarea' },
+    { id: 'q5', text: 'Evaluate your manager’s leadership style and efforts in building team cohesion.', type: 'textarea' },
+    { id: 'q6', text: 'What should your manager keep doing?', type: 'textarea' },
+    { id: 'q7', text: 'What should your manager change?', type: 'textarea' },
+  ],
+  'upward-manager': [
+    { id: 'q1', text: 'How would you describe your manager’s communication and ability to support the team?', type: 'textarea' },
+    { id: 'q2', text: 'How does your manager ensure team goals align with company objectives?', type: 'textarea' },
+    { id: 'q3', text: 'How well does your manager provide constructive feedback to develop your skills?', type: 'textarea' },
+    { id: 'q4', text: 'How confident are you in your manager’s decision-making? Do they consider team input?', type: 'textarea' },
+    { id: 'q5', text: 'Evaluate your manager’s leadership style and efforts in building team cohesion.', type: 'textarea' },
+    { id: 'q6', text: 'What should your manager keep doing?', type: 'textarea' },
+    { id: 'q7', text: 'What should your manager change?', type: 'textarea' },
+  ],
+  'downward-ops-manager': [
+    { id: 'q1', text: 'Provide specific examples of how well your direct report has performed over the past year.', type: 'textarea' },
+    { id: 'q2', text: 'What is one thing this person has been doing well and should continue doing?', type: 'textarea' },
+    { id: 'q3', text: 'What is one thing this person should focus on improving over the next year?', type: 'textarea' },
+    { id: 'q4', text: 'Which of Tempo’s values does your direct report incorporate into their work the most?', type: 'textarea' },
+    { id: 'q5', text: 'Which of Tempo’s values does your direct report need to develop the most?', type: 'textarea' },
+    { id: 'q6', text: 'How would you rate your employee’s overall performance score?', type: 'score', options: ['Needs Improvement', 'Meeting Expectations', 'Exceeding Expectations', 'Top 10%'] },
+    { id: 'q7', text: 'Is this person an attrition risk?', type: 'boolean' },
+    { id: 'q8', text: 'Should this person be promoted now?', type: 'boolean' },
+    { id: 'q9', text: 'If recommending promotion, what should their new title be?', type: 'textarea' },
+    { id: 'q10', text: 'Any comments/suggestions about this person’s compensation (salary, bonus, equity)?', type: 'textarea' },
+  ],
+};
+const getRoleDisplayName = (role) => {
+  switch (role) {
+    case 'admin': return 'Admin';
+    case 'manager': return 'Manager';
+    case 'qacoach': return 'QA Coach';
+    case 'ops_manager': return 'Operations Manager';
+    case 'agent': return 'Agent';
+    default: return 'User';
+  }
+};
+const scoreLabels = {
+  1: 'Needs Improvement',
+  2: 'Meeting Expectations',
+  3: 'Exceeding Expectations',
+  4: 'Top 10%',
+};
+const scoreColors = ['#f87171', '#fbbf24', '#34d399', '#3b82f6'];
 
-            <!-- Main Content -->
-            <main class="flex-1 flex flex-col overflow-hidden">
-                <header class="bg-white shadow-md p-4 flex justify-between items-center">
-                    <h1 id="page-title" class="text-2xl font-bold">Dashboard</h1>
-                    <div id="phase-container" class="flex items-center space-x-2">
-                         <!-- Phase indicators will be dynamically generated -->
-                    </div>
-                </header>
-                <div id="content-area" class="flex-1 p-6 overflow-y-auto bg-gray-50">
-                     <!-- Content will be injected here -->
-                </div>
-            </main>
-        </div>
-    </div>
+// --- UI Components ---
+const PageContainer = ({ children }) => <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">{children}</div>;
+const Card = ({ children, className = '' }) => <div className={`bg-white rounded-xl shadow-md p-4 sm:p-6 ${className}`}>{children}</div>;
+const Button = ({ children, onClick, className = '', disabled = false, type = 'button' }) => <button type={type} onClick={onClick} disabled={disabled} className={`px-4 py-2 rounded-lg text-white font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 flex items-center justify-center gap-2 ${className}`}>{children}</button>;
+const Select = ({ value, onChange, options, className = '', ...props }) => <select value={value} onChange={onChange} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 bg-white ${className}`} {...props}>{options.map((option, index) => <option key={index} value={option.value || option}>{option.label || option}</option>)}</select>;
+const Input = ({ type = 'text', value, onChange, placeholder, className = '', ...props }) => <input type={type} value={value} onChange={onChange} placeholder={placeholder} className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors duration-200 ${className}`} {...props} />;
+const Modal = ({ onConfirm, onCancel, title, showCancel, content }) => <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex justify-center items-center z-50"><div className="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-auto"><div className="text-center"><h3 className="text-lg leading-6 font-medium text-gray-900">{title || 'Information'}</h3><div className="mt-2 px-7 py-3">{content}</div><div className="mt-4 flex justify-center gap-4">{showCancel && <Button onClick={onCancel} className="bg-gray-500 hover:bg-gray-600">Cancel</Button>}<Button onClick={onConfirm} className="bg-blue-600 hover:bg-blue-700">OK</Button></div></div></div></div>;
+
+// --- Main App Component ---
+const App = () => {
+  const [supabaseClient, setSupabaseClient] = useState(null);
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [allUsers, setAllUsers] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [phase, setPhase] = useState(1);
+  const [view, setView] = useState('dashboard');
+  const [currentReview, setCurrentReview] = useState(null);
+  const [filterManagerId, setFilterManagerId] = useState('all');
+  const [modalContent, setModalContent] = useState(null);
+  const [modalTitle, setModalTitle] = useState('');
+  const [showCancel, setShowCancel] = useState(false);
+  const [modalCallback, setModalCallback] = useState(() => () => {});
+  const [formData, setFormData] = useState({});
+
+  useEffect(() => {
+    const initSupabase = async () => {
+        try {
+            const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm');
+            supabase = createClient(supabaseUrl, supabaseKey);
+            setSupabaseClient(supabase);
+        } catch (e) {
+            console.error("Error loading Supabase client:", e);
+        }
+    };
+    initSupabase();
+  }, []);
+
+  const showCustomModal = (content, title = 'Information', callback = () => {}, showCancel = false) => {
+    setModalContent(content);
+    setModalTitle(title);
+    setShowCancel(showCancel);
+    setModalCallback(() => callback);
+  };
+  const hideModal = () => setModalContent(null);
+
+  const fetchData = useCallback(async () => {
+    if (!session || !supabaseClient) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    const [profileRes, usersRes, reviewsRes, phasesRes] = await Promise.all([
+      supabaseClient.from('users').select('*').eq('id', session.user.id).single(),
+      supabaseClient.from('users').select('*'),
+      supabaseClient.from('reviews').select('*'),
+      supabaseClient.from('phases').select('*').eq('id', 'current').single()
+    ]);
+
+    if (profileRes.data) setProfile(profileRes.data);
+    if (usersRes.data) setAllUsers(usersRes.data);
+    if (reviewsRes.data) setReviews(reviewsRes.data);
+    if (phasesRes.data) setPhase(phasesRes.data.current_phase);
     
-    <!-- Loading Modal -->
-    <div id="loading-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="loader"></div>
-    </div>
+    setLoading(false);
+  }, [session, supabaseClient]);
 
-    <!-- Confirmation Modal -->
-    <div id="confirmation-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
-            <p id="confirmation-message" class="text-lg mb-4">Are you sure?</p>
-            <div class="flex justify-end space-x-4">
-                <button id="confirm-cancel-btn" class="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400">Cancel</button>
-                <button id="confirm-ok-btn" class="px-4 py-2 btn-primary rounded-md">Confirm</button>
-            </div>
-        </div>
-    </div>
+  useEffect(() => {
+    if (!supabaseClient) return;
+
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabaseClient]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+
+  const handleLogout = async () => {
+    await supabaseClient.auth.signOut();
+    setProfile(null);
+    setSession(null);
+  };
+
+  const handlePhaseChange = async (direction) => {
+    const newPhase = direction === 'next' ? phase + 1 : phase - 1;
+    if (newPhase >= 1 && newPhase <= 4) {
+      const { error } = await supabaseClient.from('phases').update({ current_phase: newPhase }).eq('id', 'current');
+      if (!error) setPhase(newPhase);
+      else showCustomModal(<p>Failed to update phase.</p>);
+    }
+  };
+
+  const handleViewReview = (review) => {
+    setFormData(review.questions || {});
+    setCurrentReview(review);
+    setView('form');
+  };
+
+  const handleSubmitReview = async () => {
+    const scoreValue = formData.q6 ? Object.keys(scoreLabels).find(key => scoreLabels[key] === formData.q6) : null;
+    const { data, error } = await supabaseClient.from('reviews').upsert({
+      ...currentReview,
+      questions: formData,
+      score: scoreValue ? parseInt(scoreValue) : null,
+      is_submitted: true,
+      updated_at: new Date().toISOString()
+    }).select().single();
     
-    <!-- Review Detail Modal -->
-    <div id="review-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-2xl max-h-[90vh] flex flex-col">
-            <div class="flex justify-between items-center mb-4 border-b pb-2">
-                <h2 id="review-modal-title" class="text-xl font-bold">Review Details</h2>
-                <button id="review-modal-close" class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
-            </div>
-            <div id="review-modal-content" class="overflow-y-auto">
-                <!-- Review content will be injected here -->
-            </div>
+    if (!error && data) {
+       showCustomModal(<p>Review submitted successfully!</p>, "Success", () => {
+         hideModal();
+         setView('dashboard');
+         setCurrentReview(null);
+         setReviews(prev => [...prev.filter(r => r.id !== data.id), data]);
+       });
+    } else {
+       showCustomModal(<p>{error?.message || 'Error submitting review.'}</p>, "Error");
+    }
+  };
+  
+  const handleUpdateScore = async (reviewId, newScore) => {
+    const { data, error } = await supabaseClient.from('reviews').update({ score: newScore }).eq('id', reviewId).select().single();
+    if (!error) {
+        showCustomModal(<p>Score updated successfully!</p>, "Success", () => {
+            hideModal();
+            setReviews(prev => [...prev.filter(r => r.id !== data.id), data]);
+        });
+    } else {
+      showCustomModal(<p>{error?.message || 'Error updating score.'}</p>, "Error");
+    }
+  };
+
+  const handleExportCSV = async () => { /* ... unchanged ... */ };
+  
+  const handleEditScore = (review) => {
+    let tempScore = review.score;
+    const scoreOptions = Object.entries(scoreLabels).map(([value, label]) => ({ value, label }));
+
+    const content = (
+      <div className="flex flex-col gap-4 text-left">
+        <p className="text-sm text-gray-600">Reviewee: <b>{allUsers.find(u => u.id === review.reviewee_id)?.email}</b></p>
+        <p className="text-sm text-gray-600">Current Score: <b>{scoreLabels[review.score] || 'N/A'}</b></p>
+        <div>
+          <label htmlFor="new-score-select" className="block text-sm font-medium text-gray-700">Select New Score:</label>
+          <Select id="new-score-select" defaultValue={review.score} onChange={(e) => tempScore = parseInt(e.target.value)} options={[{value: '', label: 'Select...'}, ...scoreOptions]} className="mt-1"/>
         </div>
+      </div>
+    );
+    
+    showCustomModal(content, 'Edit Performance Score', () => handleUpdateScore(review.id, tempScore), true);
+  };
+
+  if (loading || !supabaseClient) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  if (!session || !profile) {
+    return (
+      <>
+        <AuthScreen supabase={supabaseClient} />
+        {modalContent && <Modal content={modalContent} title={modalTitle} onConfirm={hideModal} showCancel={false} />}
+      </>
+    );
+  }
+
+  const role = profile.role;
+  let currentView;
+    if (view === 'form') {
+      currentView = <ReviewForm {...{ currentReview, allUsers, phase, user: profile, setView, handleSubmitReview, formData, setFormData }} />;
+    } else if (role === 'admin') {
+      if (view === 'analytics') currentView = <AnalyticsDashboard {...{ reviews, allUsers, setView }} />;
+      else if (view === 'collaboration') currentView = <CollaborationDashboard {...{ reviews, allUsers, setView, handleEditScore, phase }} />;
+      else currentView = <AdminDashboard {...{ phase, handlePhaseChange, setView, handleExportCSV, allUsers, filterManagerId, setFilterManagerId, reviews }} />;
+    } else {
+      currentView = <Dashboard {...{ user: profile, allUsers, phase, reviews, handleViewReview }} />;
+    }
+    
+  return (
+    <div className="bg-gray-50 min-h-screen">
+      <header className="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-10">
+        <h1 className="text-xl font-bold text-gray-800">Tempo Performance Review</h1>
+        <div className="flex items-center gap-4">
+          <span className="text-sm text-gray-600 hidden sm:block"><User className="w-4 h-4 inline-block mr-1"/> {profile.email} ({getRoleDisplayName(role)})</span>
+          <Button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 text-sm">Logout</Button>
+        </div>
+      </header>
+      <PageContainer>{currentView}</PageContainer>
+      {modalContent && <Modal content={modalContent} title={modalTitle} onConfirm={modalCallback} onCancel={hideModal} showCancel={showCancel} />}
     </div>
+  );
+};
 
+// --- Child Components ---
 
-    <script type="module">
-        // --- SUPABASE & APP CONFIG ---
-        const SUPABASE_URL = 'https://kyfvgmndkgprlcfkqmlu.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt5ZnZnbW5ka2dwcmxjZmtxbWx1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNTUyMDMsImV4cCI6MjA3MzczMTIwM30.5-tT4O9Rv10LG2r-wpY5BrMm7RNF9AKQmfHdwslISww';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const AuthScreen = ({ supabase }) => {
+  const [isLoginView, setIsLoginView] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
-        // --- APP STATE ---
-        let currentUser = null;
-        let userProfile = null;
-        let currentPhase = 1;
-        let allUsers = [];
-        let reviews = [];
-        let currentCycleId = 1; // Assuming a single cycle for now.
+  const handleAuthAction = async (e) => {
+    e.preventDefault();
+    if (!supabase) {
+        setMessage("Authentication service is not ready. Please wait a moment.");
+        return;
+    }
+    setLoading(true);
+    setMessage('');
+    
+    let error;
+    if (isLoginView) {
+        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        error = signInError;
+    } else {
+        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        error = signUpError;
+    }
 
-        // --- UI ELEMENTS ---
-        const loginScreen = document.getElementById('login-screen');
-        const mainApp = document.getElementById('main-app');
-        const loginForm = document.getElementById('login-form');
-        const loginError = document.getElementById('login-error');
-        const logoutButton = document.getElementById('logout-button');
-        const contentArea = document.getElementById('content-area');
-        const pageTitle = document.getElementById('page-title');
-        const userNameEl = document.getElementById('user-name');
-        const userRoleEl = document.getElementById('user-role');
-        const navLinksContainer = document.getElementById('nav-links');
-        const phaseContainer = document.getElementById('phase-container');
-        const loadingModal = document.getElementById('loading-modal');
-        const confirmationModal = document.getElementById('confirmation-modal');
-        const confirmationMessage = document.getElementById('confirmation-message');
-        const confirmOkBtn = document.getElementById('confirm-ok-btn');
-        const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
-        const reviewModal = document.getElementById('review-modal');
-        const reviewModalClose = document.getElementById('review-modal-close');
-        const reviewModalTitle = document.getElementById('review-modal-title');
-        const reviewModalContent = document.getElementById('review-modal-content');
+    if (error) {
+        setMessage(error.message);
+    } else if (!isLoginView) {
+        setMessage('Check your email for the confirmation link!');
+    }
+    setLoading(false);
+  };
+  
+  return (
+    <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
+      <Card className="w-full max-w-sm text-center">
+        <h1 className="text-3xl font-bold text-gray-800 mb-6">Tempo Performance Reviews</h1>
+        <p className="text-gray-600 mb-4">{isLoginView ? 'Sign in to your account' : 'Create a new account'}</p>
+        <form onSubmit={handleAuthAction} className="flex flex-col gap-4">
+          <Input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+          <Button type="submit" disabled={loading || !supabase} className="bg-blue-600 hover:bg-blue-700">{loading ? 'Processing...' : isLoginView ? 'Sign In' : 'Sign Up'}</Button>
+        </form>
+        {message && <p className={`mt-4 text-sm ${message.startsWith('Check your email') ? 'text-green-600' : 'text-red-500'}`}>{message}</p>}
+        <button onClick={() => setIsLoginView(!isLoginView)} className="mt-4 text-sm text-blue-600 hover:underline">
+          {isLoginView ? 'Need an account? Sign Up' : 'Already have an account? Sign In'}
+        </button>
+      </Card>
+    </div>
+  );
+};
 
+const Dashboard = ({ user, allUsers, phase, reviews, handleViewReview }) => {
+    const isPhaseActive = (reviewType) => {
+      if (reviewType === 'self' || reviewType.startsWith('upward')) return phase === 1;
+      if (reviewType.startsWith('downward')) return phase === 2;
+      return false;
+    };
 
-        // --- QUESTIONS CONFIG ---
-        const QUESTIONS = {
-            self: [
-                { id: 'accomplishments', label: 'What did you accomplish over the past year?', type: 'textarea' },
-                { id: 'doing_well', label: 'What is one thing you are doing well that you want to keep doing?', type: 'textarea' },
-                { id: 'improve', label: 'What is one thing you would like to improve/develop?', type: 'textarea' },
-                { id: 'values_incorporate', label: "Which of Tempo's values do you incorporate into your work the most?", type: 'textarea' },
-                { id: 'values_develop', label: "Which of Tempo's values do you feel you need to develop the most?", type: 'textarea' },
-            ],
-            downward: [
-                 { id: 'performance_examples', label: 'Provide specific examples of how well your direct report has performed over the past year.', type: 'textarea' },
-                 { id: 'doing_well', label: 'What is one thing this person has been doing well and should continue doing?', type: 'textarea' },
-                 { id: 'improve', label: 'What is one thing this person should focus on improving over the next year?', type: 'textarea' },
-                 { id: 'values_incorporate', label: "Which of Tempo's values does your direct report incorporate into their work the most?", type: 'textarea' },
-                 { id: 'values_develop', label: "Which of Tempo's values does your direct report need to develop the most?", type: 'textarea' },
-                 { id: 'performance_score', label: "How would you rate your employee's overall performance score?", type: 'select', options: ['Needs Improvement', 'Meeting Expectations', 'Exceeding Expectations', 'Top 10%'] },
-                 { id: 'attrition_risk', label: 'Is this person an attrition risk?', type: 'select', options: ['No', 'Yes'] },
-                 { id: 'promotion_ready', label: 'Should this person be promoted now?', type: 'select', options: ['No', 'Yes'] },
-                 { id: 'new_title', label: 'If recommending promotion, what should their new title be?', type: 'text' },
-                 { id: 'compensation_comments', label: 'Any comments/suggestions about this person\'s compensation (salary, bonus, equity)?', type: 'textarea' },
-            ],
-            upward: [
-                { id: 'communication_support', label: "How would you describe your manager's communication and ability to support the team?", type: 'textarea' },
-                { id: 'goal_alignment', label: "How does your manager ensure team goals align with company objectives?", type: 'textarea' },
-                { id: 'feedback', label: "How well does your manager provide constructive feedback to develop your skills?", type: 'textarea' },
-                { id: 'decision_making', label: "How confident are you in your manager's decision-making? Do they consider team input?", type: 'textarea' },
-                { id: 'leadership_style', label: "Evaluate your manager's leadership style and efforts in building team cohesion.", type: 'textarea' },
-                { id: 'manager_keep_doing', label: "What should your manager keep doing?", type: 'textarea' },
-                { id: 'manager_change', label: "What should your manager change?", type: 'textarea' },
-            ]
-        };
+    const getReviewsToComplete = () => {
+      let myReviews = [];
+      const findExistingReview = (reviewerId, revieweeId, type) => reviews.find(r => r.reviewer_id === reviewerId && r.reviewee_id === revieweeId && r.review_type === type);
+      
+      // Self review (not for Ops Managers)
+      if (user.role !== 'ops_manager') {
+        myReviews.push(findExistingReview(user.id, user.id, 'self') || { review_type: 'self', reviewer_id: user.id, reviewee_id: user.id, is_submitted: false, phase: 1 });
+      }
+
+      // Upward reviews
+      if (user.role === 'agent') {
+        // Review for Manager
+        if (user.manager_id) {
+          myReviews.push(findExistingReview(user.id, user.manager_id, 'upward-agent') || { review_type: 'upward-agent', reviewer_id: user.id, reviewee_id: user.manager_id, is_submitted: false, is_anonymous: true, phase: 1 });
+        }
+        // Review for QA Coach
+        if (user.qa_coach_id) {
+           myReviews.push(findExistingReview(user.id, user.qa_coach_id, 'upward-agent') || { review_type: 'upward-agent', reviewer_id: user.id, reviewee_id: user.qa_coach_id, is_submitted: false, is_anonymous: true, phase: 1 });
+        }
+      } else if (user.role === 'manager' || user.role === 'qacoach') {
+        // Review for Ops Manager
+        if (user.manager_id) {
+            myReviews.push(findExistingReview(user.id, user.manager_id, 'upward-manager') || { review_type: 'upward-manager', reviewer_id: user.id, reviewee_id: user.manager_id, is_submitted: false, is_anonymous: true, phase: 1 });
+        }
+      } 
+
+      // Downward reviews
+      if (user.role === 'manager' || user.role === 'qacoach') {
+        const directReports = allUsers.filter(u => u.manager_id === user.id || (user.role === 'qacoach' && u.qa_coach_id === user.id));
+        directReports.forEach(dr => {
+          const type = user.role === 'manager' ? 'downward-manager' : 'downward-qacoach';
+          myReviews.push(findExistingReview(user.id, dr.id, type) || { review_type: type, reviewer_id: user.id, reviewee_id: dr.id, is_submitted: false, phase: 2 });
+        });
+      } else if (user.role === 'ops_manager') {
+        // Ops manager reviews their assigned managers and qa coaches
+        const directReports = allUsers.filter(u => u.manager_id === user.id && (u.role === 'manager' || u.role === 'qacoach'));
+        directReports.forEach(dr => {
+            myReviews.push(findExistingReview(user.id, dr.id, 'downward-ops-manager') || { review_type: 'downward-ops-manager', reviewer_id: user.id, reviewee_id: dr.id, is_submitted: false, phase: 2 });
+        });
+      }
+      return myReviews.filter(r => isPhaseActive(r.review_type));
+    };
+
+    const getReceivedReviews = () => {
+      if (phase !== 4) return [];
+      return reviews.filter(r => r.reviewee_id === user.id && r.is_submitted)
+        .map(r => r.is_anonymous ? { ...r, reviewer_id: 'Anonymous' } : r);
+    };
+
+    const getReviewTitle = (review) => {
+        if (review.review_type === 'self') {
+            return 'Your Self-Review';
+        }
+        const direction = review.review_type.includes('downward') ? 'Downward' : 'Upward';
+        const reviewerEmail = review.reviewer_id === 'Anonymous' 
+            ? 'Anonymous' 
+            : allUsers.find(u => u.id === review.reviewer_id)?.email;
+        return `${direction} Review from ${reviewerEmail}`;
+    };
+
+    const reviewsToComplete = getReviewsToComplete();
+    const completedCount = reviewsToComplete.filter(r => r.is_submitted).length;
+    const pendingCount = reviewsToComplete.length - completedCount;
+    const receivedReviews = getReceivedReviews();
+
+    return (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-gray-800">Hello, {getRoleDisplayName(user.role)}!</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="bg-blue-100 text-blue-800 flex flex-col items-center justify-center p-4 text-center"> <Rocket className="w-8 h-8"/> <span className="text-lg font-bold mt-2">Current Phase</span> <span className="text-2xl font-bold">{phase} / 4</span> </Card>
+            <Card className="bg-green-100 text-green-800 flex flex-col items-center justify-center p-4 text-center"> <CheckCircle className="w-8 h-8"/> <span className="text-lg font-bold mt-2">Completed</span> <span className="text-2xl font-bold">{completedCount}</span> </Card>
+            <Card className="bg-yellow-100 text-yellow-800 flex flex-col items-center justify-center p-4 text-center"> <Clock className="w-8 h-8"/> <span className="text-lg font-bold mt-2">Pending</span> <span className="text-2xl font-bold">{pendingCount}</span> </Card>
+            <Card className="bg-purple-100 text-purple-800 flex flex-col items-center justify-center p-4 text-center"> <Handshake className="w-8 h-8"/> <span className="text-lg font-bold mt-2">Total</span> <span className="text-2xl font-bold">{reviewsToComplete.length}</span> </Card>
+        </div>
         
-        // --- HELPER FUNCTIONS ---
-        const showLoading = () => loadingModal.classList.remove('hidden');
-        const hideLoading = () => loadingModal.classList.add('hidden');
-        const getFullName = (profile) => profile ? `${profile.first_name} ${profile.last_name}` : 'Unknown User';
-        
-        const showConfirmation = (message) => {
-            return new Promise((resolve, reject) => {
-                confirmationMessage.textContent = message;
-                confirmationModal.classList.remove('hidden');
-
-                const handleConfirm = () => {
-                    confirmationModal.classList.add('hidden');
-                    cleanup();
-                    resolve();
-                };
-
-                const handleCancel = () => {
-                    confirmationModal.classList.add('hidden');
-                    cleanup();
-                    reject();
-                };
-
-                const cleanup = () => {
-                    confirmOkBtn.removeEventListener('click', handleConfirm);
-                    confirmCancelBtn.removeEventListener('click', handleCancel);
-                };
-
-                confirmOkBtn.addEventListener('click', handleConfirm);
-                confirmCancelBtn.addEventListener('click', handleCancel);
-            });
-        };
-        
-        // --- AUTHENTICATION ---
-        const handleLogin = async (event) => {
-            event.preventDefault();
-            showLoading();
-            loginError.textContent = '';
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-
-            if (error) {
-                loginError.textContent = error.message;
-                hideLoading();
-                return;
-            }
-
-            if (data.user) {
-                await initializeApp();
-            }
-        };
-
-        const handleLogout = async () => {
-            showLoading();
-            await supabase.auth.signOut();
-            window.location.reload();
-        };
-
-        const checkUserSession = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            if (session) {
-                currentUser = session.user;
-                await initializeApp();
-            } else {
-                loginScreen.classList.remove('hidden');
-                mainApp.classList.add('hidden');
-            }
-        };
-
-        // --- DATA FETCHING ---
-        const fetchUserProfile = async () => {
-            if (!currentUser) return;
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('*')
-                .eq('id', currentUser.id)
-                .single();
-            if (error) console.error('Error fetching profile:', error);
-            else userProfile = data;
-        };
-
-        const fetchAllData = async () => {
-            showLoading();
-            try {
-                // Fetch settings (current phase)
-                const { data: settingsData, error: settingsError } = await supabase
-                    .from('settings')
-                    .select('current_phase')
-                    .eq('id', 1)
-                    .single();
-                if (settingsError) throw settingsError;
-                currentPhase = settingsData.current_phase;
-
-                // Fetch all users/profiles
-                const { data: usersData, error: usersError } = await supabase
-                    .from('profiles')
-                    .select('*');
-                if (usersError) throw usersError;
-                allUsers = usersData;
-                
-                // Fetch all reviews for the current cycle
-                const { data: reviewsData, error: reviewsError } = await supabase
-                    .from('reviews')
-                    .select('*')
-                    .eq('cycle_id', currentCycleId);
-                if (reviewsError) throw reviewsError;
-                reviews = reviewsData;
-
-            } catch (error) {
-                console.error('Error fetching initial data:', error);
-                alert('Failed to load application data. Please refresh the page.');
-            } finally {
-                hideLoading();
-            }
-        };
-
-        // --- INITIALIZATION ---
-        const initializeApp = async () => {
-            showLoading();
-            if (!currentUser) {
-                 const { data: { session } } = await supabase.auth.getSession();
-                 if (!session) {
-                     loginScreen.classList.remove('hidden');
-                     mainApp.classList.add('hidden');
-                     hideLoading();
-                     return;
-                 }
-                 currentUser = session.user;
-            }
-
-            await fetchUserProfile();
-            if (!userProfile) {
-                alert("Could not load user profile. Logging out.");
-                await handleLogout();
-                return;
-            }
-
-            await fetchAllData();
-            
-            loginScreen.classList.add('hidden');
-            mainApp.classList.remove('hidden');
-            
-            userNameEl.textContent = getFullName(userProfile);
-            userRoleEl.textContent = userProfile.role;
-
-            setupUI();
-            hideLoading();
-        };
-        
-        // --- UI RENDERING & SETUP ---
-        const setupUI = () => {
-            renderNavLinks();
-            renderPhaseIndicator();
-            renderHomePage(); // Go to default page for role
-        };
-
-        const renderNavLinks = () => {
-            let links = [];
-            switch (userProfile.role) {
-                case 'Admin':
-                    links = [
-                        { text: 'Dashboard', page: 'admin_dashboard' },
-                    ];
-                    break;
-                case 'Manager':
-                    links = [
-                        { text: 'My Dashboard', page: 'manager_dashboard' },
-                        { text: 'My Self-Review', page: 'self_review' },
-                        { text: 'My Team', page: 'my_team' },
-                    ];
-                    if (userProfile.manager_id && currentPhase === 1) {
-                         links.push({ text: 'Admin Review', page: 'upward_review_admin' });
-                    }
-                     if (currentPhase === 4) {
-                        links.push({ text: 'My Upward Feedback', page: 'upward_feedback' });
-                        links.push({ text: 'My Performance Review', page: 'final_review_manager' });
-                    }
-                    break;
-                case 'Agent':
-                     links = [
-                        { text: 'My Dashboard', page: 'agent_dashboard' },
-                        { text: 'My Self-Review', page: 'self_review' },
-                        { text: 'Manager Review', page: 'upward_review' },
-                    ];
-                     if (currentPhase === 4) {
-                        links.push({ text: 'My Performance Review', page: 'final_review' });
-                    }
-                    break;
-            }
-            
-            navLinksContainer.innerHTML = links.map(link => 
-                `<a href="#" data-page="${link.page}" class="sidebar-link block px-4 py-2 rounded-md">${link.text}</a>`
-            ).join('');
-            
-            navLinksContainer.querySelectorAll('.sidebar-link').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    switchPage(e.target.dataset.page);
-                });
-            });
-        };
-        
-        const renderPhaseIndicator = () => {
-             const phases = [
-                { num: 1, name: 'Self & Upward' },
-                { num: 2, name: 'Downward' },
-                { num: 3, name: 'Collaboration' },
-                { num: 4, name: 'Released' }
-            ];
-
-            phaseContainer.innerHTML = phases.map(p => `
-                <div class="phase-indicator border-b-4 p-2 ${p.num === currentPhase ? 'active font-semibold' : 'border-transparent text-gray-500'}">
-                    Phase ${p.num}: ${p.name}
-                </div>
-            `).join('<div class="text-gray-300 mx-1">→</div>');
-             // remove last arrow
-             if (phaseContainer.lastChild && phaseContainer.lastChild.textContent === '→') phaseContainer.lastChild.remove();
-        };
-
-        const switchPage = (page) => {
-            const links = navLinksContainer.querySelectorAll('.sidebar-link');
-            links.forEach(l => l.classList.remove('active'));
-            const activeLink = navLinksContainer.querySelector(`[data-page="${page}"]`);
-            if (activeLink) activeLink.classList.add('active');
-
-            switch (page) {
-                case 'admin_dashboard': renderAdminDashboard(); break;
-                case 'manager_dashboard': renderManagerDashboard(); break;
-                case 'self_review': renderSelfReview(); break;
-                case 'my_team': renderMyTeam(); break;
-                case 'downward_review': renderDownwardReview(window.history.state?.userId); break;
-                case 'upward_feedback': renderUpwardFeedbackForManager(); break;
-                case 'upward_feedback_admin': renderUpwardFeedbackForAdmin(); break;
-                case 'agent_dashboard': renderAgentDashboard(); break;
-                case 'upward_review': renderUpwardReview(); break;
-                case 'upward_review_admin': renderUpwardReviewAdmin(); break;
-                case 'final_review': renderFinalReviewForAgent(); break;
-                case 'final_review_manager': renderFinalReviewForManager(); break;
-                default: contentArea.innerHTML = `<p>Page not found.</p>`;
-            }
-        };
-
-        const renderHomePage = () => {
-            switch (userProfile.role) {
-                case 'Admin': switchPage('admin_dashboard'); break;
-                case 'Manager': switchPage('manager_dashboard'); break;
-                case 'Agent': switchPage('agent_dashboard'); break;
-            }
-        };
-
-        // --- PAGE RENDERERS ---
-
-        // ADMIN PAGES
-        const renderAdminDashboard = () => {
-            pageTitle.textContent = 'Admin Dashboard';
-            contentArea.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <nav class="flex border-b mb-6">
-                        <button data-tab="reviews" class="admin-tab active">All Reviews</button>
-                        <button data-tab="users" class="admin-tab">Manage Users</button>
-                        <button data-tab="cycle" class="admin-tab">Cycle Control</button>
-                    </nav>
-                    <div id="admin-tab-content"></div>
-                </div>
-            `;
-
-            const tabs = contentArea.querySelectorAll('.admin-tab');
-            const tabContent = contentArea.querySelector('#admin-tab-content');
-
-            const switchAdminTab = (tabName) => {
-                tabs.forEach(t => t.classList.remove('active'));
-                contentArea.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-
-                switch(tabName) {
-                    case 'reviews':
-                        renderReviewsTable(tabContent);
-                        break;
-                    case 'users':
-                        renderUsersTable(tabContent);
-                        break;
-                    case 'cycle':
-                        renderCycleControl(tabContent);
-                        break;
-                }
-            };
-            
-            tabs.forEach(tab => {
-                tab.addEventListener('click', (e) => switchAdminTab(e.target.dataset.tab));
-            });
-            
-            // Default to reviews tab
-            switchAdminTab('reviews');
-        };
-
-        const renderCycleControl = (container) => {
-            container.innerHTML = `
-                <h2 class="text-xl font-semibold mb-4">Review Cycle Control</h2>
-                <p class="mb-4">Current Phase: <strong class="text-blue-600">Phase ${currentPhase}</strong></p>
-                <div class="flex space-x-4">
-                    ${[1, 2, 3, 4].map(p => `
-                        <button data-phase="${p}" class="set-phase-btn px-4 py-2 rounded-md font-semibold
-                            ${p === currentPhase ? 'bg-blue-600 text-white cursor-not-allowed' : 'bg-gray-200 hover:bg-gray-300'}"
-                            ${p === currentPhase ? 'disabled' : ''}>
-                            Set to Phase ${p}
-                        </button>
-                    `).join('')}
-                </div>
-            `;
-            container.querySelectorAll('.set-phase-btn').forEach(btn => {
-                btn.addEventListener('click', async (e) => {
-                    const newPhase = parseInt(e.target.dataset.phase);
-                    try {
-                        await showConfirmation(`Are you sure you want to change to Phase ${newPhase}? This action cannot be undone.`);
-                        showLoading();
-                        const { error } = await supabase.from('settings').update({ current_phase: newPhase }).eq('id', 1);
-                        if (error) throw error;
-                        alert(`Phase updated to ${newPhase}.`);
-                        await initializeApp();
-                    } catch (error) {
-                        if (error) alert('Failed to update phase: ' + error.message);
-                    } finally {
-                        hideLoading();
-                    }
-                });
-            });
-        };
-        
-        const renderReviewsTable = (container) => {
-             container.innerHTML = `
-                 <h2 class="text-xl font-semibold mb-4">All Submitted Reviews</h2>
-                 <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="p-3 font-semibold">Author</th>
-                                <th class="p-3 font-semibold">Subject</th>
-                                <th class="p-3 font-semibold">Type</th>
-                                <th class="p-3 font-semibold">Date</th>
-                                <th class="p-3 font-semibold">Score</th>
-                                <th class="p-3 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${reviews.map(review => {
-                                const author = allUsers.find(u => u.id === review.author_id);
-                                const subject = allUsers.find(u => u.id === review.subject_id);
-                                const score = review.answers.performance_score || 'N/A';
-                                return `
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="p-3">${getFullName(author)}</td>
-                                    <td class="p-3">${getFullName(subject)}</td>
-                                    <td class="p-3"><span class="capitalize px-2 py-1 text-xs rounded-full ${
-                                        {'self': 'bg-blue-100 text-blue-800', 'downward': 'bg-green-100 text-green-800', 'upward': 'bg-yellow-100 text-yellow-800'}[review.review_type]
-                                    }">${review.review_type}</span></td>
-                                    <td class="p-3">${new Date(review.created_at).toLocaleDateString()}</td>
-                                    <td class="p-3">${score}</td>
-                                    <td class="p-3">
-                                        <button data-review-id="${review.id}" class="view-review-btn btn-secondary text-xs px-3 py-1 rounded-md">View</button>
-                                    </td>
-                                </tr>`;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            container.querySelectorAll('.view-review-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => showReviewModal(e.target.dataset.reviewId));
-            });
-        };
-
-        const renderUsersTable = (container) => {
-            container.innerHTML = `
-                 <h2 class="text-xl font-semibold mb-4">All Users</h2>
-                 <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead class="bg-gray-100">
-                            <tr>
-                                <th class="p-3 font-semibold">Name</th>
-                                <th class="p-3 font-semibold">Role</th>
-                                <th class="p-3 font-semibold">Email</th>
-                                <th class="p-3 font-semibold">Manager</th>
-                                <th class="p-3 font-semibold">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                           ${allUsers.map(user => {
-                                const manager = user.manager_id ? allUsers.find(u => u.id === user.manager_id) : null;
-                                let actionsHtml = '';
-                                if (userProfile.role === 'Admin' && user.role === 'Manager' && currentPhase === 2) {
-                                    const downwardReviewSubmitted = reviews.some(r => r.review_type === 'downward' && r.subject_id === user.id && r.author_id === userProfile.id);
-                                    if (downwardReviewSubmitted) {
-                                        actionsHtml = `<p class="text-green-600 font-semibold text-sm">✔ Review Submitted</p>`;
-                                    } else {
-                                        actionsHtml = `<button data-page="downward_review" data-user-id="${user.id}" class="action-btn btn-primary px-3 py-1 rounded-md text-sm">Submit Review</button>`;
-                                    }
-                                }
-                                return `
-                                <tr class="border-b hover:bg-gray-50">
-                                    <td class="p-3">${getFullName(user)}</td>
-                                    <td class="p-3">${user.role}</td>
-                                    <td class="p-3">${user.email}</td>
-                                    <td class="p-3">${manager ? getFullName(manager) : 'N/A'}</td>
-                                    <td class="p-3">${actionsHtml}</td>
-                                </tr>
-                                `;
-                           }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-             container.querySelectorAll('.action-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const page = e.currentTarget.dataset.page;
-                    const userId = e.currentTarget.dataset.userId;
-                    window.history.pushState({ userId }, '', '#');
-                    switchPage(page);
-                });
-            });
-        };
-
-        const showReviewModal = (reviewId) => {
-            const review = reviews.find(r => r.id == reviewId);
-            if (!review) return;
-
-            const author = allUsers.find(u => u.id === review.author_id);
-            const subject = allUsers.find(u => u.id === review.subject_id);
-            
-            reviewModalTitle.textContent = `Review Details`;
-            let answersHtml = Object.entries(review.answers).map(([key, value]) => {
-                const question = QUESTIONS[review.review_type]?.find(q => q.id === key);
-                const isScoreQuestion = key === 'performance_score';
-                const canEditScore = userProfile.role === 'Admin' && currentPhase === 3 && review.review_type === 'downward';
-                
-                if (canEditScore && isScoreQuestion) {
-                    const options = QUESTIONS.downward.find(q => q.id === 'performance_score').options;
-                    return `
-                        <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded-r-md">
-                            <label class="font-semibold text-sm text-gray-700">${question.label}</label>
-                            <select data-review-id="${review.id}" class="score-edit-select mt-1 w-full p-2 border border-gray-300 rounded-md bg-white">
-                                ${options.map(opt => `<option value="${opt}" ${opt === value ? 'selected' : ''}>${opt}</option>`).join('')}
-                            </select>
-                            <p class="text-xs text-gray-500 mt-1">Changing this will save immediately.</p>
-                        </div>`;
-                }
-                
-                return `
-                    <div class="mt-3">
-                        <p class="font-semibold text-sm text-gray-600">${question ? question.label : key}</p>
-                        <div class="prose prose-sm max-w-none text-gray-800 p-2 bg-gray-50 rounded">${marked.parse(String(value))}</div>
-                    </div>`;
-            }).join('');
-
-            reviewModalContent.innerHTML = `
-                <div class="space-y-2 mb-4 text-sm">
-                    <p><strong>Author:</strong> ${getFullName(author)} ${review.review_type === 'upward' ? '(Anonymous to Manager)' : ''}</p>
-                    <p><strong>Subject:</strong> ${getFullName(subject)}</p>
-                    <p><strong>Type:</strong> <span class="capitalize">${review.review_type}</span></p>
-                    <p><strong>Date:</strong> ${new Date(review.created_at).toLocaleString()}</p>
-                </div>
-                <hr class="my-4"/>
-                <div class="space-y-4">${answersHtml}</div>
-            `;
-            
-            reviewModalContent.querySelectorAll('.score-edit-select').forEach(sel => {
-                sel.addEventListener('change', async (e) => {
-                    const newScore = e.target.value;
-                    const id = e.target.dataset.reviewId;
-                    await updatePerformanceScore(id, newScore);
-                });
-            });
-
-            reviewModal.classList.remove('hidden');
-        };
-
-        const updatePerformanceScore = async (reviewId, newScore) => {
-             showLoading();
-             try {
-                const { data: reviewToUpdate, error: fetchError } = await supabase
-                    .from('reviews')
-                    .select('answers')
-                    .eq('id', reviewId)
-                    .single();
-
-                if (fetchError) throw fetchError;
-                
-                const newAnswers = { ...reviewToUpdate.answers, performance_score: newScore };
-
-                const { error: updateError } = await supabase
-                    .from('reviews')
-                    .update({ answers: newAnswers })
-                    .eq('id', reviewId);
-                
-                if (updateError) throw updateError;
-                
-                // Refresh data and UI
-                await fetchAllData();
-                // Re-render the modal content with the updated score (but don't close it)
-                showReviewModal(reviewId); 
-                // Re-render the admin dashboard if visible
-                if (document.querySelector('.admin-tab')) {
-                   renderReviewsTable(document.getElementById('admin-tab-content'));
-                }
-                
-             } catch (error) {
-                 alert('Failed to update score: ' + error.message);
-             } finally {
-                 hideLoading();
-             }
-        };
-
-        const renderUpwardFeedbackForAdmin = () => {
-             pageTitle.textContent = 'My Upward Feedback';
-             if (currentPhase !== 4) {
-                 contentArea.innerHTML = `<p>Upward feedback will be visible when reviews are released in Phase 4.</p>`;
-                 return;
-             }
-
-             const upwardReviews = reviews.filter(r => r.review_type === 'upward' && r.subject_id === userProfile.id);
-
-             if (upwardReviews.length === 0) {
-                 contentArea.innerHTML = `<p>No upward feedback was submitted about you.</p>`;
-                 return;
-             }
-             
-             contentArea.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold mb-4">Anonymous Upward Feedback</h2>
-                    <p class="text-sm text-gray-600 mb-6">This is anonymous feedback submitted by your direct reports (Managers). Individual submissions are not identifiable.</p>
-                     <div class="space-y-6">
-                         ${upwardReviews.map((review, index) => `
-                             <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                <h3 class="font-bold text-lg text-gray-700">Feedback Submission #${index + 1}</h3>
-                                ${Object.entries(review.answers).map(([key, value]) => `
-                                    <div class="mt-3">
-                                        <p class="font-semibold text-sm text-gray-600">${QUESTIONS.upward.find(q=>q.id === key)?.label || key}</p>
-                                        <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                    </div>
-                                `).join('')}
-                             </div>
-                         `).join('')}
-                     </div>
-                </div>
-             `;
-        };
-
-        // MANAGER PAGES
-        const renderManagerDashboard = () => {
-            pageTitle.textContent = 'Manager Dashboard';
-            const directReports = allUsers.filter(u => u.manager_id === userProfile.id);
-            const selfReviewSubmitted = reviews.some(r => r.review_type === 'self' && r.author_id === userProfile.id);
-            const adminReviewSubmitted = userProfile.manager_id ? reviews.some(r => r.review_type === 'upward' && r.author_id === userProfile.id && r.subject_id === userProfile.manager_id) : true;
-            
-            let myTasksHtml = '';
-            if (currentPhase === 1) {
-                let tasks = [];
-                tasks.push({
-                    label: 'Submit Self-Review',
-                    done: selfReviewSubmitted,
-                    action: `<button data-page="self_review" class="action-btn btn-primary px-3 py-1 rounded-md text-sm">Submit</button>`
-                });
-
-                if (userProfile.manager_id) {
-                    tasks.push({
-                        label: 'Submit Admin Review',
-                        done: adminReviewSubmitted,
-                        action: `<button data-page="upward_review_admin" class="action-btn btn-primary px-3 py-1 rounded-md text-sm">Submit</button>`
-                    });
-                }
-                
-                myTasksHtml = `
-                    <h3 class="font-semibold mb-2">My Tasks (Phase 1)</h3>
-                    <ul class="space-y-2">
-                        ${tasks.map(task => `
-                            <li class="flex items-center justify-between">
-                                <span>${task.label}</span>
-                                ${task.done ? `<span class="text-green-600 font-semibold text-sm">✔ Submitted</span>` : task.action}
-                            </li>
-                        `).join('')}
-                    </ul>
-                `;
-
-            } else {
-                 myTasksHtml = `<p>Phase ${currentPhase}: ${ {2: 'Submit downward reviews for your team.', 3: 'Collaborate with admin on scores.', 4: 'Reviews are released.'}[currentPhase] }</p>`;
-            }
-
-            contentArea.innerHTML = `
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- My Review Status -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">My Dashboard</h2>
-                        ${myTasksHtml}
-                    </div>
-
-                    <!-- Team Status -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">Team Status</h2>
-                        <ul class="space-y-2">
-                           ${directReports.map(dr => {
-                               const selfReviewDone = reviews.some(r => r.review_type === 'self' && r.author_id === dr.id);
-                               const downwardReviewDone = reviews.some(r => r.review_type === 'downward' && r.subject_id === dr.id && r.author_id === userProfile.id);
-                               let statusHtml = '';
-                               if (currentPhase >= 1) {
-                                   statusHtml += `<span class="text-sm ${selfReviewDone ? 'text-green-600' : 'text-gray-500'}">Self-Review: ${selfReviewDone ? 'Done' : 'Pending'}</span>`;
-                               }
-                               if (currentPhase >= 2) {
-                                    statusHtml += ` | <span class="text-sm ${downwardReviewDone ? 'text-green-600' : 'text-gray-500'}">Downward Review: ${downwardReviewDone ? 'Done' : 'Pending'}</span>`;
-                               }
-                               return `<li class="flex justify-between items-center"><span>${getFullName(dr)}</span> <span>${statusHtml}</span></li>`;
-                           }).join('')}
-                        </ul>
-                         <button data-page="my_team" class="action-btn btn-secondary px-4 py-2 rounded-md mt-4">View My Team</button>
-                    </div>
-                 </div>
-            `;
-            addContentActionListeners();
-        };
-
-        const renderMyTeam = () => {
-            pageTitle.textContent = 'My Team';
-            const directReports = allUsers.filter(u => u.manager_id === userProfile.id);
-
-            const getReportCard = (report) => {
-                const downwardReviewSubmitted = reviews.some(r => r.review_type === 'downward' && r.subject_id === report.id && r.author_id === userProfile.id);
-                let buttonHtml = '';
-                
-                if (currentPhase === 2) {
-                    if (downwardReviewSubmitted) {
-                        buttonHtml = `<p class="text-green-600 font-semibold">✔ Review Submitted</p>`;
-                    } else {
-                        buttonHtml = `<button data-page="downward_review" data-user-id="${report.id}" class="action-btn btn-primary px-4 py-2 rounded-md">Submit Downward Review</button>`;
-                    }
-                } else if (currentPhase > 2) {
-                     buttonHtml = downwardReviewSubmitted ? `<p class="text-green-600 font-semibold">✔ Review Submitted</p>` : `<p class="text-gray-500">Review not submitted.</p>`;
-                } else {
-                     buttonHtml = `<p class="text-gray-500">Downward reviews start in Phase 2</p>`;
-                }
-
-                // In phase 3/4, show the submitted review
-                if (downwardReviewSubmitted && currentPhase >= 3) {
-                     const review = reviews.find(r => r.review_type === 'downward' && r.subject_id === report.id);
-                     const selfReview = reviews.find(r => r.review_type === 'self' && r.author_id === report.id);
-
-                     let collaborationHtml = '';
-                     if(currentPhase === 3) {
-                         collaborationHtml = `
-                            <div class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded-r-lg">
-                                <h4 class="font-bold">Collaboration & Scoring</h4>
-                                <p class="text-sm font-semibold mt-2">${QUESTIONS.downward.find(q => q.id === 'performance_score').label}</p>
-                                <p class="text-lg font-medium text-blue-700">${review.answers.performance_score}</p>
-                                <p class="text-xs text-gray-500 mt-2">Admins can see and adjust scores in this phase.</p>
-                            </div>
-                         `;
-                     }
-
-                     buttonHtml += `
-                        <div class="mt-4 space-y-4">
-                             ${collaborationHtml}
-                             ${selfReview ? `
-                                <div class="p-4 bg-gray-50 rounded-lg">
-                                    <h4 class="font-bold">${getFullName(report)}'s Self-Review</h4>
-                                     ${Object.entries(selfReview.answers).map(([key, value]) => `
-                                        <div class="mt-2">
-                                            <p class="font-semibold text-sm text-gray-600">${QUESTIONS.self.find(q=>q.id === key)?.label || key}</p>
-                                            <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                        </div>
-                                    `).join('')}
-                                </div>` 
-                            : '<p class="text-gray-500">Self-review not submitted.</p>'}
-                        </div>
-                     `;
-                }
-
-                return `
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-bold">${getFullName(report)}</h3>
-                        <p class="text-sm text-gray-500">${report.role}</p>
-                        <div class="mt-4">${buttonHtml}</div>
-                    </div>
-                `;
-            };
-
-            contentArea.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    ${directReports.length > 0 ? directReports.map(getReportCard).join('') : '<p>You have no direct reports.</p>'}
-                </div>
-            `;
-            addContentActionListeners();
-        };
-
-        const renderUpwardFeedbackForManager = () => {
-             pageTitle.textContent = 'My Upward Feedback';
-             if (currentPhase !== 4) {
-                 contentArea.innerHTML = `<p>Upward feedback will be visible when reviews are released in Phase 4.</p>`;
-                 return;
-             }
-
-             const upwardReviews = reviews.filter(r => r.review_type === 'upward' && r.subject_id === userProfile.id);
-
-             if (upwardReviews.length === 0) {
-                 contentArea.innerHTML = `<p>No upward feedback was submitted.</p>`;
-                 return;
-             }
-             
-             contentArea.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold mb-4">Anonymous Upward Feedback</h2>
-                    <p class="text-sm text-gray-600 mb-6">This is anonymous feedback submitted by your direct reports. Individual submissions are not identifiable.</p>
-                     <div class="space-y-6">
-                         ${upwardReviews.map((review, index) => `
-                             <div class="p-4 border border-gray-200 rounded-lg bg-gray-50">
-                                <h3 class="font-bold text-lg text-gray-700">Feedback Submission #${index + 1}</h3>
-                                ${Object.entries(review.answers).map(([key, value]) => `
-                                    <div class="mt-3">
-                                        <p class="font-semibold text-sm text-gray-600">${QUESTIONS.upward.find(q=>q.id === key)?.label || key}</p>
-                                        <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                    </div>
-                                `).join('')}
-                             </div>
-                         `).join('')}
-                     </div>
-                </div>
-             `;
-        };
-        
-        const renderFinalReviewForManager = () => {
-             pageTitle.textContent = 'My Performance Review';
-             if (currentPhase !== 4) {
-                 contentArea.innerHTML = `<p>Your final review will be visible in Phase 4.</p>`;
-                 return;
-             }
-            
-             const selfReview = reviews.find(r => r.author_id === userProfile.id && r.review_type === 'self');
-             // Downward review for a manager comes from their manager (an Admin)
-             const downwardReview = reviews.find(r => r.subject_id === userProfile.id && r.review_type === 'downward');
-            
-             if (!downwardReview) {
-                  contentArea.innerHTML = `<p>Your performance review has not been submitted by your manager yet.</p>`;
-                  return;
-             }
-
-             const score = downwardReview.answers.performance_score;
-
-             contentArea.innerHTML = `
-                <div class="space-y-6">
-                    <!-- Final Score -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-2">Overall Performance Score</h2>
-                        <p class="text-3xl font-bold text-blue-600">${score}</p>
-                    </div>
-
-                    <!-- Downward Review from Admin -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">Admin's Review</h2>
-                        ${Object.entries(downwardReview.answers).map(([key, value]) => {
-                             const question = QUESTIONS.downward.find(q => q.id === key);
-                             // Hide sensitive fields from manager's view
-                             if (!question || ['attrition_risk', 'promotion_ready', 'new_title', 'compensation_comments', 'performance_score'].includes(key)) return '';
-                             return `
-                                <div class="mt-4">
-                                    <p class="font-semibold text-sm text-gray-600">${question.label}</p>
-                                    <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                </div>
-                             `;
-                        }).join('')}
-                    </div>
-
-                    <!-- Self Review -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">My Self-Review</h2>
-                         ${selfReview ? Object.entries(selfReview.answers).map(([key, value]) => `
-                                <div class="mt-4">
-                                    <p class="font-semibold text-sm text-gray-600">${QUESTIONS.self.find(q=>q.id === key)?.label || key}</p>
-                                    <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                </div>
-                            `).join('') 
-                         : '<p>You did not submit a self-review.</p>'}
-                    </div>
-                </div>
-             `;
-        };
-
-        // AGENT PAGES
-        const renderAgentDashboard = () => {
-             pageTitle.textContent = 'My Dashboard';
-             const selfReviewSubmitted = reviews.some(r => r.review_type === 'self' && r.author_id === userProfile.id);
-             const upwardReviewSubmitted = reviews.some(r => r.review_type === 'upward' && r.author_id === userProfile.id && r.subject_id === userProfile.manager_id);
-
-             let phaseText = '';
-             let actionsHtml = '';
-             switch(currentPhase) {
-                case 1:
-                    phaseText = 'Please complete your self-review and the upward review for your manager.';
-                    actionsHtml = `
-                        <div class="flex space-x-4 mt-4">
-                            ${selfReviewSubmitted 
-                                ? `<p class="text-green-600 font-semibold flex items-center">✔ Self-Review Submitted</p>`
-                                : `<button data-page="self_review" class="action-btn btn-primary px-4 py-2 rounded-md">Submit Self-Review</button>`
-                            }
-                            ${upwardReviewSubmitted
-                                ? `<p class="text-green-600 font-semibold flex items-center">✔ Manager Review Submitted</p>`
-                                : `<button data-page="upward_review" class="action-btn btn-primary px-4 py-2 rounded-md">Submit Manager Review</button>`
-                            }
-                        </div>
-                    `;
-                    break;
-                case 2:
-                    phaseText = 'Your manager is currently completing their downward review.';
-                    actionsHtml = `<p class="text-gray-600 mt-4">No actions required from you at this time.</p>`;
-                    break;
-                case 3:
-                    phaseText = 'Scores are being finalized by management.';
-                    actionsHtml = `<p class="text-gray-600 mt-4">No actions required from you at this time.</p>`;
-                    break;
-                case 4:
-                    phaseText = 'Your performance review has been released.';
-                    actionsHtml = `<button data-page="final_review" class="action-btn btn-primary px-4 py-2 rounded-md mt-4">View My Performance Review</button>`;
-                    break;
-             }
-             
-             contentArea.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md">
-                    <h2 class="text-xl font-semibold mb-4">Welcome, ${userProfile.first_name}</h2>
-                    <p class="mb-4">${phaseText}</p>
-                    ${actionsHtml}
-                </div>
-             `;
-             addContentActionListeners();
-        };
-
-        const renderFinalReviewForAgent = () => {
-             pageTitle.textContent = 'My Performance Review';
-             if (currentPhase !== 4) {
-                 contentArea.innerHTML = `<p>Your final review will be visible in Phase 4.</p>`;
-                 return;
-             }
-            
-             const selfReview = reviews.find(r => r.author_id === userProfile.id && r.review_type === 'self');
-             const downwardReview = reviews.find(r => r.subject_id === userProfile.id && r.review_type === 'downward');
-            
-             if (!downwardReview) {
-                  contentArea.innerHTML = `<p>Your manager has not submitted your performance review yet.</p>`;
-                  return;
-             }
-
-             const score = downwardReview.answers.performance_score;
-
-             contentArea.innerHTML = `
-                <div class="space-y-6">
-                    <!-- Final Score -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-2">Overall Performance Score</h2>
-                        <p class="text-3xl font-bold text-blue-600">${score}</p>
-                    </div>
-
-                    <!-- Downward Review -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">Manager's Review</h2>
-                        ${Object.entries(downwardReview.answers).map(([key, value]) => {
-                             const question = QUESTIONS.downward.find(q => q.id === key);
-                             if (!question || ['attrition_risk', 'promotion_ready', 'new_title', 'compensation_comments', 'performance_score'].includes(key)) return ''; // Hide sensitive fields
-                             return `
-                                <div class="mt-4">
-                                    <p class="font-semibold text-sm text-gray-600">${question.label}</p>
-                                    <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                </div>
-                             `;
-                        }).join('')}
-                    </div>
-
-                    <!-- Self Review -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">My Self-Review</h2>
-                         ${selfReview ? Object.entries(selfReview.answers).map(([key, value]) => `
-                                <div class="mt-4">
-                                    <p class="font-semibold text-sm text-gray-600">${QUESTIONS.self.find(q=>q.id === key)?.label || key}</p>
-                                    <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                </div>
-                            `).join('') 
-                         : '<p>You did not submit a self-review.</p>'}
-                    </div>
-                </div>
-             `;
-
-        };
-
-        // SHARED PAGES (Self, Upward, Downward Forms)
-        const renderSelfReview = () => {
-            renderReviewForm('self', 'My Self-Review', userProfile.id);
-        };
-
-        const renderUpwardReview = () => {
-             if (!userProfile.manager_id) {
-                 contentArea.innerHTML = `<p>You do not have a manager assigned to review.</p>`;
-                 return;
-             }
-             renderReviewForm('upward', "Review of Your Manager", userProfile.manager_id);
-        };
-        
-        const renderUpwardReviewAdmin = () => {
-             if (!userProfile.manager_id) {
-                 contentArea.innerHTML = `<p>You do not have a manager/admin assigned to review.</p>`;
-                 return;
-             }
-             const admin = allUsers.find(u => u.id === userProfile.manager_id);
-             renderReviewForm('upward', `Review of ${getFullName(admin)}`, userProfile.manager_id);
-        };
-
-        const renderDownwardReview = (subjectId) => {
-             const subject = allUsers.find(u => u.id === subjectId);
-             if (!subject) {
-                 contentArea.innerHTML = `<p>User not found. Please go back to your team page.</p>`;
-                 return;
-             }
-             window.history.pushState({ userId: subjectId }, '', '#');
-             renderReviewForm('downward', `Review for ${getFullName(subject)}`, subject.id);
-        };
-        
-        const renderReviewForm = (type, title, subjectId) => {
-            pageTitle.textContent = title;
-            const existingReview = reviews.find(r => r.review_type === type && r.author_id === userProfile.id && r.subject_id === subjectId);
-            
-            if (existingReview) {
-                 contentArea.innerHTML = `
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h2 class="text-xl font-semibold mb-4">Review Submitted</h2>
-                        <p class="text-green-600 mb-4">You have already submitted this review. It cannot be edited.</p>
-                        <div class="space-y-4">
-                            ${Object.entries(existingReview.answers).map(([key, value]) => {
-                                const question = QUESTIONS[type]?.find(q => q.id === key);
-                                return `<div>
-                                    <p class="font-semibold text-sm text-gray-600">${question ? question.label : key}</p>
-                                    <div class="prose prose-sm max-w-none text-gray-800">${marked.parse(String(value))}</div>
-                                </div>`;
-                            }).join('')}
-                        </div>
-                    </div>
-                 `;
-                 return;
-            }
-
-            // Check phase restrictions
-            let isLockedByPhase = false;
-            if (type === 'self' || type === 'upward') isLockedByPhase = currentPhase !== 1;
-            if (type === 'downward') isLockedByPhase = currentPhase !== 2;
-
-            if (isLockedByPhase) {
-                contentArea.innerHTML = `<div class="bg-white p-6 rounded-lg shadow-md"><p>This review can only be submitted during its designated phase. The current phase is Phase ${currentPhase}.</p></div>`;
-                return;
-            }
-
-            const questionsHtml = QUESTIONS[type].map(q => {
-                switch(q.type) {
-                    case 'textarea':
-                        return `
-                            <div class="mb-6">
-                                <label for="${q.id}" class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                <textarea id="${q.id}" name="${q.id}" rows="5" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                            </div>
-                        `;
-                    case 'select':
-                         return `
-                            <div class="mb-6">
-                                <label for="${q.id}" class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                <select id="${q.id}" name="${q.id}" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                                    ${q.options.map(o => `<option value="${o}">${o}</option>`).join('')}
-                                </select>
-                            </div>
-                         `;
-                    case 'text':
-                         return `
-                            <div class="mb-6">
-                                <label for="${q.id}" class="block text-sm font-medium text-gray-700 mb-1">${q.label}</label>
-                                <input type="text" id="${q.id}" name="${q.id}" class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            </div>
-                         `;
-                }
-            }).join('');
-
-            contentArea.innerHTML = `
-                <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-                    <form id="review-form" data-type="${type}" data-subject-id="${subjectId}">
-                        ${questionsHtml}
-                        <div class="flex justify-end">
-                            <button type="submit" class="btn-primary font-semibold py-2 px-6 rounded-md">Submit Review</button>
-                        </div>
-                    </form>
-                </div>
-            `;
-            
-            document.getElementById('review-form').addEventListener('submit', handleReviewSubmit);
-        };
-        
-        const handleReviewSubmit = async (e) => {
-            e.preventDefault();
-            try {
-                await showConfirmation('Are you sure you want to submit? Once submitted, this review cannot be changed.');
-
-                showLoading();
-                const form = e.target;
-                const formData = new FormData(form);
-                const answers = {};
-                for (const [key, value] of formData.entries()) {
-                    answers[key] = value;
-                }
-
-                const reviewData = {
-                    cycle_id: currentCycleId,
-                    author_id: userProfile.id,
-                    subject_id: form.dataset.subjectId,
-                    review_type: form.dataset.type,
-                    answers: answers
-                };
-
-                const { error } = await supabase.from('reviews').insert([reviewData]);
-
-                if (error) {
-                    alert('Error submitting review: ' + error.message);
-                    hideLoading();
-                } else {
-                    alert('Review submitted successfully!');
-                    await initializeApp();
-                    // After submit, redirect to a relevant page
-                    if (userProfile.role === 'Manager') switchPage('manager_dashboard');
-                    else if (userProfile.role === 'Agent') switchPage('agent_dashboard');
-                    else renderHomePage();
-                }
-            } catch {
-                // User canceled, do nothing
-            }
-        };
-
-        const addContentActionListeners = () => {
-            contentArea.querySelectorAll('.action-btn').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const page = e.currentTarget.dataset.page;
-                    const userId = e.currentTarget.dataset.userId;
-                    if (userId) {
-                        window.history.pushState({ userId }, '', '#'); // Store userId for form renderer
-                    }
-                    switchPage(page);
-                });
-            });
-        };
-        
-        // --- EVENT LISTENERS ---
-        loginForm.addEventListener('submit', handleLogin);
-        logoutButton.addEventListener('click', handleLogout);
-        reviewModalClose.addEventListener('click', () => reviewModal.classList.add('hidden'));
-
-        // --- APP START ---
-        document.addEventListener('DOMContentLoaded', checkUserSession);
-
-    </script>
-</body>
-</html>
+        {reviewsToComplete.length > 0 && (
+          <Card>
+            <h3 className="text-xl font-bold mb-4">Reviews to Complete</h3>
+            <ul className="divide-y divide-gray-200">
+              {reviewsToComplete.map((review, i) => (
+                <li key={review.id || `${review.reviewee_id}-${i}`} className="flex items-center justify-between py-4">
+                  <span>{review.review_type === 'self' ? 'Self-Review' : `Review for ${allUsers.find(u => u.id === review.reviewee_id)?.email}`}</span>
+                  {review.is_submitted ? <span className="text-green-600 font-medium flex items-center gap-1"><CheckCircle className="w-4 h-4"/> Submitted</span> : <Button onClick={() => handleViewReview(review)} className="bg-blue-600 hover:bg-blue-700"><Edit className="w-4 h-4"/> Start/Edit</Button>}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+        {receivedReviews.length > 0 && (
+          <Card>
+            <h3 className="text-xl font-bold mb-4">Your Completed Reviews (Phase 4)</h3>
+            <ul className="divide-y divide-gray-200">
+              {receivedReviews.map(review => (
+                <li key={review.id} className="flex items-center justify-between py-4">
+                  <span>{getReviewTitle(review)}</span>
+                  <Button onClick={() => handleViewReview(review)} className="bg-purple-600 hover:bg-purple-700"><Eye className="w-4 h-4"/> View</Button>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </div>
+    );
+};
+
+const AdminDashboard = ({ phase, handlePhaseChange, setView, handleExportCSV, allUsers, filterManagerId, setFilterManagerId, reviews }) => {
+    const managerTeams = [{ value: 'all', label: 'All Teams' }, ...allUsers.filter(u => u.role === 'manager').map(u => ({ value: u.id, label: u.email }))];
+
+    const getCompletionStatus = (userToCheck, reviewType, phaseNum) => {
+        const completed = reviews.some(r => r.reviewer_id === userToCheck.id && r.review_type.includes(reviewType) && r.phase === phaseNum && r.is_submitted);
+        return completed ? <span className="text-green-600">Completed</span> : <span className="text-gray-500">Pending</span>;
+    };
+    
+    const getFinalScore = (userUid) => {
+        const downwardReviews = reviews.filter(r => r.reviewee_id === userUid && r.review_type.startsWith('downward') && r.is_submitted && r.score);
+        if (downwardReviews.length === 0) return 'N/A';
+        const avgScore = downwardReviews.reduce((sum, r) => sum + r.score, 0) / downwardReviews.length;
+        return scoreLabels[Math.round(avgScore)] || 'N/A';
+    };
+
+    const filteredUsers = allUsers.filter(u => u.role !== 'admin' && (filterManagerId === 'all' || u.manager_id === filterManagerId));
+
+    return (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-gray-800">Admin Dashboard</h2>
+        <div className="flex flex-wrap justify-between items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button onClick={() => handlePhaseChange('prev')} disabled={phase === 1} className="bg-gray-500 hover:bg-gray-600 disabled:opacity-50"><ChevronLeft className="w-5 h-5"/></Button>
+            <span className="text-lg font-medium">Phase {phase}</span>
+            <Button onClick={() => handlePhaseChange('next')} disabled={phase === 4} className="bg-gray-500 hover:bg-gray-600 disabled:opacity-50"><ChevronRight className="w-5 h-5"/></Button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => setView('analytics')} className="bg-purple-600 hover:bg-purple-700"><LayoutDashboard className="w-5 h-5"/> Analytics</Button>
+            {phase === 3 && <Button onClick={() => setView('collaboration')} className="bg-teal-600 hover:bg-teal-700"><Handshake className="w-5 h-5"/> Collaboration</Button>}
+            <Button onClick={handleExportCSV} className="bg-indigo-600 hover:bg-indigo-700"><Download className="w-5 h-5"/> Download Report</Button>
+          </div>
+        </div>
+        <Card>
+          <h3 className="text-xl font-bold mb-4">Review Completion Status (Phase {phase})</h3>
+          <div className="mb-4">
+            <label htmlFor="manager-filter" className="font-medium mr-2">Filter by Manager:</label>
+            <Select id="manager-filter" value={filterManagerId} onChange={(e) => setFilterManagerId(e.target.value)} options={managerTeams} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50"><tr>
+                {['User', 'Role', 'Manager', 'Self', 'Downward', 'Upward'].map(h => <th key={h} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{h}</th>)}
+              </tr></thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredUsers.map(u => (
+                  <tr key={u.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{getRoleDisplayName(u.role)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{allUsers.find(m => m.id === u.manager_id)?.email || 'N/A'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{phase === 1 ? getCompletionStatus(u, 'self', 1) : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{phase === 2 ? getCompletionStatus(u, 'downward', 2) : '-'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{phase === 1 ? getCompletionStatus(u, 'upward', 1) : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+         {phase === 4 && (
+          <Card>
+            <h3 className="text-xl font-bold mb-4">Final Performance Scores</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50"><tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Final Score</th>
+                </tr></thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                    {allUsers.filter(u => u.role !== 'admin').map(u => (
+                        <tr key={u.id}>
+                            <td className="px-6 py-4 whitespace-nowrap">{u.email}</td>
+                            <td className="px-6 py-4 whitespace-nowrap">{getRoleDisplayName(u.role)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap font-semibold">{getFinalScore(u.id)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        )}
+      </div>
+    );
+};
+const CollaborationDashboard = ({ reviews, allUsers, setView, handleEditScore, phase }) => {
+    if (phase !== 3) return null;
+    const downwardReviews = reviews.filter(r => r.review_type.startsWith('downward') && r.is_submitted);
+
+    return (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-gray-800">Collaboration Dashboard</h2>
+        <Button onClick={() => setView('dashboard')} className="self-start bg-gray-600 hover:bg-gray-700">Back to Admin Dashboard</Button>
+        <Card>
+          <h3 className="text-xl font-bold mb-4">Performance Scores</h3>
+          <p className="text-gray-500 mb-6">Review and adjust scores submitted by Managers and QA Coaches.</p>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50"><tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reviewer</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reviewee</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+              </tr></thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {downwardReviews.map(review => (
+                  <tr key={review.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">{allUsers.find(u => u.id === review.reviewer_id)?.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{allUsers.find(u => u.id === review.reviewee_id)?.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap font-medium">{scoreLabels[review.score] || 'Not Scored'}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Button onClick={() => handleEditScore(review)} className="bg-blue-600 hover:bg-blue-700 text-sm"><Edit className="w-4 h-4"/> Edit Score</Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+};
+
+const AnalyticsDashboard = ({ reviews, allUsers, setView }) => {
+    const allDownwardReviews = reviews.filter(r => r.review_type.startsWith('downward') && r.is_submitted && r.score);
+    const scoreData = Object.entries(scoreLabels).map(([key, label], index) => ({
+      name: label,
+      value: allDownwardReviews.filter(r => r.score === parseInt(key)).length,
+    }));
+
+    const barChartData = allUsers.filter(u => u.role === 'manager').map(manager => {
+        const teamReviews = allDownwardReviews.filter(r => allUsers.find(u => u.id === r.reviewee_id)?.manager_id === manager.id);
+        const data = { name: manager.email.split('@')[0] };
+        Object.keys(scoreLabels).forEach(scoreKey => {
+            data[scoreLabels[scoreKey]] = teamReviews.filter(r => r.score === parseInt(scoreKey)).length;
+        });
+        return data;
+    });
+
+    return (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-gray-800">Analytics Dashboard</h2>
+        <Button onClick={() => setView('dashboard')} className="self-start bg-gray-600 hover:bg-gray-700">Back to Admin Dashboard</Button>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <h3 className="text-xl font-bold mb-4">Overall Score Distribution</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie data={scoreData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
+                    {scoreData.map((entry, index) => <Cell key={`cell-${index}`} fill={scoreColors[index % scoreColors.length]} />)}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+            <Card>
+              <h3 className="text-xl font-bold mb-4">Scores by Team</h3>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={barChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  {Object.values(scoreLabels).map((label, index) => (
+                      <Bar key={label} dataKey={label} stackId="a" fill={scoreColors[index % scoreColors.length]} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+        </div>
+      </div>
+    );
+};
+
+const ReviewForm = ({ currentReview, allUsers, phase, user, setView, handleSubmitReview, formData, setFormData }) => {
+    const isSubmitted = currentReview?.is_submitted;
+    const isPhaseCorrect = (
+      (currentReview.review_type === 'self' && phase === 1) ||
+      (currentReview.review_type.startsWith('downward') && phase === 2) ||
+      (currentReview.review_type.startsWith('upward') && phase === 1)
+    );
+    const canEdit = !isSubmitted && isPhaseCorrect;
+    const isViewingShared = phase === 4 && user.id === currentReview.reviewee_id;
+    
+    const allQuestions = questionSets[currentReview.review_type];
+    if (!allQuestions) return <p>Question set not found for this review type.</p>;
+
+    const sensitiveQuestionIds = ['q7', 'q8', 'q9', 'q10'];
+    const questions = isViewingShared
+        ? allQuestions.filter(q => !sensitiveQuestionIds.includes(q.id))
+        : allQuestions;
+
+    const handleFormChange = (qId, value) => setFormData(prev => ({ ...prev, [qId]: value }));
+
+    return (
+      <div className="flex flex-col gap-6">
+        <h2 className="text-3xl font-bold text-gray-800 capitalize">{currentReview.review_type.replace('-', ' ')} Review</h2>
+        <Card>
+          {isViewingShared && currentReview.score && (
+            <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 rounded-lg mb-6 shadow">
+                <p className="font-bold text-gray-700">How would you rate your employee's overall performance score?</p>
+                <p className="text-2xl font-semibold mt-1">{scoreLabels[currentReview.score]}</p>
+            </div>
+          )}
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-xl font-bold">Review for: <span className="text-blue-600">{allUsers.find(u => u.id === currentReview.reviewee_id)?.email}</span></h3>
+            {(isSubmitted || isViewingShared) && <span className="flex items-center text-green-600 font-medium"><Lock className="w-4 h-4 mr-1"/> Submitted</span>}
+          </div>
+          <p className="text-gray-500 mb-6">Reviewer: {currentReview.is_anonymous ? 'Anonymous' : allUsers.find(u => u.id === currentReview.reviewer_id)?.email}</p>
+          <div className="flex flex-col gap-6">
+            {questions.map(q => (
+              <div key={q.id}>
+                <label className="block text-lg font-medium text-gray-700 mb-2">{q.text}</label>
+                {q.type === 'textarea' && <textarea rows="4" value={formData[q.id] || ''} onChange={(e) => handleFormChange(q.id, e.target.value)} disabled={!canEdit && !isViewingShared} className="w-full p-2 border rounded-lg disabled:bg-gray-100" />}
+                {q.type === 'score' && <Select value={formData[q.id] || ''} onChange={(e) => handleFormChange(q.id, e.target.value)} disabled={!canEdit && !isViewingShared} options={['', ...q.options]} className="disabled:bg-gray-100" />}
+                {q.type === 'boolean' && ['Yes', 'No'].map(val => (
+                  <label key={val} className="inline-flex items-center mr-4"><input type="radio" name={q.id} value={val} checked={formData[q.id] === val} onChange={(e) => handleFormChange(q.id, e.target.value)} disabled={!canEdit && !isViewingShared} className="mr-2"/>{val}</label>
+                ))}
+              </div>
+            ))}
+          </div>
+          <div className="flex justify-end mt-6 gap-4">
+            <Button onClick={() => setView('dashboard')} className="bg-gray-500 hover:bg-gray-600">Back</Button>
+            {canEdit && <Button onClick={handleSubmitReview} className="bg-green-600 hover:bg-green-700"><Send className="w-4 h-4"/> Submit Review</Button>}
+          </div>
+        </Card>
+      </div>
+    );
+};
+
+export default App;
 
