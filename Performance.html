@@ -98,7 +98,7 @@
         const renderToast = (message, type = 'success') => {
             const toast = document.createElement('div');
             const bgColor = type === 'success' ? 'bg-green-500' : 'bg-red-500';
-            toast.className = `fixed top-5 right-5 ${bgColor} text-white py-2 px-4 rounded-lg shadow-xl transform translate-x-full animate-slide-in-out`;
+            toast.className = `fixed top-5 right-5 ${bgColor} text-white py-2 px-4 rounded-lg shadow-xl transform translate-x-full animate-slide-in-out z-[60]`; // Increased z-index
             toast.innerHTML = `<style>
                 @keyframes slide-in-out {
                     0% { transform: translateX(100%); opacity: 0; }
@@ -137,17 +137,29 @@
                 const cancelBtn = document.getElementById(`${modalId}-cancel`);
                 
                 const closeModal = (result) => {
-                    const value = contentHTML ? modalElement.querySelector('select, input').value : result;
+                    let resolvedValue;
+                    if (result === false) {
+                        resolvedValue = false; // User cancelled
+                    } else if (contentHTML) {
+                        // User confirmed, and there was content
+                        const inputElement = modalElement.querySelector('select, input, textarea');
+                        resolvedValue = inputElement ? inputElement.value : true; // Get value, or default to true
+                    } else {
+                        // User confirmed, no content
+                        resolvedValue = true;
+                    }
+                   
                     modalElement.remove();
-                    resolve(value);
+                    window.removeEventListener('keydown', handleKeyDown); // Clean up listener
+                    resolve(resolvedValue);
                 };
 
-                confirmBtn.onclick = () => closeModal(true);
-                cancelBtn.onclick = () => closeModal(false);
+                confirmBtn.onclick = () => closeModal(true); // Pass true for confirm
+                cancelBtn.onclick = () => closeModal(false); // Pass false for cancel
+
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         closeModal(false);
-                        window.removeEventListener('keydown', handleKeyDown);
                     }
                 };
                 window.addEventListener('keydown', handleKeyDown);
@@ -269,23 +281,23 @@
             return `
                 <h2 class="text-2xl font-semibold text-slate-900 mb-4">Admin Dashboard</h2>
                  <div id="admin-tabs">
-                    <div class="border-b border-slate-200">
-                        <nav class="-mb-px flex space-x-8" aria-label="Tabs">
-                            <button data-tab="phase" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-sky-500 text-sky-600">Phase Control</button>
-                            <button data-tab="status" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">${AppState.currentPhase === 3 ? 'Score Collaboration' : 'Review Status'}</button>
-                            <button data-tab="scores" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Scores Overview</button>
-                            <button data-tab="analytics" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Analytics</button>
-                            <button data-tab="export" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Data Export</button>
-                        </nav>
-                    </div>
-                    <div class="py-6">
-                        <div id="admin-tab-content-phase">${renderAdminPhaseControl()}</div>
-                        <div id="admin-tab-content-status" class="hidden">${AppState.currentPhase === 3 ? renderAdminScoreCollaboration() : renderAdminStatusView()}</div>
-                        <div id="admin-tab-content-scores" class="hidden">${renderAdminScoresOverview()}</div>
-                        <div id="admin-tab-content-analytics" class="hidden">${renderAdminAnalytics()}</div>
-                        <div id="admin-tab-content-export" class="hidden">${renderAdminExport()}</div>
-                    </div>
-                </div>
+                     <div class="border-b border-slate-200">
+                         <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                             <button data-tab="phase" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-sky-500 text-sky-600">Phase Control</button>
+                             <button data-tab="status" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">${AppState.currentPhase === 3 ? 'Score Collaboration' : 'Review Status'}</button>
+                             <button data-tab="scores" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Scores Overview</button>
+                             <button data-tab="analytics" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Analytics</button>
+                             <button data-tab="export" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Data Export</button>
+                         </nav>
+                     </div>
+                     <div class="py-6">
+                         <div id="admin-tab-content-phase">${renderAdminPhaseControl()}</div>
+                         <div id="admin-tab-content-status" class="hidden">${AppState.currentPhase === 3 ? renderAdminScoreCollaboration() : renderAdminStatusView()}</div>
+                         <div id="admin-tab-content-scores" class="hidden">${renderAdminScoresOverview()}</div>
+                         <div id="admin-tab-content-analytics" class="hidden">${renderAdminAnalytics()}</div>
+                         <div id="admin-tab-content-export" class="hidden">${renderAdminExport()}</div>
+                     </div>
+                 </div>
             `;
         };
         
@@ -295,20 +307,20 @@
                 <div class="bg-white p-6 rounded-lg shadow">
                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Manage Review Phase</h3>
                      <div class="flex items-center space-x-4">
-                        ${[1, 2, 3, 4].map(p => `
-                            <div class="flex items-center">
-                                <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold ${AppState.currentPhase >= p ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-500'}">
-                                    ${p}
-                                </div>
-                                ${ p < 4 ? `<div class="w-16 h-1 ${AppState.currentPhase > p ? 'bg-sky-500' : 'bg-slate-200'}"></div>` : ''}
-                            </div>
-                        `).join('')}
+                         ${[1, 2, 3, 4].map(p => `
+                             <div class="flex items-center">
+                                 <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold ${AppState.currentPhase >= p ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-500'}">
+                                     ${p}
+                                 </div>
+                                 ${ p < 4 ? `<div class="w-16 h-1 ${AppState.currentPhase > p ? 'bg-sky-500' : 'bg-slate-200'}"></div>` : ''}
+                             </div>
+                         `).join('')}
                      </div>
                      <p class="mt-4 text-sm text-slate-600">Current Phase: <strong>${phaseNames[AppState.currentPhase]}</strong></p>
                      <div class="mt-6">
                          ${AppState.currentPhase < 4 
-                            ? `<button id="next-phase-btn" data-next-phase="${AppState.currentPhase + 1}" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition">Move to Phase ${AppState.currentPhase + 1}</button>`
-                            : `<p class="font-semibold text-green-600">Review cycle is complete.</p>`
+                             ? `<button id="next-phase-btn" data-next-phase="${AppState.currentPhase + 1}" class="bg-sky-600 text-white px-4 py-2 rounded-md hover:bg-sky-700 transition">Move to Phase ${AppState.currentPhase + 1}</button>`
+                             : `<p class="font-semibold text-green-600">Review cycle is complete.</p>`
                          }
                      </div>
                 </div>
@@ -316,57 +328,57 @@
         };
 
         const renderAdminStatusView = () => {
-            const managers = AppState.users.filter(u => u.role === 'manager');
+            const managers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
             return `
                  <div class="bg-white p-6 rounded-lg shadow">
                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Review Completion Status (Phase ${AppState.currentPhase})</h3>
                      <div class="mb-4">
-                        <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
-                        <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                            <option value="all">All Managers</option>
-                            ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
-                        </select>
+                         <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
+                         <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                             <option value="all">All Managers</option>
+                             ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
+                         </select>
                      </div>
                      <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200" id="status-table">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Review Tasks & Status</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-slate-200"></tbody>
-                        </table>
+                         <table class="min-w-full divide-y divide-slate-200" id="status-table">
+                             <thead class="bg-slate-50">
+                                 <tr>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Review Tasks & Status</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="bg-white divide-y divide-slate-200"></tbody>
+                         </table>
                      </div>
                  </div>
             `;
         };
         
         const renderAdminScoreCollaboration = () => {
-            const managers = AppState.users.filter(u => u.role === 'manager');
+            const managers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
             return `
                  <div class="bg-white p-6 rounded-lg shadow">
                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Score Collaboration & Adjustment</h3>
                      <div class="mb-4">
-                        <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
-                        <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                            <option value="all">All Managers</option>
-                            ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
-                        </select>
+                         <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
+                         <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                             <option value="all">All Managers</option>
+                             ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
+                         </select>
                      </div>
                      <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200" id="score-table">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Scored By</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Score</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-slate-200"></tbody>
-                        </table>
+                         <table class="min-w-full divide-y divide-slate-200" id="score-table">
+                             <thead class="bg-slate-50">
+                                 <tr>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Scored By</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Current Score</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="bg-white divide-y divide-slate-200"></tbody>
+                         </table>
                      </div>
                  </div>
             `;
@@ -378,73 +390,73 @@
                 <div class="bg-white p-6 rounded-lg shadow">
                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">All Performance Scores</h3>
                      <div class="mb-4">
-                        <label for="role-filter" class="block text-sm font-medium text-slate-700">Filter by Role</label>
-                        <select id="role-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                            <option value="all">All Roles</option>
-                            ${roles.map(r => `<option value="${r}" class="capitalize">${r.replace('_', ' ')}</option>`).join('')}
-                        </select>
+                         <label for="role-filter" class="block text-sm font-medium text-slate-700">Filter by Role</label>
+                         <select id="role-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                             <option value="all">All Roles</option>
+                             ${roles.map(r => `<option value="${r}" class="capitalize">${r.replace('_', ' ')}</option>`).join('')}
+                         </select>
                      </div>
                      <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200" id="scores-overview-table">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Scored By</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Score</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-slate-200"></tbody>
-                        </table>
+                         <table class="min-w-full divide-y divide-slate-200" id="scores-overview-table">
+                             <thead class="bg-slate-50">
+                                 <tr>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Scored By</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Score</th>
+                                 </tr>
+                             </thead>
+                             <tbody class="bg-white divide-y divide-slate-200"></tbody>
+                         </table>
                      </div>
                 </div>
             `;
         };
 
         const renderAdminAnalytics = () => {
-             const managers = AppState.users.filter(u => u.role === 'manager');
+             const managers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
              return `
-                <div>
-                     <div class="mb-4">
-                        <label for="analytics-manager-filter" class="block text-sm font-medium text-slate-700">Filter by Team</label>
-                         <select id="analytics-manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                            <option value="all">All Teams</option>
-                            ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
-                        </select>
-                    </div>
+                 <div>
+                      <div class="mb-4">
+                         <label for="analytics-manager-filter" class="block text-sm font-medium text-slate-700">Filter by Team</label>
+                          <select id="analytics-manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                             <option value="all">All Teams</option>
+                             ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
+                         </select>
+                     </div>
 
-                    <!-- Stat Cards -->
-                    <div id="stat-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"></div>
+                     <!-- Stat Cards -->
+                     <div id="stat-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"></div>
 
-                    <!-- Charts -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="bg-white p-6 rounded-lg shadow">
-                             <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Performance Score Distribution</h3>
-                            <div class="h-80"><canvas id="score-chart"></canvas></div>
-                        </div>
-                        <div class="bg-white p-6 rounded-lg shadow">
-                             <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Attrition Risk</h3>
-                            <div class="h-80"><canvas id="attrition-chart"></canvas></div>
-                        </div>
-                         <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
-                             <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Average Score by Team</h3>
-                            <div class="h-80"><canvas id="team-score-chart"></canvas></div>
-                        </div>
-                    </div>
-                </div>
+                     <!-- Charts -->
+                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                         <div class="bg-white p-6 rounded-lg shadow">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Performance Score Distribution</h3>
+                             <div class="h-80"><canvas id="score-chart"></canvas></div>
+                         </div>
+                         <div class="bg-white p-6 rounded-lg shadow">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Attrition Risk</h3>
+                             <div class="h-80"><canvas id="attrition-chart"></canvas></div>
+                         </div>
+                          <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Average Score by Team</h3>
+                             <div class="h-80"><canvas id="team-score-chart"></canvas></div>
+                         </div>
+                     </div>
+                 </div>
             `;
         };
 
         const renderAdminExport = () => {
              return `
-                <div class="bg-white p-6 rounded-lg shadow">
-                     <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Export Full Report</h3>
-                     <p class="text-sm text-slate-600 mb-4">Download a complete report of all performance reviews, including all comments and scores.</p>
-                     <div class="flex space-x-4">
-                        <button id="export-csv-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Export as CSV</button>
-                        <button id="export-pdf-btn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">Export as PDF</button>
-                     </div>
-                </div>
+                 <div class="bg-white p-6 rounded-lg shadow">
+                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Export Full Report</h3>
+                      <p class="text-sm text-slate-600 mb-4">Download a complete report of all performance reviews, including all comments and scores.</p>
+                      <div class="flex space-x-4">
+                         <button id="export-csv-btn" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Export as CSV</button>
+                         <button id="export-pdf-btn" class="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition">Export as PDF</button>
+                      </div>
+                 </div>
             `;
         };
 
@@ -458,12 +470,12 @@
                  const qaCoach = AppState.users.find(u => u.id === AppState.userProfile.qa_coach_id);
 
                 content = `
-                     <h3 class="text-xl font-semibold text-slate-800 mb-4">Released Reviews</h3>
-                     <div class="space-y-6">
-                        ${renderReleasedReview('My Self-Review', selfReview)}
-                        ${renderReleasedReview(`Manager Review: ${manager?.email || 'N/A'}`, downwardManagerReview)}
-                        ${renderReleasedReview(`QA Coach Review: ${qaCoach?.email || 'N/A'}`, downwardQAReview)}
-                     </div>
+                      <h3 class="text-xl font-semibold text-slate-800 mb-4">Released Reviews</h3>
+                      <div class="space-y-6">
+                           ${renderReleasedReview('My Self-Review', selfReview)}
+                           ${renderReleasedReview(`Manager Review: ${manager?.email || 'N/A'}`, downwardManagerReview)}
+                           ${renderReleasedReview(`QA Coach Review: ${qaCoach?.email || 'N/A'}`, downwardQAReview)}
+                      </div>
                 `;
             } else {
                 const selfReview = AppState.reviews.find(r => r.reviewer_id === AppState.currentUser.id && r.review_type === 'self');
@@ -493,10 +505,10 @@
         const renderManagerDashboard = () => {
             let content = '';
              if (AppState.currentPhase === 4) {
-                const selfReview = AppState.reviews.find(r => r.reviewer_id === AppState.currentUser.id && r.review_type === 'self' && r.submitted_at);
-                const downwardOpsReview = AppState.reviews.find(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'downward_ops' && r.submitted_at);
-                const upwardReviews = AppState.reviews.filter(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'upward_manager' && r.submitted_at);
-                const opsManager = AppState.users.find(u => u.id === AppState.userProfile.manager_id);
+                 const selfReview = AppState.reviews.find(r => r.reviewer_id === AppState.currentUser.id && r.review_type === 'self' && r.submitted_at);
+                 const downwardOpsReview = AppState.reviews.find(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'downward_ops' && r.submitted_at);
+                 const upwardReviews = AppState.reviews.filter(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'upward_manager' && r.submitted_at);
+                 const opsManager = AppState.users.find(u => u.id === AppState.userProfile.manager_id);
 
                 content = `
                     <div class="space-y-6">
@@ -518,7 +530,7 @@
                     content = `
                         <div class="space-y-4">
                             ${renderReviewCard('My Self-Review', 'Complete your personal performance review.', 'self', AppState.currentUser.id, selfReview)}
-                            ${opsManager ? renderReviewCard(`Upward Review: ${opsManager.email}`, 'Provide feedback for your Operations Manager.', 'upward_ops', opsManager.id, upwardOpsReview) : ''}
+                            ${opsManager ? renderReviewCard(`Upward Review: ${opsManager.email}`, 'Provide feedback for your Manager.', 'upward_ops', opsManager.id, upwardOpsReview) : ''}
                         </div>
                     `;
                 } else if (AppState.currentPhase === 2) {
@@ -550,12 +562,12 @@
                 const opsManager = AppState.users.find(u => u.id === AppState.userProfile.manager_id);
                 content = `
                      <div class="space-y-6">
-                        <h3 class="text-xl font-semibold text-slate-800">Your Reviews</h3>
-                        ${renderReleasedReview('My Self-Review', selfReview)}
-                        ${renderReleasedReview(`Review from your Manager: ${opsManager?.email || 'N/A'}`, downwardOpsReview)}
+                         <h3 class="text-xl font-semibold text-slate-800">Your Reviews</h3>
+                         ${renderReleasedReview('My Self-Review', selfReview)}
+                         ${renderReleasedReview(`Review from your Manager: ${opsManager?.email || 'N/A'}`, downwardOpsReview)}
                         
-                        <h3 class="text-xl font-semibold text-slate-800 pt-4 border-t">Anonymous Upward Feedback</h3>
-                         ${upwardReviews.length > 0 ? upwardReviews.map((review, index) => renderReleasedReview(`Feedback from Team Member ${index + 1}`, review)).join('') : '<div class="bg-white rounded-lg shadow p-6"><p class="text-slate-500">No upward feedback was submitted for you in this cycle.</p></div>'}
+                         <h3 class="text-xl font-semibold text-slate-800 pt-4 border-t">Anonymous Upward Feedback</h3>
+                          ${upwardReviews.length > 0 ? upwardReviews.map((review, index) => renderReleasedReview(`Feedback from Team Member ${index + 1}`, review)).join('') : '<div class="bg-white rounded-lg shadow p-6"><p class="text-slate-500">No upward feedback was submitted for you in this cycle.</p></div>'}
                     </div>
                 `;
             } else {
@@ -568,7 +580,7 @@
                     content = `
                         <div class="space-y-4">
                             ${renderReviewCard('My Self-Review', 'Complete your personal performance review.', 'self', AppState.currentUser.id, selfReview)}
-                            ${opsManager ? renderReviewCard(`Upward Review: ${opsManager.email}`, 'Provide feedback for your Operations Manager.', 'upward_ops', opsManager.id, upwardOpsReview) : ''}
+                            ${opsManager ? renderReviewCard(`Upward Review: ${opsManager.email}`, 'Provide feedback for your Manager.', 'upward_ops', opsManager.id, upwardOpsReview) : ''}
                         </div>
                     `;
                 } else if (AppState.currentPhase === 2) {
@@ -597,55 +609,55 @@
 
             if (AppState.currentPhase === 4) {
                  const upwardReviewsForOps = AppState.reviews.filter(r => 
-                    r.reviewee_id === AppState.currentUser.id && 
-                    r.review_type === 'upward_ops' && 
-                    r.submitted_at
+                     r.reviewee_id === AppState.currentUser.id && 
+                     r.review_type === 'upward_ops' && 
+                     r.submitted_at
                 );
 
                 let upwardFeedbackHtml = `
-                    <h3 class="text-xl font-semibold text-slate-800">Your Anonymous Upward Feedback</h3>
-                    <div class="space-y-6 mt-4">
-                        ${upwardReviewsForOps.length > 0 
-                            ? upwardReviewsForOps.map((review, index) => renderReleasedReview(`Feedback from Leader ${index + 1}`, review)).join('') 
-                            : '<div class="bg-white rounded-lg shadow p-6"><p class="text-slate-500">No upward feedback was submitted for you in this cycle.</p></div>'
-                        }
-                    </div>
+                     <h3 class="text-xl font-semibold text-slate-800">Your Anonymous Upward Feedback</h3>
+                     <div class="space-y-6 mt-4">
+                         ${upwardReviewsForOps.length > 0 
+                             ? upwardReviewsForOps.map((review, index) => renderReleasedReview(`Feedback from Leader ${index + 1}`, review)).join('') 
+                             : '<div class="bg-white rounded-lg shadow p-6"><p class="text-slate-500">No upward feedback was submitted for you in this cycle.</p></div>'
+                         }
+                     </div>
                 `;
 
                 let teamViewHtml = `
-                    <h3 class="text-xl font-semibold text-slate-800 mt-8 pt-6 border-t">Full Team Review Access</h3>
-                    <div class="space-y-6 mt-4">
-                        ${assignedPersonnel.map(person => {
-                            const agentsOfPerson = AppState.users.filter(agent => 
-                                agent.manager_id === person.id || agent.qa_coach_id === person.id
-                            );
+                     <h3 class="text-xl font-semibold text-slate-800 mt-8 pt-6 border-t">Full Team Review Access</h3>
+                     <div class="space-y-6 mt-4">
+                         ${assignedPersonnel.map(person => {
+                             const agentsOfPerson = AppState.users.filter(agent => 
+                                 agent.manager_id === person.id || agent.qa_coach_id === person.id
+                             );
 
-                            return `
-                                <div class="bg-white rounded-lg shadow p-6">
-                                    <div class="flex justify-between items-center">
-                                        <div>
-                                            <p class="font-semibold text-slate-800">${person.email}</p>
-                                            <p class="text-sm text-slate-500 capitalize">${person.role.replace('_', ' ')}</p>
-                                        </div>
-                                        <button class="view-full-review-btn bg-sky-100 text-sky-700 hover:bg-sky-200 text-sm font-medium px-4 py-2 rounded-md" data-user-id="${person.id}">View All Reviews</button>
-                                    </div>
-                                    ${agentsOfPerson.length > 0 ? `
-                                    <div class="mt-4 pt-4 border-t border-slate-200 pl-4 space-y-3">
-                                        ${agentsOfPerson.map(agent => `
-                                            <div class="flex justify-between items-center">
-                                                <div>
-                                                    <p class="text-sm text-slate-700">${agent.email}</p>
-                                                    <p class="text-xs text-slate-400">Agent</p>
-                                                </div>
-                                                <button class="view-full-review-btn bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-medium px-3 py-1 rounded-md" data-user-id="${agent.id}">View All Reviews</button>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                    ` : ''}
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
+                             return `
+                                 <div class="bg-white rounded-lg shadow p-6">
+                                     <div class="flex justify-between items-center">
+                                         <div>
+                                             <p class="font-semibold text-slate-800">${person.email}</p>
+                                             <p class="text-sm text-slate-500 capitalize">${person.role.replace('_', ' ')}</p>
+                                         </div>
+                                         <button class="view-full-review-btn bg-sky-100 text-sky-700 hover:bg-sky-200 text-sm font-medium px-4 py-2 rounded-md" data-user-id="${person.id}">View All Reviews</button>
+                                     </div>
+                                     ${agentsOfPerson.length > 0 ? `
+                                     <div class="mt-4 pt-4 border-t border-slate-200 pl-4 space-y-3">
+                                         ${agentsOfPerson.map(agent => `
+                                             <div class="flex justify-between items-center">
+                                                 <div>
+                                                     <p class="text-sm text-slate-700">${agent.email}</p>
+                                                     <p class="text-xs text-slate-400">Agent</p>
+                                                 </div>
+                                                 <button class="view-full-review-btn bg-slate-100 text-slate-700 hover:bg-slate-200 text-xs font-medium px-3 py-1 rounded-md" data-user-id="${agent.id}">View All Reviews</button>
+                                             </div>
+                                         `).join('')}
+                                     </div>
+                                     ` : ''}
+                                 </div>
+                             `;
+                         }).join('')}
+                     </div>
                 `;
                 content = upwardFeedbackHtml + teamViewHtml;
 
@@ -664,7 +676,7 @@
             }
             
             return `
-                 <h2 class="text-2xl font-semibold text-slate-900 mb-4">Operations Manager Dashboard</h2>
+                 <h2 class="text-2xl font-semibold text-slate-900 mb-4">Manager Dashboard</h2>
                  ${content}
             `;
         };
@@ -681,7 +693,8 @@
 
             if (error) {
                 renderToast(error.message, 'error');
-                $app.querySelector('.spinner').parentElement.remove();
+                const spinner = $app.querySelector('.spinner');
+                if (spinner) spinner.parentElement.remove();
             } else {
                 AppState.currentUser = data.user;
                 await renderDashboard();
@@ -713,6 +726,8 @@
         };
         
         const fetchData = async () => {
+            if (!AppState.currentUser) return; // Guard clause
+            
             const { data: userProfile, error: profileError } = await supabaseClient
                 .from('users')
                 .select('*')
@@ -743,23 +758,62 @@
                     .eq('manager_id', AppState.currentUser.id);
 
                 if (reportsError) {
-                    renderToast('Could not fetch direct reports for Ops Manager.', 'error');
+                    renderToast('Could not fetch direct reports for Manager.', 'error');
                 } else {
                     const directReportIds = directReports.map(r => r.id);
+                    
+                    // Also need agents of their direct reports
+                    let allTeamIds = [...directReportIds];
                     if (directReportIds.length > 0) {
-                        // Fetch reviews written by the Ops Manager, received by them, OR reviews written *about* their direct reports.
+                        const { data: agentsOfReports, error: agentsError } = await supabaseClient
+                            .from('users')
+                            .select('id')
+                            .or(`manager_id.in.(${directReportIds.join(',')}),qa_coach_id.in.(${directReportIds.join(',')})`);
+                        
+                        if (agentsError) {
+                             renderToast('Could not fetch full team.', 'error');
+                        } else {
+                            allTeamIds = [...allTeamIds, ...agentsOfReports.map(a => a.id)];
+                        }
+                    }
+
+                    if (allTeamIds.length > 0) {
+                        // Fetch reviews written by the Ops Manager, received by them, OR reviews written *about* anyone in their hierarchy
                          reviewsQuery = reviewsQuery.or(
                             `reviewer_id.eq.${AppState.currentUser.id},` +
                             `reviewee_id.eq.${AppState.currentUser.id},` +
-                            `reviewee_id.in.(${directReportIds.join(',')})`
+                            `reviewee_id.in.(${allTeamIds.join(',')})`
                         );
                     } else {
                         // Fallback if they have no reports, just fetch their own reviews (written or received)
                         reviewsQuery = reviewsQuery.or(`reviewer_id.eq.${AppState.currentUser.id},reviewee_id.eq.${AppState.currentUser.id}`);
                     }
                 }
+            } else if (AppState.userProfile.role === 'manager') {
+                // Manager needs reviews they wrote, received, AND reviews about their direct reports
+                const { data: directReports, error: reportsError } = await supabaseClient
+                    .from('users')
+                    .select('id')
+                    .eq('manager_id', AppState.currentUser.id);
+                
+                if (reportsError) {
+                    renderToast('Could not fetch direct reports.', 'error');
+                    reviewsQuery = reviewsQuery.or(`reviewer_id.eq.${AppState.currentUser.id},reviewee_id.eq.${AppState.currentUser.id}`);
+                } else {
+                    const directReportIds = directReports.map(r => r.id);
+                    if (directReportIds.length > 0) {
+                        reviewsQuery = reviewsQuery.or(
+                            `reviewer_id.eq.${AppState.currentUser.id},` + // Written by manager
+                            `reviewee_id.eq.${AppState.currentUser.id},` + // Written about manager (upward)
+                            `reviewee_id.in.(${directReportIds.join(',')})` // Written about their agents (self, qa)
+                        );
+                    } else {
+                        // No reports, just fetch their own reviews
+                        reviewsQuery = reviewsQuery.or(`reviewer_id.eq.${AppState.currentUser.id},reviewee_id.eq.${AppState.currentUser.id}`);
+                    }
+                }
             } else {
-                // Standard users (Agent, Manager, QA Coach) see reviews they wrote or received.
+                // Standard users (Agent, QA Coach) see reviews they wrote or received.
                 reviewsQuery = reviewsQuery.or(`reviewer_id.eq.${AppState.currentUser.id},reviewee_id.eq.${AppState.currentUser.id}`);
             }
 
@@ -774,6 +828,25 @@
         };
 
         // --- Init ---
+        // Add a listener for auth changes (like login/logout)
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+                 // Handle logout
+                 AppState.currentUser = null;
+                 AppState.userProfile = null;
+                 renderLogin();
+             } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+                 // Handle login or session refresh
+                 if (session && session.user) {
+                    AppState.currentUser = session.user;
+                    if (!$app.querySelector('main')) { // Only render dash if not already there
+                         renderDashboard();
+                    }
+                 }
+             }
+        });
+        
+        // Initial check
         checkSession();
         
         // Helper functions and more complex renderers
@@ -787,31 +860,31 @@
 
             return `
                  <div class="bg-white rounded-lg shadow p-6 flex justify-between items-center">
-                    <div>
-                        <h4 class="font-semibold text-slate-800">${title}</h4>
-                        <p class="text-sm text-slate-500 mt-1">${description}</p>
-                    </div>
-                    <div class="flex items-center space-x-4">
-                        <span class="text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColor}">${statusText}</span>
-                        <button class="open-review-form text-white px-4 py-2 rounded-md transition ${buttonClass}" 
-                                data-review-type="${reviewType}" 
-                                data-reviewee-id="${revieweeId}"
-                                data-review-id="${review ? review.id : ''}">
-                            ${buttonText}
-                        </button>
-                    </div>
-                </div>
+                     <div>
+                         <h4 class="font-semibold text-slate-800">${title}</h4>
+                         <p class="text-sm text-slate-500 mt-1">${description}</p>
+                     </div>
+                     <div class="flex items-center space-x-4">
+                         <span class="text-xs font-medium px-2.5 py-0.5 rounded-full ${statusColor}">${statusText}</span>
+                         <button class="open-review-form text-white px-4 py-2 rounded-md transition ${buttonClass}" 
+                                 data-review-type="${reviewType}" 
+                                 data-reviewee-id="${revieweeId}"
+                                 data-review-id="${review ? review.id : ''}">
+                             ${buttonText}
+                         </button>
+                     </div>
+                 </div>
             `;
         }
-
-        function renderReleasedReview(title, review, isModalView = false) {
+ 
+       function renderReleasedReview(title, review, isModalView = false, showSummarizeButton = true) {
             if (!review) {
                 const wrapperClass = isModalView ? 'border border-slate-200 p-4 rounded-lg' : 'bg-white rounded-lg shadow p-6';
                 return `
-                    <div class="${wrapperClass}">
-                        <h4 class="font-semibold text-slate-800">${title}</h4>
-                        <p class="mt-2 text-sm text-slate-500">This review has not been submitted or is not available.</p>
-                    </div>
+                     <div class="${wrapperClass}">
+                         <h4 class="font-semibold text-slate-800">${title}</h4>
+                         <p class="mt-2 text-sm text-slate-500">This review has not been submitted or is not available.</p>
+                     </div>
                 `;
             }
             const questions = getQuestionSet(review.review_type);
@@ -822,6 +895,10 @@
             // Define sensitive questions that should not be shown to employees in the final view.
             const sensitiveQuestionKeys = ['q7', 'q8', 'q9', 'q10'];
             
+            // Determine if the current user should see sensitive info
+            // Admins and Ops Managers see everything
+            const canSeeSensitive = ['admin', 'ops_manager'].includes(AppState.userProfile.role);
+
             return `
                 <div class="${wrapperClass}">
                     <div class="flex justify-between items-start">
@@ -833,24 +910,32 @@
                     </div>
                     <div class="mt-4 border-t border-slate-200 pt-4 space-y-4">
                         ${Object.entries(questions).map(([key, question]) => {
-                            // Hide the score question (as it's shown in the header) and sensitive questions
+                            // Hide the score question (as it's shown in the header)
                             if (question.includes('(1–4 scale)')) return '';
-                            if (sensitiveQuestionKeys.includes(key)) return '';
+                            // Hide sensitive questions if the user is not privileged
+                            if (!canSeeSensitive && sensitiveQuestionKeys.includes(key)) return '';
+
+                            // Special formatting for sensitive questions for those who can see them
+                            const isSensitive = sensitiveQuestionKeys.includes(key);
+                            const questionClass = isSensitive ? "text-sm font-medium text-red-600" : "text-sm font-medium text-slate-600";
+                            const answerBg = isSensitive ? "bg-red-50" : "bg-slate-50";
 
                             return `
-                                <div>
-                                    <p class="text-sm font-medium text-slate-600">${question}</p>
-                                    <p class="text-sm text-slate-800 bg-slate-50 p-2 rounded-md mt-1">${review.questions[key] || '<em>No answer provided.</em>'}</p>
-                                </div>
+                                 <div>
+                                     <p class="${questionClass}">${isSensitive ? '[Sensitive] ' : ''}${question}</p>
+                                     <p class="text-sm text-slate-800 ${answerBg} p-2 rounded-md mt-1 whitespace-pre-wrap">${review.questions[key] || '<em>No answer provided.</em>'}</p>
+                                 </div>
                             `;
                         }).join('')}
                     </div>
-                    <div class="mt-4 pt-4 border-t border-slate-200">
-                        <button class="summarize-btn text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md flex items-center space-x-2" data-review-id="${review.id}">
-                            <span>✨</span>
-                            <span>Summarize Feedback</span>
-                        </button>
-                    </div>
+                   ${showSummarizeButton ? `
+                       <div class="mt-4 pt-4 border-t border-slate-200">
+                           <button class="summarize-btn text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 rounded-md flex items-center space-x-2" data-review-id="${review.id}">
+                               <span>✨</span>
+                               <span>Summarize Feedback</span>
+                           </button>
+                       </div>
+                   ` : ''}
                 </div>
             `;
         }
@@ -923,6 +1008,52 @@
             });
         }
         
+        // NEW HELPER FUNCTION to render different form fields
+        function renderFormField(key, question, review, isSubmitted) {
+            const value = review.questions[key] || '';
+            const isDisabled = isSubmitted ? 'disabled' : '';
+
+            if (question.includes('(1–4 scale)')) {
+                // q6
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                    <option value="" ${!value ? 'selected' : ''}>Select a score</option>
+                    <option value="1" ${value == '1' ? 'selected' : ''}>1: Needs Improvement</option>
+                    <option value="2" ${value == '2' ? 'selected' : ''}>2: Meeting Expectations</option>
+                    <option value="3" ${value == '3' ? 'selected' : ''}>3: Exceeding Expectations</option>
+                    <option value="4" ${value == '4' ? 'selected' : ''}>4: Top 10%</option>
+                </select>`;
+            }
+
+            if (question.includes('attrition risk')) { // q7 in downward reviews
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                    <option value="" ${!value ? 'selected' : ''}>Select an option</option>
+                    <option value="Yes" ${value.toLowerCase() == 'yes' ? 'selected' : ''}>Yes</option>
+                    <option value="No" ${value.toLowerCase() == 'no' ? 'selected' : ''}>No</option>
+                </select>`;
+            }
+
+            if (question.includes('promoted now')) { // q8 in downward reviews
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                    <option value="" ${!value ? 'selected' : ''}>Select an option</option>
+                    <option value="Yes" ${value == 'Yes' ? 'selected' : ''}>Yes</option>
+                    <option value="No" ${value == 'No' ? 'selected' : ''}>No</option>
+                    <option value="Not Now" ${value == 'Not Now' ? 'selected' : ''}>Not Now</option>
+                </select>`;
+            }
+
+            // NEW: Add check for leadership/cohesion question
+            if (question.includes('manager’s leadership style') || question.includes('QA Coach’s coaching style')) {
+                const options = ["Very satisfied", "satisfied", "neutral", "not satisfied", "very dissatisfied"];
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                    <option value="" ${!value ? 'selected' : ''}>Select an option</option>
+                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                </select>`;
+            }
+
+            // Default textarea
+            return `<textarea id="${key}" name="${key}" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>${value}</textarea>`;
+        }
+
         // Review Form Logic
         function renderReviewForm(reviewType, revieweeId, reviewId) {
             const review = AppState.reviews.find(r => r.id == reviewId) || { questions: {}, submitted_at: null };
@@ -930,6 +1061,63 @@
             const reviewee = AppState.users.find(u => u.id === revieweeId);
             const isSubmitted = !!review.submitted_at;
             
+           // --- START: Logic to show QA & Self Review ---
+           let referenceReviewsHtml = '';
+           if (reviewType === 'downward_manager' && reviewee) { // Only for manager's downward review
+               
+               // 1. Find Agent's Self-Review
+               const selfReview = AppState.reviews.find(r => 
+                   r.reviewee_id === revieweeId && // Review is about the agent
+                   r.review_type === 'self' &&     // It is a self-review
+                   r.submitted_at                // And it's submitted
+               );
+
+               // 2. Find QA's Downward Review
+               const qaCoach = AppState.users.find(u => u.id === reviewee.qa_coach_id);
+               const qaCoachName = qaCoach ? qaCoach.email : 'the QA Coach';
+               const qaReview = AppState.reviews.find(r => 
+                   r.reviewee_id === revieweeId && 
+                   r.review_type === 'downward_qa' && 
+                   r.submitted_at
+               );
+
+               let selfReviewDisplay = '';
+               if (selfReview) {
+                   selfReviewDisplay = `
+                       <h3 class="text-lg font-semibold text-slate-800 mb-2">Agent's Self-Review (for reference)</h3>
+                       ${renderReleasedReview(`${reviewee.email}'s Self-Review`, selfReview, true, false)}
+                   `;
+               } else {
+                   selfReviewDisplay = `
+                       <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                           <p class="text-sm font-medium text-yellow-800">Note: The agent's self-review has not been submitted yet.</p>
+                       </div>
+                   `;
+               }
+
+               let qaReviewDisplay = '';
+               if (qaReview) {
+                   qaReviewDisplay = `
+                       <h3 class="text-lg font-semibold text-slate-800 mb-2 mt-4">QA Coach Review (for reference)</h3>
+                       ${renderReleasedReview(`${qaCoachName}'s QA Review`, qaReview, true, false)}
+                   `;
+               } else {
+                   qaReviewDisplay = `
+                       <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mt-4">
+                           <p class="text-sm font-medium text-yellow-800">Note: The QA review from ${qaCoachName} has not been submitted yet.</p>
+                       </div>
+                   `;
+               }
+
+               referenceReviewsHtml = `
+                    <div class="my-6">
+                        ${selfReviewDisplay}
+                        ${qaReviewDisplay}
+                    </div>
+               `;
+           }
+           // --- END: Logic to show QA & Self Review ---
+
             const titleMap = {
                 'self': 'Self-Review',
                 'upward_manager': `Upward Review for ${reviewee.email}`,
@@ -951,20 +1139,15 @@
                         <div class="bg-white rounded-lg shadow p-8">
                             <h2 class="text-2xl font-bold text-slate-900">${titleMap[reviewType]}</h2>
                              ${isSubmitted ? '<p class="mt-2 text-sm text-yellow-700 bg-yellow-100 p-3 rounded-md">This review has been submitted and cannot be edited.</p>' : ''}
+                           
+                           <!-- Inject QA and Self-review content here -->
+                           ${referenceReviewsHtml}
+
                             <form id="review-form" class="mt-6 space-y-6">
-                                ${Object.entries(questions).map(([key, question], index) => `
+                                ${Object.entries(questions).map(([key, question]) => `
                                     <div>
                                         <label for="${key}" class="block text-sm font-medium text-slate-700">${question}</label>
-                                        ${ question.includes('(1–4 scale)') ?
-                                            `<select id="${key}" name="q${index+1}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isSubmitted ? 'disabled' : ''}>
-                                                <option value="" ${!review.questions[`q${index+1}`] ? 'selected' : ''}>Select a score</option>
-                                                <option value="1" ${review.questions[`q${index+1}`] == '1' ? 'selected' : ''}>1: Needs Improvement</option>
-                                                <option value="2" ${review.questions[`q${index+1}`] == '2' ? 'selected' : ''}>2: Meeting Expectations</option>
-                                                <option value="3" ${review.questions[`q${index+1}`] == '3' ? 'selected' : ''}>3: Exceeding Expectations</option>
-                                                <option value="4" ${review.questions[`q${index+1}`] == '4' ? 'selected' : ''}>4: Top 10%</option>
-                                            </select>` :
-                                            `<textarea id="${key}" name="q${index+1}" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isSubmitted ? 'disabled' : ''}>${review.questions[`q${index+1}`] || ''}</textarea>`
-                                        }
+                                        ${renderFormField(key, question, review, isSubmitted)}
                                     </div>
                                 `).join('')}
                                 ${!isSubmitted ? `
@@ -984,8 +1167,8 @@
             document.getElementById('back-to-dashboard').addEventListener('click', renderDashboard);
 
             if (!isSubmitted) {
-                document.getElementById('review-form').addEventListener('submit', (e) => handleReviewSubmit(e, reviewType, revieweeId, reviewId, true));
-                document.getElementById('save-progress-btn').addEventListener('click', (e) => handleReviewSubmit(e, reviewType, revieweeId, reviewId, false));
+                document.getElementById('review-form').addEventListener('submit', (e) => handleReviewSubmit(e, reviewType, revieweeId, review.id, true)); // Pass existing review.id
+                document.getElementById('save-progress-btn').addEventListener('click', (e) => handleReviewSubmit(e, reviewType, revieweeId, review.id, false)); // Pass existing review.id
             }
         }
 
@@ -997,10 +1180,11 @@
             
             let score = null;
             const questionSet = getQuestionSet(reviewType);
+            // Find the key for the score question (e.g., 'q6')
             const scoreQuestionKey = Object.keys(questionSet).find(key => questionSet[key].includes('(1–4 scale)'));
+            
             if (scoreQuestionKey) {
-                const questionNumber = scoreQuestionKey.replace('q', '');
-                const scoreValue = questions[`q${questionNumber}`];
+                const scoreValue = questions[scoreQuestionKey];
                 if (scoreValue) score = parseInt(scoreValue, 10);
             }
 
@@ -1021,12 +1205,21 @@
             
             $app.insertAdjacentHTML('beforeend', renderSpinner());
             
-            const { error } = await supabaseClient.from('reviews').upsert(reviewData, { onConflict: 'reviewer_id,reviewee_id,review_type' });
+            let query;
+            if (reviewId) {
+                // Update existing review
+                query = supabaseClient.from('reviews').update(reviewData).eq('id', reviewId);
+            } else {
+                // Insert new review
+                query = supabaseClient.from('reviews').insert(reviewData);
+            }
+
+            const { error } = await query;
 
             if (error) renderToast(error.message, 'error');
             else renderToast(isFinalSubmit ? 'Review submitted!' : 'Progress saved!', 'success');
             
-            await renderDashboard();
+            await renderDashboard(); // This will re-fetch data including the new/updated review
         }
 
         function getQuestionSet(type) {
@@ -1036,7 +1229,7 @@
                     q2: 'What is one thing you are doing well that you want to keep doing?',
                     q3: 'What is one thing you would like to improve/develop?',
                     q4: 'Which of Tempo’s values do you incorporate into your work the most?',
-                    q5: 'Which of Tempo’s values does your direct report need to develop the most?',
+                    q5: 'Which of Tempo’s values do you need to develop the most?',
                 },
                 'downward_manager': {
                     q1: 'Provide specific examples of how well your direct report has performed over the past year.',
@@ -1077,21 +1270,22 @@
                     q7: 'What should your manager change?',
                 },
                 'upward_qa': { 
-                    q1: 'How would you describe your QA Coach’s communication and ability to support you?',
-                    q2: 'How does your QA Coach ensure their feedback aligns with company objectives?',
+                    q1: 'How would you describe your QA Coach’s communication and ability to support the team?',
+                    q2: 'How does your QA Coach ensure team goals align with company objectives?',
                     q3: 'How well does your QA Coach provide constructive feedback to develop your skills?',
-                    q4: 'How confident are you in your QA Coach’s guidance?',
+                    q4: 'How confident are you in your QA Coach’s decision-making? Do they consider team input?',
                     q5: 'Evaluate your QA Coach’s coaching style and efforts in helping you improve.',
                     q6: 'What should your QA Coach keep doing?',
                     q7: 'What should your QA Coach change?',
                 },
                 'upward_ops': {
-                    q1: 'How would you describe your Operations Manager’s communication and ability to provide strategic direction?',
-                    q2: 'How does your Operations Manager ensure departmental goals align with company objectives?',
-                    q3: 'How well does your Operations Manager provide constructive feedback for your development as a leader?',
-                    q4: 'How confident are you in your Operations Manager’s decision-making for the department?',
-                    q5: 'What should your Operations Manager keep doing to support you and your team?',
-                    q6: 'What could your Operations Manager change to better support you and your team?',
+                    q1: 'How would you describe your manager’s communication and ability to support the team?',
+                    q2: 'How does your manager ensure team goals align with company objectives?',
+                    q3: 'How well does your manager provide constructive feedback to develop your skills?',
+                    q4: 'How confident are you in your manager’s decision-making? Do they consider team input?',
+                    q5: 'Evaluate your manager’s leadership style and efforts in building team cohesion.',
+                    q6: 'What should your manager keep doing?',
+                    q7: 'What should your manager change?',
                 }
             };
             return questionSets[type] || {};
@@ -1105,14 +1299,15 @@
                  const { error } = await supabaseClient.from('phases').update({ current_phase: parseInt(nextPhase) }).eq('id', 'current');
                  if (error) renderToast(error.message, 'error');
                  else {
-                    await renderDashboard();
-                    renderToast(`Successfully moved to Phase ${nextPhase}!`, 'success');
+                     await renderDashboard();
+                     renderToast(`Successfully moved to Phase ${nextPhase}!`, 'success');
                  }
             }
         }
         
         function populateStatusTable() {
             const tableBody = document.querySelector('#status-table tbody');
+            if (!tableBody) return; // Guard clause if tab isn't visible
             const managerFilter = document.getElementById('manager-filter');
             const selectedManagerId = managerFilter.value;
             
@@ -1142,6 +1337,7 @@
 
         function populateScoreTable() {
             const tableBody = document.querySelector('#score-table tbody');
+            if (!tableBody) return; // Guard clause
             const managerFilter = document.getElementById('manager-filter');
             const selectedManagerId = managerFilter.value;
             const scoreMap = { 1: "Needs Improvement", 2: "Meeting Expectations", 3: "Exceeding", 4: "Top 10%"};
@@ -1170,6 +1366,7 @@
 
         function populateScoresOverviewTable() {
             const tableBody = document.querySelector('#scores-overview-table tbody');
+            if (!tableBody) return; // Guard clause
             const roleFilter = document.getElementById('role-filter');
             const selectedRole = roleFilter.value;
             const scoreMap = { 1: "Needs Improvement", 2: "Meeting Expectations", 3: "Exceeding", 4: "Top 10%"};
@@ -1258,17 +1455,20 @@
 
             // Sort reviews logically (self, then downward, then upward)
             relatedReviews.sort((a, b) => {
-                if (a.review_type === 'self') return -1;
-                if (b.review_type === 'self') return 1;
-                if (a.review_type.startsWith('downward')) return -1;
-                if (b.review_type.startsWith('downward')) return 1;
-                return 0;
+                if (a.review_type === 'self' && a.reviewee_id === userId) return -1;
+                if (b.review_type === 'self' && b.reviewee_id === userId) return 1;
+                if (a.review_type.startsWith('downward') && a.reviewee_id === userId) return -1;
+                if (b.review_type.startsWith('downward') && b.reviewee_id === userId) return 1;
+                if (a.review_type.startsWith('upward') && a.reviewee_id === userId) return 1; // Upward about them last
+                if (b.review_type.startsWith('upward') && b.reviewee_id === userId) return -1;
+                return 0; // Other reviews (e.g., written by them)
             });
+
 
             let modalContentHTML = '<div class="space-y-4">';
             for (const review of relatedReviews) {
                 let title = '';
-                if (review.review_type === 'self') {
+                if (review.review_type === 'self' && review.reviewer_id === userId) {
                     title = 'Self-Review';
                 } else if (review.reviewee_id === userId) { // Review is about them
                     const reviewer = AppState.users.find(u => u.id === review.reviewer_id);
@@ -1280,10 +1480,15 @@
                     }
                 } else { // Review is written by them
                     const reviewee = AppState.users.find(u => u.id === review.reviewee_id);
-                    title = `Downward Review for ${reviewee?.email || 'N/A'}`;
+                     if (review.review_type.startsWith('upward')) {
+                        title = `Upward Review for ${reviewee?.email || 'N/A'}`;
+                     } else {
+                        title = `Downward Review for ${reviewee?.email || 'N/A'}`;
+                     }
                 }
                 
-                modalContentHTML += renderReleasedReview(title, review, true); 
+               // When Ops/Admin views all reviews, show summarize button
+               modalContentHTML += renderReleasedReview(title, review, true, true); 
             }
             modalContentHTML += '</div>';
             
@@ -1311,8 +1516,8 @@
         
         // --- Gemini API Integration ---
         async function callGeminiApi(prompt) {
-            const apiKey = "AIzaSyAhYDpHKXbTYQeGW3A-3g47XXDMGyB8NU0"; // Leave empty, will be handled by the environment
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const apiKey = ""; // Leave empty, will be handled by the environment
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             
             const payload = {
                 contents: [{ parts: [{ text: prompt }] }],
@@ -1356,13 +1561,22 @@
                 renderToast("Could not find review data.", "error");
                 return;
             }
+            
+            // Disable button to prevent multiple clicks
+            button.disabled = true;
+            button.innerHTML = '<span>✨</span> <span>Summarizing...</span>';
 
             const modalContent = `<div id="summary-content" class="my-4 p-4 bg-slate-100 rounded-md min-h-[10rem] flex items-center justify-center"><div class="spinner"></div></div>`;
+            // Show a modal that *doesn't* require a promise, as we'll close it manually
             const modalPromise = renderModal('✨ AI-Powered Summary', 'Generating a summary of the feedback...', 'Close', '', modalContent);
             
             const questionSet = getQuestionSet(review.review_type);
             let fullReviewText = "";
             for (const [key, question] of Object.entries(questionSet)) {
+                // Don't send sensitive questions to AI if they aren't for AI
+                 const sensitiveQuestionKeys = ['q7', 'q8', 'q9', 'q10'];
+                 if (sensitiveQuestionKeys.includes(key)) continue;
+                 
                 const answer = review.questions[key] || "No answer provided.";
                 fullReviewText += `Q: ${question}\nA: ${answer}\n\n`;
             }
@@ -1375,16 +1589,25 @@
             const summaryContentEl = document.getElementById('summary-content');
             if (summaryContentEl) {
                 // Basic markdown to HTML conversion for bullet points
-                const formattedSummary = summary.replace(/\* /g, '<br>• ').replace(/\n/g, '<br>');
-                summaryContentEl.innerHTML = `<div class="text-sm text-slate-700">${formattedSummary}</div>`;
+                const formattedSummary = summary
+                    .replace(/\*\*(.*?)\*\*/g, '<br><strong class="text-slate-800">$1</strong>') // Bold
+                    .replace(/\* (.*?)(?=\n\* |\n\n|$) /g, '<li class="ml-4 list-disc">$1</li>') // Bullets
+                    .replace(/(\r\n|\n|\r)/g, '<br>'); // Newlines
+                    
+                summaryContentEl.innerHTML = `<div class="text-sm text-slate-700">${formattedSummary.replace('<br>', '')}</div>`; // Remove first <br>
                 summaryContentEl.classList.remove('items-center', 'justify-center');
             }
+            
+            // Re-enable button
+            button.disabled = false;
+            button.innerHTML = '<span>✨</span> <span>Summarize Feedback</span>';
         }
 
         // Analytics
         let chartInstances = {};
         function renderAllAnalytics() {
             const managerFilter = document.getElementById('analytics-manager-filter');
+            if (!managerFilter) return; // Guard clause if tab not rendered
             const selectedManagerId = managerFilter.value;
             const analyticsData = calculateAnalyticsData(selectedManagerId);
             
@@ -1400,17 +1623,28 @@
                 relevantUsers = relevantUsers.filter(u => u.manager_id === managerId || u.id === managerId);
             }
             const relevantUserIds = relevantUsers.map(u => u.id);
+            
+            // Get all reviews *required* for this group in the current phase or earlier
+            let totalRequiredReviews = 0;
+            for(let phase = 1; phase <= AppState.currentPhase; phase++) {
+                 relevantUsers.forEach(user => {
+                     totalRequiredReviews += getRequiredReviewsForUser(user, phase).length;
+                 });
+            }
+
+            // Get all reviews *submitted* by or about this group
+            const completedReviews = AppState.reviews.filter(r => {
+                return r.submitted_at && (relevantUserIds.includes(r.reviewer_id) || relevantUserIds.includes(r.reviewee_id));
+            }).length;
+
             const downwardReviews = AppState.reviews.filter(r => r.submitted_at && relevantUserIds.includes(r.reviewee_id) && r.review_type.startsWith('downward'));
             
-            const totalReviews = AppState.reviews.filter(r => relevantUserIds.includes(r.reviewer_id) || relevantUserIds.includes(r.reviewee_id)).length;
-            const completedReviews = AppState.reviews.filter(r => r.submitted_at && (relevantUserIds.includes(r.reviewer_id) || relevantUserIds.includes(r.reviewee_id))).length;
-
             const scores = downwardReviews.map(r => r.score).filter(s => s);
             const averageScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 'N/A';
             
             return {
-                totalReviews,
-                completionRate: totalReviews > 0 ? ((completedReviews / totalReviews) * 100).toFixed(0) : 0,
+                totalReviews: totalRequiredReviews,
+                completionRate: totalRequiredReviews > 0 ? ((completedReviews / totalRequiredReviews) * 100).toFixed(0) : 0,
                 averageScore,
                 downwardReviews,
                 users: AppState.users,
@@ -1419,15 +1653,18 @@
 
         function renderStatCards(data) {
             const container = document.getElementById('stat-cards');
+            if (!container) return;
             container.innerHTML = `
                 <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Completion Rate</p><p class="text-3xl font-bold text-slate-800">${data.completionRate}%</p></div>
-                <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Total Reviews</p><p class="text-3xl font-bold text-slate-800">${data.totalReviews}</p></div>
+                <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Total Required Reviews</p><p class="text-3xl font-bold text-slate-800">${data.totalReviews}</p></div>
                 <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Average Score</p><p class="text-3xl font-bold text-slate-800">${data.averageScore}</p></div>
             `;
         }
 
         function renderScoreDistributionChart(data) {
-            const ctx = document.getElementById('score-chart').getContext('2d');
+            const ctxEl = document.getElementById('score-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
             const scoreCounts = { '1': 0, '2': 0, '3': 0, '4': 0 };
             data.downwardReviews.forEach(r => { if(r.score) scoreCounts[r.score]++; });
             
@@ -1443,7 +1680,9 @@
         }
         
         function renderAttritionChart(data) {
-            const ctx = document.getElementById('attrition-chart').getContext('2d');
+            const ctxEl = document.getElementById('attrition-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
             const attrition = { 'Yes': 0, 'No': 0 };
             data.downwardReviews.forEach(r => {
                 if (r.review_type === 'downward_manager' || r.review_type === 'downward_ops') {
@@ -1465,7 +1704,9 @@
         }
 
         function renderTeamScoreChart(data) {
-            const ctx = document.getElementById('team-score-chart').getContext('2d');
+            const ctxEl = document.getElementById('team-score-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
             const managers = data.users.filter(u => u.role === 'manager');
             const teamScores = {};
             managers.forEach(m => {
@@ -1492,13 +1733,22 @@
             csvContent += headers.join(",") + "\r\n";
 
             AppState.reviews.forEach(review => {
+                if (!review.submitted_at) return; // Only export submitted
                 const questions = getQuestionSet(review.review_type);
                 const reviewer = AppState.users.find(u => u.id === review.reviewer_id)?.email || 'N/A';
                 const reviewee = AppState.users.find(u => u.id === review.reviewee_id)?.email || 'N/A';
                 
                 Object.entries(review.questions).forEach(([key, answer]) => {
                     const questionText = questions[key] || key;
-                    const row = [reviewer, reviewee, review.review_type, review.submitted_at ? new Date(review.submitted_at).toLocaleDateString() : 'Not Submitted', `"${questionText.replace(/"/g, '""')}"`, `"${String(answer).replace(/"/g, '""')}"`, review.score || '' ];
+                    const row = [
+                        reviewer, 
+                        reviewee, 
+                        review.review_type, 
+                        review.submitted_at ? new Date(review.submitted_at).toLocaleDateString() : 'Not Submitted', 
+                        `"${questionText.replace(/"/g, '""')}"`, 
+                        `"${String(answer).replace(/"/g, '""')}"`, 
+                        review.score || '' 
+                    ];
                     csvContent += row.join(",") + "\r\n";
                 });
             });
@@ -1521,7 +1771,14 @@
             doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 22);
 
             let yPos = 30;
-            const sortedReviews = [...AppState.reviews].sort((a, b) => a.reviewee_id.localeCompare(b.reviewee_id));
+            const sortedReviews = [...AppState.reviews]
+                .filter(r => r.submitted_at) // Only submitted
+                .sort((a, b) => { // Sort by reviewee, then type
+                    const emailA = AppState.users.find(u => u.id === a.reviewee_id)?.email || '';
+                    const emailB = AppState.users.find(u => u.id === b.reviewee_id)?.email || '';
+                    if (emailA !== emailB) return emailA.localeCompare(emailB);
+                    return a.review_type.localeCompare(b.review_type);
+                });
             
             sortedReviews.forEach(review => {
                 if (yPos > 260) { doc.addPage(); yPos = 15; }
@@ -1541,7 +1798,7 @@
                     head: [['Question', 'Answer']],
                     body: tableBody,
                     theme: 'striped',
-                    headStyles: { fillColor: [22, 163, 74] },
+                    headStyles: { fillColor: [34, 139, 230] }, // Sky color
                     didDrawPage: (data) => { yPos = data.cursor.y; }
                 });
                 yPos = doc.lastAutoTable.finalY + 10;
@@ -1554,4 +1811,12 @@
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
 
