@@ -88,6 +88,7 @@
 
         // --- UI COMPONENTS & RENDERING ---
         const $app = document.getElementById('app');
+        let isDelegatedListenerAttached = false; // <-- FIX: Add flag here
 
         const renderSpinner = () => `
             <div class="fixed inset-0 bg-white/70 flex items-center justify-center z-50">
@@ -1021,21 +1022,24 @@
             if (exportPdfBtn) exportPdfBtn.addEventListener('click', handleExportPDF);
 
             // Use event delegation for dynamic buttons
-            document.addEventListener('click', e => {
-                if (e.target && e.target.closest('.edit-score-btn')) {
-                    handleEditScore(e.target.closest('.edit-score-btn'));
-                }
-                if (e.target && e.target.closest('.summarize-btn')) {
-                    handleSummarizeFeedback(e.target.closest('.summarize-btn'));
-                }
-                if (e.target && e.target.closest('.view-full-review-btn')) {
-                    handleViewFullReview(e.target.closest('.view-full-review-btn'));
-                }
-                // New handler for the calibration context button
-                if (e.target && e.target.closest('.view-calibration-context-btn')) {
-                    handleViewCalibrationContext(e.target.closest('.view-calibration-context-btn'));
-                }
-            });
+            // FIX: Add guard to ensure this only runs ONCE
+            if (!isDelegatedListenerAttached) {
+                document.addEventListener('click', e => {
+                    if (e.target && e.target.closest('.edit-score-btn')) {
+                        handleEditScore(e.target.closest('.edit-score-btn'));
+                    }
+                    if (e.target && e.target.closest('.summarize-btn')) {
+                        handleSummarizeFeedback(e.target.closest('.summarize-btn'));
+                    }
+                    if (e.target && e.target.closest('.view-full-review-btn')) {
+                        handleViewFullReview(e.target.closest('.view-full-review-btn'));
+                    }
+                    if (e.target && e.target.closest('.view-calibration-context-btn')) {
+                        handleViewCalibrationContext(e.target.closest('.view-calibration-context-btn'));
+                    }
+                });
+                isDelegatedListenerAttached = true;
+            }
         }
         
         // NEW HELPER FUNCTION to render different form fields
@@ -1250,7 +1254,7 @@
             let query;
             if (reviewId) {
                 // Update existing review
-                query = supabaseClient.from('reviews').update(reviewData).eq('id', reviewId);
+                query = supabaseClient.from('reviews').update(reviewData).eq('id', reviewId).select().single(); // <-- FIX: Added .select().single()
             } else {
                 // Insert new review
                 query = supabaseClient.from('reviews').insert(reviewData).select().single();
@@ -1263,16 +1267,16 @@
             } else {
                 renderToast(isFinalSubmit ? 'Review submitted!' : 'Progress saved!', 'success');
                 // Manually update local state to avoid full re-fetch
-                if (reviewId) { // Update
+                if (reviewId && newOrUpdatedReview) { // Update
                     const index = AppState.reviews.findIndex(r => r.id == reviewId);
-                    if (index !== -1) AppState.reviews[index] = {...AppState.reviews[index], ...reviewData};
+                    if (index !== -1) AppState.reviews[index] = newOrUpdatedReview; // <-- FIX: Use returned data
                 } else if (newOrUpdatedReview) { // Insert
                     AppState.reviews.push(newOrUpdatedReview);
                 }
             }
             
             // Go back to dashboard
-            await renderDashboard();
+            await renderDashboard(); // This is OK now because of the flag
         }
 
         function getQuestionSet(type) {
@@ -1548,9 +1552,16 @@
             if (!user) return;
 
             // Find all reviews where this user is either the reviewer or the reviewee
-            const relatedReviews = AppState.reviews.filter(r => 
-                (r.reviewer_id === userId || r.reviewee_id === userId) && r.submitted_at
-            );
+            const relatedReviews = AppState.reviews.filter(r => {
+                const isRelated = (r.reviewer_id === userId || r.reviewee_id === userId) && r.submitted_at;
+
+                // FIX: Exclude the upward review the leader/qa wrote about the current ops_manager
+                const isExcludedUpwardReview = r.review_type === 'upward_ops' && 
+                                               r.reviewer_id === userId && 
+                                               r.reviewee_id === AppState.currentUser.id;
+
+                return isRelated && !isExcludedUpwardReview;
+            });
 
             if (relatedReviews.length === 0) {
                 renderToast(`No submitted reviews found for ${user.email}.`, 'info');
