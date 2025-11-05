@@ -192,6 +192,8 @@
         const renderHeader = () => {
             if (!AppState.userProfile) return '';
             const fullName = AppState.userProfile.email.split('@')[0]; // Simple name from email
+            // Use role.replace('_', ' ') to make it user-friendly
+            const userRole = AppState.userProfile.role.replace('_', ' ');
             return `
                 <header class="bg-white shadow-sm">
                     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -202,7 +204,7 @@
                             </div>
                             <div class="flex items-center space-x-4">
                                 <span class="text-sm text-slate-600">
-                                    Welcome, <strong class="font-semibold capitalize">${fullName}</strong> (${AppState.userProfile.role})
+                                    Welcome, <strong class="font-semibold capitalize">${fullName}</strong> (${userRole})
                                 </span>
                                 <button id="logout-btn" class="text-sm font-medium text-sky-600 hover:text-sky-800 transition">Logout</button>
                             </div>
@@ -217,7 +219,7 @@
                 <div class="min-h-screen flex items-center justify-center bg-slate-50">
                     <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
                         <div class="flex items-center justify-center space-x-2 mb-6">
-                            <svg class="h-10 w-10 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
+                            <svg class="h-10 w-10 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.s 0 00-3 0m-9.75 0h9.75" /></svg>
                             <h2 class="text-2xl font-bold text-slate-800">Performance Review Login</h2>
                         </div>
                         <form id="login-form">
@@ -415,32 +417,48 @@
 
         const renderAdminAnalytics = () => {
              const managers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
+             const roles = [...new Set(AppState.users.map(u => u.role))].filter(r => r !== 'admin').sort();
              return `
                  <div>
-                      <div class="mb-4">
-                         <label for="analytics-manager-filter" class="block text-sm font-medium text-slate-700">Filter by Team</label>
-                          <select id="analytics-manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                             <option value="all">All Teams</option>
-                             ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
-                         </select>
-                     </div>
+                      <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-6">
+                         <!-- Filter by Team -->
+                         <div class="flex-1">
+                             <label for="analytics-manager-filter" class="block text-sm font-medium text-slate-700">Filter by Team</label>
+                             <select id="analytics-manager-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                                 <option value="all">All Teams</option>
+                                 ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
+                             </select>
+                         </div>
+                         <!-- Filter by Role -->
+                         <div class="flex-1">
+                             <label for="analytics-role-filter" class="block text-sm font-medium text-slate-700">Filter by Role</label>
+                             <select id="analytics-role-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                                 <option value="all">All Roles</option>
+                                 ${roles.map(r => `<option value="${r}" class="capitalize">${r.replace('_', ' ')}</option>`).join('')}
+                             </select>
+                         </div>
+                      </div>
 
                      <!-- Stat Cards -->
-                     <div id="stat-cards" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"></div>
+                     <div id="stat-cards" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6"></div>
 
                      <!-- Charts -->
                      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                         <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Average Score by Team</h3>
+                             <div class="h-80"><canvas id="team-score-chart"></canvas></div>
+                         </div>
                          <div class="bg-white p-6 rounded-lg shadow">
-                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Performance Score Distribution</h3>
-                             <div class="h-80"><canvas id="score-chart"></canvas></div>
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Score Distribution by Role</h3>
+                             <div class="h-80"><canvas id="score-by-role-chart"></canvas></div>
+                         </div>
+                         <div class="bg-white p-6 rounded-lg shadow">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Promotion Recommendations</h3>
+                             <div class="h-80"><canvas id="promotion-chart"></canvas></div>
                          </div>
                          <div class="bg-white p-6 rounded-lg shadow">
                               <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Attrition Risk</h3>
                              <div class="h-80"><canvas id="attrition-chart"></canvas></div>
-                         </div>
-                          <div class="bg-white p-6 rounded-lg shadow lg:col-span-2">
-                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Average Score by Team</h3>
-                             <div class="h-80"><canvas id="team-score-chart"></canvas></div>
                          </div>
                      </div>
                  </div>
@@ -667,7 +685,7 @@
                     <div class="space-y-4">
                         ${assignedPersonnel.map(person => {
                             const review = AppState.reviews.find(r => r.reviewer_id === AppState.currentUser.id && r.reviewee_id === person.id && r.review_type === 'downward_ops');
-                            return renderReviewCard(`Downward Review: ${person.email}`, `Provide review for this ${person.role}.`, 'downward_ops', person.id, review);
+                            return renderReviewCard(`Downward Review: ${person.email}`, `Provide review for this ${person.role.replace('_', ' ')}.`, 'downward_ops', person.id, review);
                         }).join('')}
                     </div>
                 `;
@@ -777,12 +795,16 @@
                         }
                     }
 
+                    // We need all reviews WHERE:
+                    // 1. The reviewer is the ops_manager OR
+                    // 2. The reviewee is the ops_manager OR
+                    // 3. The reviewee is one of their direct reports (manager, qacoach) OR
+                    // 4. The reviewee is an agent *under* one of their direct reports
                     if (allTeamIds.length > 0) {
-                        // Fetch reviews written by the Ops Manager, received by them, OR reviews written *about* anyone in their hierarchy
                          reviewsQuery = reviewsQuery.or(
-                            `reviewer_id.eq.${AppState.currentUser.id},` +
-                            `reviewee_id.eq.${AppState.currentUser.id},` +
-                            `reviewee_id.in.(${allTeamIds.join(',')})`
+                            `reviewer_id.eq.${AppState.currentUser.id},` + // Written by ops
+                            `reviewee_id.eq.${AppState.currentUser.id},` + // Written about ops
+                            `reviewee_id.in.(${allTeamIds.join(',')})`   // Written about anyone on their team/hierarchy
                         );
                     } else {
                         // Fallback if they have no reports, just fetch their own reviews (written or received)
@@ -987,6 +1009,10 @@
             
             const analyticsManagerFilter = document.getElementById('analytics-manager-filter');
             if(analyticsManagerFilter) analyticsManagerFilter.addEventListener('change', () => renderAllAnalytics());
+
+            // Add listener for new role filter
+            const analyticsRoleFilter = document.getElementById('analytics-role-filter');
+            if(analyticsRoleFilter) analyticsRoleFilter.addEventListener('change', () => renderAllAnalytics());
             
             const exportCsvBtn = document.getElementById('export-csv-btn');
             if (exportCsvBtn) exportCsvBtn.addEventListener('click', handleExportCSV);
@@ -1004,6 +1030,10 @@
                 }
                 if (e.target && e.target.closest('.view-full-review-btn')) {
                     handleViewFullReview(e.target.closest('.view-full-review-btn'));
+                }
+                // New handler for the calibration context button
+                if (e.target && e.target.closest('.view-calibration-context-btn')) {
+                    handleViewCalibrationContext(e.target.closest('.view-calibration-context-btn'));
                 }
             });
         }
@@ -1046,7 +1076,7 @@
                 const options = ["Very satisfied", "satisfied", "neutral", "not satisfied", "very dissatisfied"];
                 return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
                     <option value="" ${!value ? 'selected' : ''}>Select an option</option>
-                    ${options.map(opt => `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`).join('')}
+                    ${options.map(opt => `<option value="${opt}" ${value.toLowerCase() === opt.toLowerCase() ? 'selected' : ''}>${opt}</option>`).join('')}
                 </select>`;
             }
 
@@ -1061,62 +1091,72 @@
             const reviewee = AppState.users.find(u => u.id === revieweeId);
             const isSubmitted = !!review.submitted_at;
             
-           // --- START: Logic to show QA & Self Review ---
+           // --- START: Logic to show Contextual Reviews ---
            let referenceReviewsHtml = '';
-           if (reviewType === 'downward_manager' && reviewee) { // Only for manager's downward review
+           if (reviewType === 'downward_manager' && reviewee) { 
+               // --- For Manager reviewing Agent ---
                
                // 1. Find Agent's Self-Review
                const selfReview = AppState.reviews.find(r => 
-                   r.reviewee_id === revieweeId && // Review is about the agent
-                   r.review_type === 'self' &&     // It is a self-review
-                   r.submitted_at                // And it's submitted
+                   r.reviewee_id === revieweeId && r.review_type === 'self' && r.submitted_at
                );
 
                // 2. Find QA's Downward Review
                const qaCoach = AppState.users.find(u => u.id === reviewee.qa_coach_id);
                const qaCoachName = qaCoach ? qaCoach.email : 'the QA Coach';
                const qaReview = AppState.reviews.find(r => 
-                   r.reviewee_id === revieweeId && 
-                   r.review_type === 'downward_qa' && 
-                   r.submitted_at
+                   r.reviewee_id === revieweeId && r.review_type === 'downward_qa' && r.submitted_at
                );
 
-               let selfReviewDisplay = '';
-               if (selfReview) {
-                   selfReviewDisplay = `
+               let selfReviewDisplay = selfReview
+                   ? `
                        <h3 class="text-lg font-semibold text-slate-800 mb-2">Agent's Self-Review (for reference)</h3>
-                       ${renderReleasedReview(`${reviewee.email}'s Self-Review`, selfReview, true, false)}
-                   `;
-               } else {
-                   selfReviewDisplay = `
+                       ${renderReleasedReview(`${reviewee.email}'s Self-Review`, selfReview, true, true)}
+                   `
+                   : `
                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                            <p class="text-sm font-medium text-yellow-800">Note: The agent's self-review has not been submitted yet.</p>
                        </div>
                    `;
-               }
 
-               let qaReviewDisplay = '';
-               if (qaReview) {
-                   qaReviewDisplay = `
+               let qaReviewDisplay = qaReview
+                   ? `
                        <h3 class="text-lg font-semibold text-slate-800 mb-2 mt-4">QA Coach Review (for reference)</h3>
-                       ${renderReleasedReview(`${qaCoachName}'s QA Review`, qaReview, true, false)}
-                   `;
-               } else {
-                   qaReviewDisplay = `
+                       ${renderReleasedReview(`${qaCoachName}'s QA Review`, qaReview, true, true)}
+                   `
+                   : `
                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mt-4">
                            <p class="text-sm font-medium text-yellow-800">Note: The QA review from ${qaCoachName} has not been submitted yet.</p>
                        </div>
                    `;
-               }
 
-               referenceReviewsHtml = `
-                    <div class="my-6">
-                        ${selfReviewDisplay}
-                        ${qaReviewDisplay}
-                    </div>
-               `;
+               referenceReviewsHtml = `<div class="my-6">${selfReviewDisplay}${qaReviewDisplay}</div>`;
+
+           } else if (reviewType === 'downward_ops' && reviewee) {
+               // --- For Ops Manager reviewing Manager/QA ---
+               
+               // 1. Find Leader's Self-Review
+               const selfReview = AppState.reviews.find(r => 
+                   r.reviewee_id === revieweeId && r.review_type === 'self' && r.submitted_at
+               );
+
+               referenceReviewsHtml = `<div class="my-6">`;
+               if (selfReview) {
+                   referenceReviewsHtml += `
+                       <h3 class="text-lg font-semibold text-slate-800 mb-2">Leader's Self-Review (for reference)</h3>
+                       ${renderReleasedReview(`${reviewee.email}'s Self-Review`, selfReview, true, true)}
+                   `;
+               } else {
+                   referenceReviewsHtml += `
+                       <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                           <p class="text-sm font-medium text-yellow-800">Note: The leader's self-review has not been submitted yet.</p>
+                       </div>
+                   `;
+               }
+               referenceReviewsHtml += `</div>`;
            }
-           // --- END: Logic to show QA & Self Review ---
+           // --- END: Logic to show Contextual Reviews ---
+
 
             const titleMap = {
                 'self': 'Self-Review',
@@ -1142,6 +1182,8 @@
                            
                            <!-- Inject QA and Self-review content here -->
                            ${referenceReviewsHtml}
+                           
+                           ${referenceReviewsHtml ? `<h3 class="text-lg font-semibold text-slate-800 border-b pb-2 mb-4">Your Review</h3>` : ''}
 
                             <form id="review-form" class="mt-6 space-y-6">
                                 ${Object.entries(questions).map(([key, question]) => `
@@ -1211,15 +1253,26 @@
                 query = supabaseClient.from('reviews').update(reviewData).eq('id', reviewId);
             } else {
                 // Insert new review
-                query = supabaseClient.from('reviews').insert(reviewData);
+                query = supabaseClient.from('reviews').insert(reviewData).select().single();
             }
 
-            const { error } = await query;
+            const { data: newOrUpdatedReview, error } = await query;
 
-            if (error) renderToast(error.message, 'error');
-            else renderToast(isFinalSubmit ? 'Review submitted!' : 'Progress saved!', 'success');
+            if (error) {
+                renderToast(error.message, 'error');
+            } else {
+                renderToast(isFinalSubmit ? 'Review submitted!' : 'Progress saved!', 'success');
+                // Manually update local state to avoid full re-fetch
+                if (reviewId) { // Update
+                    const index = AppState.reviews.findIndex(r => r.id == reviewId);
+                    if (index !== -1) AppState.reviews[index] = {...AppState.reviews[index], ...reviewData};
+                } else if (newOrUpdatedReview) { // Insert
+                    AppState.reviews.push(newOrUpdatedReview);
+                }
+            }
             
-            await renderDashboard(); // This will re-fetch data including the new/updated review
+            // Go back to dashboard
+            await renderDashboard();
         }
 
         function getQuestionSet(type) {
@@ -1345,7 +1398,11 @@
             let scoredReviews = AppState.reviews.filter(r => r.score && r.review_type !== 'downward_qa' && r.review_type.startsWith('downward'));
 
             if (selectedManagerId !== 'all') {
+                // Find all users *managed* by this manager (e.g., agents)
                 const teamMemberIds = AppState.users.filter(u => u.manager_id === selectedManagerId).map(u => u.id);
+                // Also include the manager themself (for ops_manager viewing manager)
+                teamMemberIds.push(selectedManagerId);
+                
                 scoredReviews = scoredReviews.filter(r => teamMemberIds.includes(r.reviewee_id));
             }
             
@@ -1356,7 +1413,8 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${reviewee?.email || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${reviewer?.email || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${review.score}: ${scoreMap[review.score] || ''}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-4">
+                        <button class="view-calibration-context-btn text-indigo-600 hover:text-indigo-800" data-user-id="${review.reviewee_id}">View Context</button>
                         <button class="edit-score-btn text-sky-600 hover:text-sky-800" data-review-id="${review.id}" data-current-score="${review.score}">Edit</button>
                     </td>
                 </tr>`;
@@ -1438,6 +1496,52 @@
             }
         }
 
+        // NEW: Special filtered view for Admin calibration
+        async function handleViewCalibrationContext(button) {
+            const { userId } = button.dataset;
+            const user = AppState.users.find(u => u.id === userId);
+            if (!user) return;
+
+            // Find all reviews *about* this user that are self or downward
+            const relatedReviews = AppState.reviews.filter(r => 
+                r.reviewee_id === userId && // Only reviews *about* this user
+                (r.review_type === 'self' || r.review_type.startsWith('downward')) && // Only self or downward
+                r.submitted_at
+            );
+
+            if (relatedReviews.length === 0) {
+                renderToast(`No submitted self or downward reviews found for ${user.email}.`, 'info');
+                return;
+            }
+
+            // Sort reviews logically (self first, then downward)
+            relatedReviews.sort((a, b) => {
+                if (a.review_type === 'self') return -1;
+                if (b.review_type === 'self') return 1;
+                return 0; // Downward reviews can come after self in any order
+            });
+
+
+            let modalContentHTML = '<div class="space-y-4">';
+            for (const review of relatedReviews) {
+                let title = '';
+                if (review.review_type === 'self') {
+                    title = 'Self-Review';
+                } else if (review.review_type.startsWith('downward')) {
+                    const reviewer = AppState.users.find(u => u.id === review.reviewer_id);
+                    const reviewerRole = reviewer ? `(${reviewer.role.replace('_', ' ')})` : '';
+                    title = `Downward Review from ${reviewer?.email || 'N/A'} ${reviewerRole}`;
+                }
+                
+               // When Ops/Admin views all reviews, show summarize button
+               modalContentHTML += renderReleasedReview(title, review, true, true); 
+            }
+            modalContentHTML += '</div>';
+            
+            renderFullReviewModal(user.email, modalContentHTML);
+        }
+
+        // RESTORED: Original "View All" function for Ops Manager
         async function handleViewFullReview(button) {
             const { userId } = button.dataset;
             const user = AppState.users.find(u => u.id === userId);
@@ -1481,9 +1585,9 @@
                 } else { // Review is written by them
                     const reviewee = AppState.users.find(u => u.id === review.reviewee_id);
                      if (review.review_type.startsWith('upward')) {
-                        title = `Upward Review for ${reviewee?.email || 'N/A'}`;
+                         title = `Upward Review for ${reviewee?.email || 'N/A'}`;
                      } else {
-                        title = `Downward Review for ${reviewee?.email || 'N/A'}`;
+                         title = `Downward Review for ${reviewee?.email || 'N/A'}`;
                      }
                 }
                 
@@ -1607,47 +1711,123 @@
         let chartInstances = {};
         function renderAllAnalytics() {
             const managerFilter = document.getElementById('analytics-manager-filter');
-            if (!managerFilter) return; // Guard clause if tab not rendered
+            const roleFilter = document.getElementById('analytics-role-filter');
+            
+            if (!managerFilter || !roleFilter) return; // Guard clause if tab not rendered
+            
             const selectedManagerId = managerFilter.value;
-            const analyticsData = calculateAnalyticsData(selectedManagerId);
+            const selectedRole = roleFilter.value;
+            
+            const analyticsData = calculateAnalyticsData(selectedManagerId, selectedRole);
             
             renderStatCards(analyticsData);
-            renderScoreDistributionChart(analyticsData);
-            renderAttritionChart(analyticsData);
-            renderTeamScoreChart(analyticsData);
+            renderTeamScoreChart(analyticsData.teamScoresData); // <-- Fixed
+            renderScoreByRoleChart(analyticsData.scoreByRoleData); // <-- New
+            renderAttritionChart(analyticsData.attritionData); // <-- Updated
+            renderPromotionChart(analyticsData.promotionData); // <-- New
         }
         
-        function calculateAnalyticsData(managerId) {
+        function calculateAnalyticsData(managerId, role) {
             let relevantUsers = AppState.users.filter(u => u.role !== 'admin');
+
+            // --- Apply Filters ---
             if (managerId !== 'all') {
-                relevantUsers = relevantUsers.filter(u => u.manager_id === managerId || u.id === managerId);
+                // "Team" = direct reports of the selected manager
+                relevantUsers = relevantUsers.filter(u => u.manager_id === managerId);
             }
+            if (role !== 'all') {
+                relevantUsers = relevantUsers.filter(u => u.role === role);
+            }
+            
             const relevantUserIds = relevantUsers.map(u => u.id);
             
-            // Get all reviews *required* for this group in the current phase or earlier
+            // --- Calculate Completion ---
             let totalRequiredReviews = 0;
             for(let phase = 1; phase <= AppState.currentPhase; phase++) {
                  relevantUsers.forEach(user => {
                      totalRequiredReviews += getRequiredReviewsForUser(user, phase).length;
                  });
             }
-
-            // Get all reviews *submitted* by or about this group
             const completedReviews = AppState.reviews.filter(r => {
                 return r.submitted_at && (relevantUserIds.includes(r.reviewer_id) || relevantUserIds.includes(r.reviewee_id));
             }).length;
+            const completionRate = totalRequiredReviews > 0 ? ((completedReviews / totalRequiredReviews) * 100).toFixed(0) : 0;
 
-            const downwardReviews = AppState.reviews.filter(r => r.submitted_at && relevantUserIds.includes(r.reviewee_id) && r.review_type.startsWith('downward'));
+            // --- Get All Scored Downward Reviews for Filtered Users ---
+            // These are the reviews we will analyze for scores, attrition, and promotion
+            const downwardReviews = AppState.reviews.filter(r => 
+                r.submitted_at && 
+                r.review_type.startsWith('downward') && 
+                r.score && // Only reviews that have a score
+                relevantUserIds.includes(r.reviewee_id) // Only for users in our filtered group
+            );
             
+            // --- Calculate Avg Score ---
             const scores = downwardReviews.map(r => r.score).filter(s => s);
             const averageScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2) : 'N/A';
             
+            // --- Calculate Attrition & Promotion ---
+            const attritionData = { 'Yes': 0, 'No': 0, 'N/A': 0 };
+            const promotionData = { 'Yes': 0, 'No': 0, 'Not Now': 0, 'N/A': 0 };
+            
+            downwardReviews.forEach(r => {
+                if (r.review_type === 'downward_manager' || r.review_type === 'downward_ops') {
+                    // Attrition (q7)
+                    const attritionAnswer = r.questions?.q7?.toLowerCase();
+                    if (attritionAnswer === 'yes') attritionData['Yes']++;
+                    else if (attritionAnswer === 'no') attritionData['No']++;
+                    else attritionData['N/A']++;
+                    
+                    // Promotion (q8)
+                    const promotionAnswer = r.questions?.q8;
+                    if (promotionAnswer === 'Yes') promotionData['Yes']++;
+                    else if (promotionAnswer === 'No') promotionData['No']++;
+                    else if (promotionAnswer === 'Not Now') promotionData['Not Now']++;
+                    else promotionData['N/A']++;
+                }
+            });
+
+            // --- Calculate Score by Role (Uses all submitted reviews, ignores filters) ---
+            const scoreByRoleData = {
+                'agent': { 1: 0, 2: 0, 3: 0, 4: 0 },
+                'manager': { 1: 0, 2: 0, 3: 0, 4: 0 },
+                'qacoach': { 1: 0, 2: 0, 3: 0, 4: 0 },
+            };
+            const allScoredReviews = AppState.reviews.filter(r => r.submitted_at && r.review_type.startsWith('downward') && r.score);
+            allScoredReviews.forEach(r => {
+                const revieweeRole = AppState.users.find(u => u.id === r.reviewee_id)?.role;
+                if (revieweeRole && scoreByRoleData[revieweeRole]) {
+                    scoreByRoleData[revieweeRole][r.score]++;
+                }
+            });
+
+            // --- Calculate Team Scores (FIXED) (Uses all users, ignores filters) ---
+            const teamScoresData = {};
+            const allManagers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
+            
+            allManagers.forEach(manager => {
+                const reportIds = AppState.users.filter(u => u.manager_id === manager.id).map(u => u.id);
+                if (reportIds.length > 0) {
+                    const teamScores = AppState.reviews
+                        .filter(r => reportIds.includes(r.reviewee_id) && r.review_type.startsWith('downward') && r.score)
+                        .map(r => r.score);
+                    
+                    if (teamScores.length > 0) {
+                        const avg = (teamScores.reduce((a, b) => a + b, 0) / teamScores.length);
+                        teamScoresData[manager.email] = avg.toFixed(2);
+                    }
+                }
+            });
+            
+            // --- Return All Data ---
             return {
                 totalReviews: totalRequiredReviews,
-                completionRate: totalRequiredReviews > 0 ? ((completedReviews / totalRequiredReviews) * 100).toFixed(0) : 0,
-                averageScore,
-                downwardReviews,
-                users: AppState.users,
+                completionRate: completionRate,
+                averageScore: averageScore,
+                attritionData: attritionData,
+                promotionData: promotionData,
+                scoreByRoleData: scoreByRoleData,
+                teamScoresData: teamScoresData,
             };
         }
 
@@ -1656,26 +1836,56 @@
             if (!container) return;
             container.innerHTML = `
                 <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Completion Rate</p><p class="text-3xl font-bold text-slate-800">${data.completionRate}%</p></div>
-                <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Total Required Reviews</p><p class="text-3xl font-bold text-slate-800">${data.totalReviews}</p></div>
                 <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">Average Score</p><p class="text-3xl font-bold text-slate-800">${data.averageScore}</p></div>
+                <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">High Potentials (Promo 'Yes')</p><p class="text-3xl font-bold text-slate-800">${data.promotionData['Yes']}</p></div>
+                <div class="bg-white p-5 rounded-lg shadow"><p class="text-sm text-slate-500">High Attrition Risk ('Yes')</p><p class="text-3xl font-bold text-slate-800">${data.attritionData['Yes']}</p></div>
             `;
         }
 
-        function renderScoreDistributionChart(data) {
-            const ctxEl = document.getElementById('score-chart');
+        function renderScoreByRoleChart(data) {
+            const ctxEl = document.getElementById('score-by-role-chart');
             if (!ctxEl) return;
             const ctx = ctxEl.getContext('2d');
-            const scoreCounts = { '1': 0, '2': 0, '3': 0, '4': 0 };
-            data.downwardReviews.forEach(r => { if(r.score) scoreCounts[r.score]++; });
             
-            if (chartInstances.score) chartInstances.score.destroy();
-            chartInstances.score = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: ['1: Needs Improvement', '2: Meeting', '3: Exceeding', '4: Top 10%'],
-                    datasets: [{ data: Object.values(scoreCounts), backgroundColor: ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6'] }]
+            const labels = ['Agents', 'Managers', 'QA Coaches'];
+            const datasets = [
+                {
+                    label: '1 - Needs Improvement',
+                    data: [data.agent[1], data.manager[1], data.qacoach[1]],
+                    backgroundColor: '#ef4444',
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }}}
+                {
+                    label: '2 - Meeting Expectations',
+                    data: [data.agent[2], data.manager[2], data.qacoach[2]],
+                    backgroundColor: '#f59e0b',
+                },
+                {
+                    label: '3 - Exceeding',
+                    data: [data.agent[3], data.manager[3], data.qacoach[3]],
+                    backgroundColor: '#22c55e',
+                },
+                {
+                    label: '4 - Top 10%',
+                    data: [data.agent[4], data.manager[4], data.qacoach[4]],
+                    backgroundColor: '#3b82f6',
+                },
+            ];
+            
+            if (chartInstances.scoreByRole) chartInstances.scoreByRole.destroy();
+            chartInstances.scoreByRole = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true }
+                    },
+                    plugins: { 
+                        legend: { position: 'bottom' }
+                    }
+                }
             });
         }
         
@@ -1683,23 +1893,37 @@
             const ctxEl = document.getElementById('attrition-chart');
             if (!ctxEl) return;
             const ctx = ctxEl.getContext('2d');
-            const attrition = { 'Yes': 0, 'No': 0 };
-            data.downwardReviews.forEach(r => {
-                if (r.review_type === 'downward_manager' || r.review_type === 'downward_ops') {
-                    const answer = r.questions?.q7?.toLowerCase();
-                    if (answer === 'yes') attrition['Yes']++;
-                    else if (answer === 'no') attrition['No']++;
-                }
-            });
             
             if (chartInstances.attrition) chartInstances.attrition.destroy();
             chartInstances.attrition = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Yes', 'No'],
-                    datasets: [{ data: Object.values(attrition), backgroundColor: ['#ef4444', '#22c55e'] }]
+                    labels: ['Yes', 'No', 'N/A'],
+                    datasets: [{ 
+                        data: [data['Yes'], data['No'], data['N/A']], 
+                        backgroundColor: ['#ef4444', '#22c55e', '#cbd5e1'] 
+                    }]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }} }
+            });
+        }
+
+        function renderPromotionChart(data) {
+            const ctxEl = document.getElementById('promotion-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
+            
+            if (chartInstances.promotion) chartInstances.promotion.destroy();
+            chartInstances.promotion = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Yes', 'No', 'Not Now', 'N/A'],
+                    datasets: [{ 
+                        data: [data['Yes'], data['No'], data['Not Now'], data['N/A']], 
+                        backgroundColor: ['#22c55e', '#ef4444', '#f59e0b', '#cbd5e1'] 
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }} }
             });
         }
 
@@ -1707,22 +1931,24 @@
             const ctxEl = document.getElementById('team-score-chart');
             if (!ctxEl) return;
             const ctx = ctxEl.getContext('2d');
-            const managers = data.users.filter(u => u.role === 'manager');
-            const teamScores = {};
-            managers.forEach(m => {
-                const teamMemberIds = data.users.filter(u => u.manager_id === m.id).map(u => u.id);
-                const scores = AppState.reviews.filter(r => teamMemberIds.includes(r.reviewee_id) && r.score).map(r => r.score);
-                if (scores.length) teamScores[m.email] = (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(2);
-            });
             
             if (chartInstances.teamScore) chartInstances.teamScore.destroy();
             chartInstances.teamScore = new Chart(ctx, {
                 type: 'bar',
                 data: {
-                    labels: Object.keys(teamScores),
-                    datasets: [{ label: 'Average Score', data: Object.values(teamScores), backgroundColor: '#3b82f6' }]
+                    labels: Object.keys(data),
+                    datasets: [{ 
+                        label: 'Average Score', 
+                        data: Object.values(data), 
+                        backgroundColor: '#3b82f6' 
+                    }]
                 },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }}}
+                options: { 
+                    indexAxis: 'y', 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false }}
+                }
             });
         }
         
@@ -1811,12 +2037,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
