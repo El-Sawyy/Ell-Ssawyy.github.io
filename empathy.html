@@ -153,7 +153,7 @@
                 <div class="space-y-4">
                     <div>
                         <label for="rephrase-customer-statement" class="block text-sm font-medium text-gray-700">Customer's Statement</label>
-                        <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Tempo device stopped working mid-workout and I'm really frustrated!"></textarea>
+                        <textarea id="rephrase-customer-statement" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3" rows="4" placeholder="e.g., My Kindly! device stopped working mid-workout and I'm really frustrated!"></textarea>
                     </div>
                     <div>
                         <label for="rephrase-agent-draft" class="block text-sm font-medium text-gray-700">Your Draft Response</label>
@@ -605,8 +605,8 @@
             
             // NOTE: This key is for demonstration purposes. In a real application,
             // this should be handled securely on a server.
-            const apiKey = "AIzaSyCYFHabjIKGS4UrO1gnvZxLen20hsqxgxo";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+            const apiKey = "AIzaSyDaE1ZS2Jd6jtcR2bD6JaDP86LJ0f24kiY";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -725,7 +725,7 @@
                 }
             };
 
-            const apiKey = "AIzaSyDaE1ZS2Jd6jtcR2bD6JaDP86LJ0f24kiY";
+            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
@@ -2427,7 +2427,7 @@
                 return; // Let onAuthStateChange handle the UI switch to logged-out
             }
 
-            isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@tempo.fit';
+            isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
 
             document.getElementById('logged-out-header').classList.add('hidden');
             const loggedInHeader = document.getElementById('logged-in-header');
@@ -2499,8 +2499,3 @@
     </script>
 </body>
 </html>
-
-
-
-
-
