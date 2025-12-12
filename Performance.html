@@ -483,7 +483,14 @@
             let content = '';
             if (AppState.currentPhase === 4) {
                  const selfReview = AppState.reviews.find(r => r.reviewer_id === AppState.currentUser.id && r.review_type === 'self');
-                 const downwardManagerReview = AppState.reviews.find(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'downward_manager' && r.submitted_at);
+                 
+                 // FIX: Look for either downward_manager OR downward_ops review
+                 const downwardManagerReview = AppState.reviews.find(r => 
+                    r.reviewee_id === AppState.currentUser.id && 
+                    (r.review_type === 'downward_manager' || r.review_type === 'downward_ops') && 
+                    r.submitted_at
+                 );
+                 
                  const downwardQAReview = AppState.reviews.find(r => r.reviewee_id === AppState.currentUser.id && r.review_type === 'downward_qa' && r.submitted_at);
                  const manager = AppState.users.find(u => u.id === AppState.userProfile.manager_id);
                  const qaCoach = AppState.users.find(u => u.id === AppState.userProfile.qa_coach_id);
