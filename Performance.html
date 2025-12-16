@@ -88,7 +88,7 @@
 
         // --- UI COMPONENTS & RENDERING ---
         const $app = document.getElementById('app');
-        let isDelegatedListenerAttached = false; // <-- FIX: Add flag here
+        let isDelegatedListenerAttached = false; // Flag to prevent duplicate listeners
 
         const renderSpinner = () => `
             <div class="fixed inset-0 bg-white/70 flex items-center justify-center z-50">
@@ -215,32 +215,88 @@
             `;
         };
 
-        const renderLogin = () => {
-            $app.innerHTML = `
+        const renderLogin = (view = 'signin') => {
+            if (view === 'signin') {
+                $app.innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center bg-slate-50">
+                        <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+                            <div class="flex items-center justify-center space-x-2 mb-6">
+                                <svg class="h-10 w-10 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" /></svg>
+                                <h2 class="text-2xl font-bold text-slate-800">Performance Review Login</h2>
+                            </div>
+                            <form id="login-form">
+                                <div class="mb-4">
+                                    <label for="email" class="block text-sm font-medium text-slate-700">Email Address</label>
+                                    <input type="email" id="email" name="email" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                </div>
+                                <div class="mb-2">
+                                    <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
+                                    <input type="password" id="password" name="password" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                </div>
+                                <div class="flex items-center justify-end mb-6">
+                                    <button type="button" id="forgot-password-link" class="text-sm font-medium text-sky-600 hover:text-sky-500 focus:outline-none">Forgot your password?</button>
+                                </div>
+                                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+                                    Sign In
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('login-form').addEventListener('submit', handleLogin);
+                document.getElementById('forgot-password-link').addEventListener('click', () => renderLogin('forgot'));
+            } else if (view === 'forgot') {
+                $app.innerHTML = `
+                    <div class="min-h-screen flex items-center justify-center bg-slate-50">
+                        <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+                             <div class="mb-6 text-center">
+                                <div class="flex items-center justify-center space-x-2 mb-4">
+                                    <svg class="h-10 w-10 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" /></svg>
+                                </div>
+                                <h2 class="text-2xl font-bold text-slate-800">Reset Password</h2>
+                                <p class="text-sm text-slate-500 mt-2">Enter your email address and we'll send you a link to reset your password.</p>
+                            </div>
+                            <form id="reset-request-form">
+                                <div class="mb-6">
+                                    <label for="reset-email" class="block text-sm font-medium text-slate-700">Email Address</label>
+                                    <input type="email" id="reset-email" name="email" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                </div>
+                                <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
+                                    Send Reset Link
+                                </button>
+                                <div class="mt-4 text-center">
+                                    <button type="button" id="back-to-login" class="text-sm font-medium text-sky-600 hover:text-sky-500 focus:outline-none">Back to Login</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('reset-request-form').addEventListener('submit', handleResetRequest);
+                document.getElementById('back-to-login').addEventListener('click', () => renderLogin('signin'));
+            }
+        };
+
+        const renderNewPasswordForm = () => {
+             $app.innerHTML = `
                 <div class="min-h-screen flex items-center justify-center bg-slate-50">
                     <div class="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
-                        <div class="flex items-center justify-center space-x-2 mb-6">
-                            <svg class="h-10 w-10 text-sky-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.s 0 00-3 0m-9.75 0h9.75" /></svg>
-                            <h2 class="text-2xl font-bold text-slate-800">Performance Review Login</h2>
+                        <div class="mb-6 text-center">
+                            <h2 class="text-2xl font-bold text-slate-800">Set New Password</h2>
+                            <p class="text-sm text-slate-500 mt-2">Please enter a new password for your account.</p>
                         </div>
-                        <form id="login-form">
-                            <div class="mb-4">
-                                <label for="email" class="block text-sm font-medium text-slate-700">Email Address</label>
-                                <input type="email" id="email" name="email" value="ops@tempo.fit" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
-                            </div>
+                        <form id="update-password-form">
                             <div class="mb-6">
-                                <label for="password" class="block text-sm font-medium text-slate-700">Password</label>
-                                <input type="password" id="password" name="password" value="password" required class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
+                                <label for="new-password" class="block text-sm font-medium text-slate-700">New Password</label>
+                                <input type="password" id="new-password" name="password" required minlength="6" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm">
                             </div>
-                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500">
-                                Sign In
+                            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                Update Password
                             </button>
                         </form>
                     </div>
                 </div>
             `;
-
-            document.getElementById('login-form').addEventListener('submit', handleLogin);
+            document.getElementById('update-password-form').addEventListener('submit', handleUpdatePassword);
         };
         
         const renderDashboard = async () => {
@@ -287,7 +343,7 @@
                      <div class="border-b border-slate-200">
                          <nav class="-mb-px flex space-x-8" aria-label="Tabs">
                              <button data-tab="phase" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-sky-500 text-sky-600">Phase Control</button>
-                             <button data-tab="status" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">${AppState.currentPhase === 3 ? 'Score Collaboration' : 'Review Status'}</button>
+                             <button data-tab="status" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">${AppState.currentPhase === 3 ? 'Score Collaboration' : (AppState.currentPhase === 4 ? 'All Reviews' : 'Review Status')}</button>
                              <button data-tab="scores" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Scores Overview</button>
                              <button data-tab="analytics" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Analytics</button>
                              <button data-tab="export" class="admin-tab whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300">Data Export</button>
@@ -332,9 +388,12 @@
 
         const renderAdminStatusView = () => {
             const managers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
+            const title = AppState.currentPhase === 4 ? "All Released Reviews" : `Review Completion Status (Phase ${AppState.currentPhase})`;
+            const actionHeader = AppState.currentPhase === 4 ? "Actions" : "Review Tasks & Status";
+
             return `
                  <div class="bg-white p-6 rounded-lg shadow">
-                     <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Review Completion Status (Phase ${AppState.currentPhase})</h3>
+                     <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">${title}</h3>
                      <div class="mb-4">
                          <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
                          <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
@@ -348,7 +407,7 @@
                                  <tr>
                                      <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Employee</th>
                                      <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Review Tasks & Status</th>
+                                     <th class="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">${actionHeader}</th>
                                  </tr>
                              </thead>
                              <tbody class="bg-white divide-y divide-slate-200"></tbody>
@@ -456,6 +515,15 @@
                          <div class="bg-white p-6 rounded-lg shadow">
                               <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Promotion Recommendations</h3>
                              <div class="h-80"><canvas id="promotion-chart"></canvas></div>
+                         </div>
+                         <!-- NEW: Leadership & Coaching Charts -->
+                         <div class="bg-white p-6 rounded-lg shadow">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Leadership Style (Managers/Ops)</h3>
+                             <div class="h-80"><canvas id="leadership-style-chart"></canvas></div>
+                         </div>
+                         <div class="bg-white p-6 rounded-lg shadow">
+                              <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Coaching Effectiveness (QA)</h3>
+                             <div class="h-80"><canvas id="coaching-style-chart"></canvas></div>
                          </div>
                          <div class="bg-white p-6 rounded-lg shadow">
                               <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">Attrition Risk</h3>
@@ -634,9 +702,10 @@
             const assignedPersonnel = AppState.users.filter(u => u.manager_id === AppState.currentUser.id); 
 
             if (AppState.currentPhase === 4) {
+                 // FIX: Include both upward_ops (from leaders) and upward_manager (from direct agents)
                  const upwardReviewsForOps = AppState.reviews.filter(r => 
                      r.reviewee_id === AppState.currentUser.id && 
-                     r.review_type === 'upward_ops' && 
+                     (r.review_type === 'upward_ops' || r.review_type === 'upward_manager') && 
                      r.submitted_at
                 );
 
@@ -644,7 +713,7 @@
                      <h3 class="text-xl font-semibold text-slate-800">Your Anonymous Upward Feedback</h3>
                      <div class="space-y-6 mt-4">
                          ${upwardReviewsForOps.length > 0 
-                             ? upwardReviewsForOps.map((review, index) => renderReleasedReview(`Feedback from Leader ${index + 1}`, review)).join('') 
+                             ? upwardReviewsForOps.map((review, index) => renderReleasedReview(`Feedback from Team Member ${index + 1}`, review)).join('') 
                              : '<div class="bg-white rounded-lg shadow p-6"><p class="text-slate-500">No upward feedback was submitted for you in this cycle.</p></div>'
                          }
                      </div>
@@ -709,6 +778,44 @@
         
         // --- EVENT HANDLERS & LOGIC ---
 
+        const handleResetRequest = async (e) => {
+            e.preventDefault();
+            const email = e.target.email.value;
+            $app.insertAdjacentHTML('beforeend', renderSpinner());
+            
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + window.location.pathname, 
+            });
+            
+            const spinner = $app.querySelector('.spinner');
+            if (spinner) spinner.parentElement.remove();
+
+            if (error) {
+                renderToast(error.message, 'error');
+            } else {
+                renderToast('Password reset link sent! Please check your email.', 'success');
+                renderLogin('signin');
+            }
+        };
+
+        const handleUpdatePassword = async (e) => {
+            e.preventDefault();
+            const password = e.target.password.value;
+            $app.insertAdjacentHTML('beforeend', renderSpinner());
+            
+            const { error } = await supabaseClient.auth.updateUser({ password: password });
+            
+            const spinner = $app.querySelector('.spinner');
+            if (spinner) spinner.parentElement.remove();
+
+            if (error) {
+                renderToast(error.message, 'error');
+            } else {
+                renderToast('Password updated successfully! Logging you in...', 'success');
+                await renderDashboard(); 
+            }
+        };
+
         const handleLogin = async (e) => {
             e.preventDefault();
             $app.insertAdjacentHTML('beforeend', renderSpinner());
@@ -728,7 +835,11 @@
         };
 
         const handleLogout = async () => {
-            await supabaseClient.auth.signOut();
+            try {
+                await supabaseClient.auth.signOut();
+            } catch (error) {
+                console.warn("Sign out failed (network error?), clearing local state anyway.", error);
+            }
             AppState.currentUser = null;
             AppState.userProfile = null;
             renderLogin();
@@ -737,17 +848,30 @@
         const checkSession = async () => {
             try {
                 $app.innerHTML = renderSpinner();
+                
+                // Manual Hash Check for Recovery Flow
+                const hash = window.location.hash;
+                if (hash && hash.includes('type=recovery')) {
+                    // Let Supabase process the hash automatically, but prepare to show the new password form
+                    // Supabase's onAuthStateChange will fire 'PASSWORD_RECOVERY'
+                    // renderNewPasswordForm() will be called there.
+                }
+
                 const { data } = await supabaseClient.auth.getSession();
                 if (data.session && data.session.user) {
                     AppState.currentUser = data.session.user;
-                    await renderDashboard();
+                    // Only render dashboard if NOT in recovery flow
+                     const isRecoveryFormPresent = document.getElementById('update-password-form');
+                    if (!isRecoveryFormPresent) {
+                         await renderDashboard();
+                    }
                 } else {
                     renderLogin();
                 }
             } catch (error) {
                 console.error("Initialization Error:", error);
                 renderToast("An error occurred during startup. Please try again.", "error");
-                renderLogin(); // Fallback to login screen on any error
+                renderLogin(); 
             }
         };
         
@@ -761,6 +885,7 @@
                 .single();
 
             if (profileError) {
+                console.error("Profile fetch error:", profileError);
                 renderToast(`Error fetching profile: ${profileError.message}`, 'error');
                 handleLogout();
                 return;
@@ -777,7 +902,9 @@
             if (AppState.userProfile.role === 'admin') {
                 // Admin sees all reviews, so no additional filter is needed on the query.
             } else if (AppState.userProfile.role === 'ops_manager') {
-                // Ops Manager needs to see reviews they've written, AND upward reviews for their direct reports.
+                // Ops Manager needs to see reviews they've written, OR reviews for their direct reports
+                // AND reviews written *by* their direct reports (e.g., manager reviewing agent)
+                // AND reviews *about* the agents of their direct reports (e.g., agent self-review)
                 const { data: directReports, error: reportsError } = await supabaseClient
                     .from('users')
                     .select('id')
@@ -860,7 +987,10 @@
         // --- Init ---
         // Add a listener for auth changes (like login/logout)
         supabaseClient.auth.onAuthStateChange((event, session) => {
-             if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
+             if (event === 'PASSWORD_RECOVERY') {
+                 // Handle password recovery flow
+                 renderNewPasswordForm();
+             } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                  // Handle logout
                  AppState.currentUser = null;
                  AppState.userProfile = null;
@@ -869,7 +999,9 @@
                  // Handle login or session refresh
                  if (session && session.user) {
                     AppState.currentUser = session.user;
-                    if (!$app.querySelector('main')) { // Only render dash if not already there
+                    // Only render dashboard if we are NOT in the middle of a password recovery (showing the update form)
+                    const isRecoveryFormPresent = document.getElementById('update-password-form');
+                    if (!isRecoveryFormPresent && !$app.querySelector('main')) { 
                          renderDashboard();
                     }
                  }
@@ -1326,7 +1458,7 @@
                 },
                 'upward_manager': {
                     q1: 'How would you describe your manager’s communication and ability to support the team?',
-                    q2: 'How does your manager ensure team goals align with company objectives?',
+                    q2: 'How does your manager ensure team goals align with company company objectives?',
                     q3: 'How well does your manager provide constructive feedback to develop your skills?',
                     q4: 'How confident are you in your manager’s decision-making? Do they consider team input?',
                     q5: 'Evaluate your manager’s leadership style and efforts in building team cohesion.',
@@ -1343,10 +1475,10 @@
                     q7: 'What should your QA Coach change?',
                 },
                 'upward_ops': {
-                    q1: 'How would you describe your manager’s communication and ability to support the team?',
-                    q2: 'How does your manager ensure team goals align with company objectives?',
-                    q3: 'How well does your manager provide constructive feedback to develop your skills?',
-                    q4: 'How confident are you in your manager’s decision-making? Do they consider team input?',
+                    q1: 'How would you describe your manager’s communication and ability to provide strategic direction?',
+                    q2: 'How does your manager ensure departmental goals align with company objectives?',
+                    q3: 'How well does your manager provide constructive feedback for your development as a leader?',
+                    q4: 'How confident are you in your manager’s decision-making for the department?',
                     q5: 'Evaluate your manager’s leadership style and efforts in building team cohesion.',
                     q6: 'What should your manager keep doing?',
                     q7: 'What should your manager change?',
@@ -1381,19 +1513,33 @@
             }
             
             const rows = filteredUsers.map(user => {
-                const requiredReviews = getRequiredReviewsForUser(user, AppState.currentPhase);
-                if (requiredReviews.length === 0) return '';
-                const reviewStatusHtml = requiredReviews.map(req => {
-                    const review = AppState.reviews.find(r => r.reviewer_id === user.id && r.review_type === req.type && r.reviewee_id === req.reviewee_id);
-                    const isSubmitted = review && review.submitted_at;
-                    const statusBadge = `<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isSubmitted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${isSubmitted ? 'Completed' : 'Pending'}</span>`;
-                    return `<div class="py-1">${req.name} ${statusBadge}</div>`;
-                }).join('');
+                let cellContent = '';
 
+                if (AppState.currentPhase === 4) {
+                    // Phase 4: Show View All Button
+                    cellContent = `<button class="view-full-review-btn bg-sky-100 text-sky-700 hover:bg-sky-200 text-sm font-medium px-4 py-2 rounded-md" data-user-id="${user.id}">View All Reviews</button>`;
+                } else {
+                    // Phase 1-2: Show Status Badges
+                    const requiredReviews = getRequiredReviewsForUser(user, AppState.currentPhase);
+                    if (requiredReviews.length === 0) return ''; // Should handle this better if no reviews but table row exists? For now skipping row if no tasks is old behavior, keeping consistent.
+                    
+                    const reviewStatusHtml = requiredReviews.map(req => {
+                        const review = AppState.reviews.find(r => r.reviewer_id === user.id && r.review_type === req.type && r.reviewee_id === req.reviewee_id);
+                        const isSubmitted = review && review.submitted_at;
+                        const statusBadge = `<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isSubmitted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${isSubmitted ? 'Completed' : 'Pending'}</span>`;
+                        return `<div class="py-1">${req.name} ${statusBadge}</div>`;
+                    }).join('');
+                    cellContent = reviewStatusHtml;
+                }
+
+                // If no required reviews in Phase 1/2 and we skipped above, this row won't render. 
+                // But in Phase 4 we want to show everyone. 
+                // Let's ensure we render row in Phase 4 even if no "required reviews" logic applies (though everyone has reviews by then).
+                
                 return `<tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${user.email}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${user.role}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${reviewStatusHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${cellContent}</td>
                 </tr>`;
             }).join('');
             tableBody.innerHTML = rows || `<tr><td colspan="3" class="text-center p-4 text-slate-500">No users match the filter.</td></tr>`;
@@ -1562,8 +1708,8 @@
             const relatedReviews = AppState.reviews.filter(r => {
                 const isRelated = (r.reviewer_id === userId || r.reviewee_id === userId) && r.submitted_at;
 
-                // FIX: Exclude the upward review the leader/qa wrote about the current ops_manager
-                const isExcludedUpwardReview = r.review_type === 'upward_ops' && 
+                // FIX: Exclude ANY upward review written about the current ops_manager (whether from leader or agent)
+                const isExcludedUpwardReview = (r.review_type === 'upward_ops' || r.review_type === 'upward_manager') && 
                                                r.reviewer_id === userId && 
                                                r.reviewee_id === AppState.currentUser.id;
 
@@ -1739,10 +1885,12 @@
             const analyticsData = calculateAnalyticsData(selectedManagerId, selectedRole);
             
             renderStatCards(analyticsData);
-            renderTeamScoreChart(analyticsData.teamScoresData); // <-- Fixed
-            renderScoreByRoleChart(analyticsData.scoreByRoleData); // <-- New
-            renderAttritionChart(analyticsData.attritionData); // <-- Updated
-            renderPromotionChart(analyticsData.promotionData); // <-- New
+            renderTeamScoreChart(analyticsData.teamScoresData);
+            renderScoreByRoleChart(analyticsData.scoreByRoleData);
+            renderAttritionChart(analyticsData.attritionData);
+            renderPromotionChart(analyticsData.promotionData);
+            renderLeadershipChart(analyticsData.leadershipCountsByName); // <-- Updated to use new data structure
+            renderCoachingChart(analyticsData.coachingCountsByName);     // <-- Updated to use new data structure
         }
         
         function calculateAnalyticsData(managerId, role) {
@@ -1772,7 +1920,6 @@
             const completionRate = totalRequiredReviews > 0 ? ((completedReviews / totalRequiredReviews) * 100).toFixed(0) : 0;
 
             // --- Get All Scored Downward Reviews for Filtered Users ---
-            // These are the reviews we will analyze for scores, attrition, and promotion
             const downwardReviews = AppState.reviews.filter(r => 
                 r.submitted_at && 
                 r.review_type.startsWith('downward') && 
@@ -1819,11 +1966,15 @@
                 }
             });
 
-            // --- Calculate Team Scores (FIXED) (Uses all users, ignores filters) ---
+            // --- Calculate Team Scores (Respects Filter) ---
             const teamScoresData = {};
-            const allManagers = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
+            let managersToChart = AppState.users.filter(u => u.role === 'manager' || u.role === 'ops_manager');
             
-            allManagers.forEach(manager => {
+            if (managerId !== 'all') {
+                managersToChart = managersToChart.filter(u => u.id === managerId || u.manager_id === managerId);
+            }
+
+            managersToChart.forEach(manager => {
                 const reportIds = AppState.users.filter(u => u.manager_id === manager.id).map(u => u.id);
                 if (reportIds.length > 0) {
                     const teamScores = AppState.reviews
@@ -1836,7 +1987,49 @@
                     }
                 }
             });
+
+            // --- Calculate Leadership & Coaching Scores By Name (UPDATED: Counts per category) ---
+            // Structure: { "manager@email": { "Very Satisfied": 2, "Satisfied": 1 ... } }
+            const leadershipCountsByName = {}; 
+            const coachingCountsByName = {};   
             
+            // Helper to initialize counts object
+            const initCounts = () => ({ "Very Satisfied": 0, "Satisfied": 0, "Neutral": 0, "Not Satisfied": 0, "Very Dissatisfied": 0 });
+
+            // Get upward reviews.
+            let relevantUpwardReviewees = AppState.users.map(u => u.id); 
+            if (managerId !== 'all') {
+                 relevantUpwardReviewees = [managerId, ...AppState.users.filter(u => u.manager_id === managerId).map(u => u.id)];
+            }
+
+            const upwardReviews = AppState.reviews.filter(r => 
+                r.submitted_at && 
+                r.review_type.startsWith('upward') &&
+                relevantUpwardReviewees.includes(r.reviewee_id)
+            );
+
+            upwardReviews.forEach(r => {
+                const reviewee = AppState.users.find(u => u.id === r.reviewee_id);
+                const answer = r.questions?.q5; // Leadership/Coaching question
+                if (!answer || !reviewee) return;
+
+                // Normalize Answer
+                const normalize = (str) => str.toLowerCase().split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                const normalizedAnswer = normalize(answer);
+                
+                // Ensure the normalized answer is one of our expected categories
+                if (["Very Satisfied", "Satisfied", "Neutral", "Not Satisfied", "Very Dissatisfied"].includes(normalizedAnswer)) {
+                    
+                    if (r.review_type === 'upward_manager' || r.review_type === 'upward_ops') {
+                        if (!leadershipCountsByName[reviewee.email]) leadershipCountsByName[reviewee.email] = initCounts();
+                        leadershipCountsByName[reviewee.email][normalizedAnswer]++;
+                    } else if (r.review_type === 'upward_qa') {
+                        if (!coachingCountsByName[reviewee.email]) coachingCountsByName[reviewee.email] = initCounts();
+                        coachingCountsByName[reviewee.email][normalizedAnswer]++;
+                    }
+                }
+            });
+
             // --- Return All Data ---
             return {
                 totalReviews: totalRequiredReviews,
@@ -1846,6 +2039,8 @@
                 promotionData: promotionData,
                 scoreByRoleData: scoreByRoleData,
                 teamScoresData: teamScoresData,
+                leadershipCountsByName: leadershipCountsByName, // Pass raw counts
+                coachingCountsByName: coachingCountsByName      // Pass raw counts
             };
         }
 
@@ -1965,7 +2160,74 @@
                     indexAxis: 'y', 
                     responsive: true, 
                     maintainAspectRatio: false, 
-                    plugins: { legend: { display: false }}
+                    plugins: { legend: { display: false } },
+                    scales: { x: { max: 4 } }
+                }
+            });
+        }
+
+        function renderLeadershipChart(data) {
+            // Data structure: { "email": { "Very Satisfied": 1, ... } }
+            const ctxEl = document.getElementById('leadership-style-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
+            
+            const labels = Object.keys(data);
+            const categories = ["Very Satisfied", "Satisfied", "Neutral", "Not Satisfied", "Very Dissatisfied"];
+            const colors = ['#15803d', '#22c55e', '#94a3b8', '#f97316', '#ef4444'];
+            
+            const datasets = categories.map((cat, index) => ({
+                label: cat,
+                data: labels.map(name => data[name][cat]),
+                backgroundColor: colors[index]
+            }));
+
+            if (chartInstances.leadership) chartInstances.leadership.destroy();
+            chartInstances.leadership = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: { 
+                    indexAxis: 'y',
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } }, // Legend might be too big, keeping hidden for cleaner look or enable if needed
+                    scales: { 
+                        x: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
+                        y: { stacked: true }
+                    } 
+                }
+            });
+        }
+
+        function renderCoachingChart(data) {
+             // Data structure: { "email": { "Very Satisfied": 1, ... } }
+            const ctxEl = document.getElementById('coaching-style-chart');
+            if (!ctxEl) return;
+            const ctx = ctxEl.getContext('2d');
+            
+            const labels = Object.keys(data);
+            const categories = ["Very Satisfied", "Satisfied", "Neutral", "Not Satisfied", "Very Dissatisfied"];
+            const colors = ['#15803d', '#22c55e', '#94a3b8', '#f97316', '#ef4444'];
+            
+            const datasets = categories.map((cat, index) => ({
+                label: cat,
+                data: labels.map(name => data[name][cat]),
+                backgroundColor: colors[index]
+            }));
+            
+            if (chartInstances.coaching) chartInstances.coaching.destroy();
+            chartInstances.coaching = new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets },
+                options: { 
+                    indexAxis: 'y',
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        x: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } },
+                        y: { stacked: true }
+                    } 
                 }
             });
         }
