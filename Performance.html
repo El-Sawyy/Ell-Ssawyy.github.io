@@ -82,6 +82,7 @@
             currentUser: null,
             userProfile: null,
             currentPhase: 1,
+            isRecoveringPassword: false, // Flag for password recovery flow
             users: [],
             reviews: [],
         };
@@ -812,6 +813,8 @@
                 renderToast(error.message, 'error');
             } else {
                 renderToast('Password updated successfully! Logging you in...', 'success');
+                // Clear recovery flag and show dashboard
+                AppState.isRecoveringPassword = false;
                 await renderDashboard(); 
             }
         };
@@ -835,13 +838,10 @@
         };
 
         const handleLogout = async () => {
-            try {
-                await supabaseClient.auth.signOut();
-            } catch (error) {
-                console.warn("Sign out failed (network error?), clearing local state anyway.", error);
-            }
+            await supabaseClient.auth.signOut();
             AppState.currentUser = null;
             AppState.userProfile = null;
+            AppState.isRecoveringPassword = false;
             renderLogin();
         };
 
@@ -852,19 +852,17 @@
                 // Manual Hash Check for Recovery Flow
                 const hash = window.location.hash;
                 if (hash && hash.includes('type=recovery')) {
-                    // Let Supabase process the hash automatically, but prepare to show the new password form
-                    // Supabase's onAuthStateChange will fire 'PASSWORD_RECOVERY'
-                    // renderNewPasswordForm() will be called there.
+                    console.log("Recovery hash detected");
+                    AppState.isRecoveringPassword = true; 
+                    // Return early. Do NOT load session/dashboard yet.
+                    // Wait for Supabase to process hash and fire event.
+                    return; 
                 }
 
                 const { data } = await supabaseClient.auth.getSession();
                 if (data.session && data.session.user) {
                     AppState.currentUser = data.session.user;
-                    // Only render dashboard if NOT in recovery flow
-                     const isRecoveryFormPresent = document.getElementById('update-password-form');
-                    if (!isRecoveryFormPresent) {
-                         await renderDashboard();
-                    }
+                    await renderDashboard();
                 } else {
                     renderLogin();
                 }
@@ -989,20 +987,27 @@
         supabaseClient.auth.onAuthStateChange((event, session) => {
              if (event === 'PASSWORD_RECOVERY') {
                  // Handle password recovery flow
+                 AppState.isRecoveringPassword = true;
                  renderNewPasswordForm();
              } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
                  // Handle logout
                  AppState.currentUser = null;
                  AppState.userProfile = null;
+                 AppState.isRecoveringPassword = false;
                  renderLogin();
              } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
                  // Handle login or session refresh
                  if (session && session.user) {
                     AppState.currentUser = session.user;
-                    // Only render dashboard if we are NOT in the middle of a password recovery (showing the update form)
-                    const isRecoveryFormPresent = document.getElementById('update-password-form');
-                    if (!isRecoveryFormPresent && !$app.querySelector('main')) { 
-                         renderDashboard();
+                    
+                    // Critical check: If we are in recovery mode, do NOT show dashboard.
+                    if (AppState.isRecoveringPassword) {
+                        renderNewPasswordForm();
+                    } else {
+                        // Only render dashboard if not already rendered
+                        if (!$app.querySelector('main')) { 
+                             renderDashboard();
+                        }
                     }
                  }
              }
@@ -1216,7 +1221,7 @@
 
             // NEW: Add check for leadership/cohesion question
             if (question.includes('manager’s leadership style') || question.includes('QA Coach’s coaching style')) {
-                const options = ["Very satisfied", "satisfied", "neutral", "not satisfied", "very dissatisfied"];
+                const options = ["Very Satisfied", "Satisfied", "Neutral", "Not Satisfied", "Very Dissatisfied"];
                 return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
                     <option value="" ${!value ? 'selected' : ''}>Select an option</option>
                     ${options.map(opt => `<option value="${opt}" ${value.toLowerCase() === opt.toLowerCase() ? 'selected' : ''}>${opt}</option>`).join('')}
