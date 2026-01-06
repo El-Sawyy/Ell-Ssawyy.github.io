@@ -138,32 +138,27 @@
                 const confirmBtn = document.getElementById(`${modalId}-confirm`);
                 const cancelBtn = document.getElementById(`${modalId}-cancel`);
                 
-                const closeModal = (result) => {
-                    let resolvedValue;
-                    if (result === false) {
-                        resolvedValue = false; // User cancelled
-                    } else if (contentHTML) {
-                        // User confirmed, and there was content
-                        const inputElement = modalElement.querySelector('select, input, textarea');
-                        resolvedValue = inputElement ? inputElement.value : true; // Get value, or default to true
-                    } else {
-                        // User confirmed, no content
-                        resolvedValue = true;
+                const resolveModal = (result) => {
+                    let value = result;
+                    if (result === true && contentHTML) {
+                        const input = modalElement.querySelector('select, input');
+                        if (input) {
+                            value = input.value;
+                        }
                     }
-                   
                     modalElement.remove();
-                    window.removeEventListener('keydown', handleKeyDown); // Clean up listener
-                    resolve(resolvedValue);
+                    window.removeEventListener('keydown', handleKeyDown);
+                    resolve(value);
                 };
-
-                confirmBtn.onclick = () => closeModal(true); // Pass true for confirm
-                cancelBtn.onclick = () => closeModal(false); // Pass false for cancel
 
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
-                        closeModal(false);
+                        resolveModal(false);
                     }
                 };
+
+                confirmBtn.onclick = () => resolveModal(true);
+                cancelBtn.onclick = () => resolveModal(false);
                 window.addEventListener('keydown', handleKeyDown);
             });
         };
@@ -395,12 +390,22 @@
             return `
                  <div class="bg-white p-6 rounded-lg shadow">
                      <h3 class="text-lg font-medium leading-6 text-slate-900 mb-4">${title}</h3>
-                     <div class="mb-4">
-                         <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
-                         <select id="manager-filter" class="mt-1 block w-full md:w-1/3 pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
-                             <option value="all">All Managers</option>
-                             ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
-                         </select>
+                     <div class="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mb-4">
+                         <div class="flex-1">
+                             <label for="manager-filter" class="block text-sm font-medium text-slate-700">Filter by Manager</label>
+                             <select id="manager-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                                 <option value="all">All Managers</option>
+                                 ${managers.map(m => `<option value="${m.id}">${m.email}</option>`).join('')}
+                             </select>
+                         </div>
+                         <div class="flex-1">
+                             <label for="status-filter" class="block text-sm font-medium text-slate-700">Filter by Status</label>
+                             <select id="status-filter" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm rounded-md">
+                                 <option value="all">All Statuses</option>
+                                 <option value="pending">Pending</option>
+                                 <option value="completed">Completed</option>
+                             </select>
+                         </div>
                      </div>
                      <div class="overflow-x-auto">
                          <table class="min-w-full divide-y divide-slate-200" id="status-table">
@@ -784,15 +789,25 @@
             const email = e.target.email.value;
             $app.insertAdjacentHTML('beforeend', renderSpinner());
             
+            // Note: If you get "Error sending recovery email", it often means:
+            // 1. The Supabase Project is PAUSED.
+            // 2. You hit the strict Rate Limit (3 emails/hr on free tier).
+            // 3. The Redirect URL is not whitelisted in Supabase dashboard.
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.origin + window.location.pathname, 
+                redirectTo: window.location.href, 
             });
             
             const spinner = $app.querySelector('.spinner');
             if (spinner) spinner.parentElement.remove();
 
             if (error) {
-                renderToast(error.message, 'error');
+                console.error("Reset Password Error:", error);
+                let msg = error.message;
+                // Specific handling for the generic "Error sending recovery email" which usually means rate limit
+                if (msg.includes("Error sending recovery email")) {
+                    msg = "Service Limit: You can only send 3 password reset emails per hour. Please wait and try again later.";
+                }
+                renderToast(msg, 'error');
             } else {
                 renderToast('Password reset link sent! Please check your email.', 'success');
                 renderLogin('signin');
@@ -838,7 +853,11 @@
         };
 
         const handleLogout = async () => {
-            await supabaseClient.auth.signOut();
+            try {
+                await supabaseClient.auth.signOut();
+            } catch (error) {
+                console.warn("Sign out failed (network error?), clearing local state anyway.", error);
+            }
             AppState.currentUser = null;
             AppState.userProfile = null;
             AppState.isRecoveringPassword = false;
@@ -1149,6 +1168,10 @@
                 else populateStatusTable();
             });
 
+            // FIX: Added listener for status filter
+            const statusFilter = document.getElementById('status-filter');
+            if(statusFilter) statusFilter.addEventListener('change', populateStatusTable);
+
             const roleFilter = document.getElementById('role-filter');
             if(roleFilter) roleFilter.addEventListener('change', populateScoresOverviewTable);
             
@@ -1190,10 +1213,12 @@
         function renderFormField(key, question, review, isSubmitted) {
             const value = review.questions[key] || '';
             const isDisabled = isSubmitted ? 'disabled' : '';
+            // Add required attribute if form is not submitted (editable)
+            const isRequired = !isSubmitted ? 'required' : '';
 
             if (question.includes('(1–4 scale)')) {
                 // q6
-                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>
                     <option value="" ${!value ? 'selected' : ''}>Select a score</option>
                     <option value="1" ${value == '1' ? 'selected' : ''}>1: Needs Improvement</option>
                     <option value="2" ${value == '2' ? 'selected' : ''}>2: Meeting Expectations</option>
@@ -1203,7 +1228,7 @@
             }
 
             if (question.includes('attrition risk')) { // q7 in downward reviews
-                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>
                     <option value="" ${!value ? 'selected' : ''}>Select an option</option>
                     <option value="Yes" ${value.toLowerCase() == 'yes' ? 'selected' : ''}>Yes</option>
                     <option value="No" ${value.toLowerCase() == 'no' ? 'selected' : ''}>No</option>
@@ -1211,7 +1236,17 @@
             }
 
             if (question.includes('promoted now')) { // q8 in downward reviews
-                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>
+                    <option value="" ${!value ? 'selected' : ''}>Select an option</option>
+                    <option value="Yes" ${value == 'Yes' ? 'selected' : ''}>Yes</option>
+                    <option value="No" ${value == 'No' ? 'selected' : ''}>No</option>
+                    <option value="Not Now" ${value == 'Not Now' ? 'selected' : ''}>Not Now</option>
+                </select>`;
+            }
+
+            // NEW: Compensation suggestions dropdown
+            if (question.includes('suggestions about this person’s compensation')) {
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>
                     <option value="" ${!value ? 'selected' : ''}>Select an option</option>
                     <option value="Yes" ${value == 'Yes' ? 'selected' : ''}>Yes</option>
                     <option value="No" ${value == 'No' ? 'selected' : ''}>No</option>
@@ -1221,15 +1256,15 @@
 
             // NEW: Add check for leadership/cohesion question
             if (question.includes('manager’s leadership style') || question.includes('QA Coach’s coaching style')) {
-                const options = ["Very Satisfied", "Satisfied", "Neutral", "Not Satisfied", "Very Dissatisfied"];
-                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>
+                const options = ["Very satisfied", "satisfied", "neutral", "not satisfied", "very dissatisfied"];
+                return `<select id="${key}" name="${key}" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>
                     <option value="" ${!value ? 'selected' : ''}>Select an option</option>
                     ${options.map(opt => `<option value="${opt}" ${value.toLowerCase() === opt.toLowerCase() ? 'selected' : ''}>${opt}</option>`).join('')}
                 </select>`;
             }
 
             // Default textarea
-            return `<textarea id="${key}" name="${key}" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled}>${value}</textarea>`;
+            return `<textarea id="${key}" name="${key}" rows="4" class="mt-1 block w-full px-3 py-2 bg-white border border-slate-300 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm" ${isDisabled} ${isRequired}>${value}</textarea>`;
         }
 
         // Review Form Logic
@@ -1442,7 +1477,7 @@
                     q7: 'Is this person an attrition risk?',
                     q8: 'Should this person be promoted now?',
                     q9: 'If recommending promotion, what should their new title be?',
-                    q10: 'Any comments/suggestions about this person’s compensation (salary, bonus, equity)?',
+                    q10: 'Any suggestions about this person’s compensation (salary, bonus, equity)?',
                 },
                 'downward_qa': {
                     q1: 'What is the agent doing particularly well in their role?',
@@ -1459,11 +1494,11 @@
                     q7: 'Is this person an attrition risk?',
                     q8: 'Should this person be promoted now?',
                     q9: 'If recommending promotion, what should their new title be?',
-                    q10: 'Any comments/suggestions about this person’s compensation (salary, bonus, equity)?',
+                    q10: 'Any suggestions about this person’s compensation (salary, bonus, equity)?',
                 },
                 'upward_manager': {
                     q1: 'How would you describe your manager’s communication and ability to support the team?',
-                    q2: 'How does your manager ensure team goals align with company company objectives?',
+                    q2: 'How does your manager ensure team goals align with company objectives?',
                     q3: 'How well does your manager provide constructive feedback to develop your skills?',
                     q4: 'How confident are you in your manager’s decision-making? Do they consider team input?',
                     q5: 'Evaluate your manager’s leadership style and efforts in building team cohesion.',
@@ -1510,43 +1545,69 @@
             const tableBody = document.querySelector('#status-table tbody');
             if (!tableBody) return; // Guard clause if tab isn't visible
             const managerFilter = document.getElementById('manager-filter');
-            const selectedManagerId = managerFilter.value;
+            const statusFilter = document.getElementById('status-filter');
+            const selectedManagerId = managerFilter ? managerFilter.value : 'all';
+            const selectedStatus = statusFilter ? statusFilter.value : 'all';
             
             let filteredUsers = AppState.users.filter(u => u.role !== 'admin');
+            
+            // Filter by Manager
             if (selectedManagerId !== 'all') {
                 filteredUsers = filteredUsers.filter(u => u.manager_id === selectedManagerId || u.id === selectedManagerId);
             }
             
             const rows = filteredUsers.map(user => {
                 let cellContent = '';
+                let isComplete = true; // Default to true if no tasks (e.g. Phase 4 or user with no reviews)
+                let hasTasks = false;
 
                 if (AppState.currentPhase === 4) {
-                    // Phase 4: Show View All Button
+                    // Phase 4: Show View All Button. Everyone is technically "complete" with the cycle process.
                     cellContent = `<button class="view-full-review-btn bg-sky-100 text-sky-700 hover:bg-sky-200 text-sm font-medium px-4 py-2 rounded-md" data-user-id="${user.id}">View All Reviews</button>`;
+                    hasTasks = true; // Ensure row renders
                 } else {
                     // Phase 1-2: Show Status Badges
                     const requiredReviews = getRequiredReviewsForUser(user, AppState.currentPhase);
-                    if (requiredReviews.length === 0) return ''; // Should handle this better if no reviews but table row exists? For now skipping row if no tasks is old behavior, keeping consistent.
+                    hasTasks = requiredReviews.length > 0;
                     
-                    const reviewStatusHtml = requiredReviews.map(req => {
-                        const review = AppState.reviews.find(r => r.reviewer_id === user.id && r.review_type === req.type && r.reviewee_id === req.reviewee_id);
-                        const isSubmitted = review && review.submitted_at;
-                        const statusBadge = `<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isSubmitted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${isSubmitted ? 'Completed' : 'Pending'}</span>`;
-                        return `<div class="py-1">${req.name} ${statusBadge}</div>`;
-                    }).join('');
-                    cellContent = reviewStatusHtml;
+                    if (hasTasks) {
+                        // Check if ANY required review is pending
+                        const pendingReviews = requiredReviews.filter(req => {
+                            const review = AppState.reviews.find(r => r.reviewer_id === user.id && r.review_type === req.type && r.reviewee_id === req.reviewee_id);
+                            return !review || !review.submitted_at;
+                        });
+                        
+                        if (pendingReviews.length > 0) {
+                            isComplete = false;
+                        }
+
+                        const reviewStatusHtml = requiredReviews.map(req => {
+                            const review = AppState.reviews.find(r => r.reviewer_id === user.id && r.review_type === req.type && r.reviewee_id === req.reviewee_id);
+                            const isSubmitted = review && review.submitted_at;
+                            const statusBadge = `<span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${isSubmitted ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${isSubmitted ? 'Completed' : 'Pending'}</span>`;
+                            return `<div class="py-1">${req.name} ${statusBadge}</div>`;
+                        }).join('');
+                        cellContent = reviewStatusHtml;
+                    }
                 }
 
-                // If no required reviews in Phase 1/2 and we skipped above, this row won't render. 
-                // But in Phase 4 we want to show everyone. 
-                // Let's ensure we render row in Phase 4 even if no "required reviews" logic applies (though everyone has reviews by then).
-                
+                // Filter Logic
+                if (selectedStatus === 'pending') {
+                    if (isComplete) return ''; // Hide if complete
+                } else if (selectedStatus === 'completed') {
+                    if (!isComplete) return ''; // Hide if pending
+                }
+
+                // If no required reviews in Phase 1/2 and we skipped above, cellContent is empty.
+                if (!hasTasks && AppState.currentPhase !== 4) return '';
+
                 return `<tr>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">${user.email}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${user.role}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-500">${cellContent}</td>
                 </tr>`;
             }).join('');
+            
             tableBody.innerHTML = rows || `<tr><td colspan="3" class="text-center p-4 text-slate-500">No users match the filter.</td></tr>`;
         }
 
