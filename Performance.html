@@ -828,6 +828,12 @@
                 renderToast(error.message, 'error');
             } else {
                 renderToast('Password updated successfully! Logging you in...', 'success');
+                
+                // FIX: Clear the URL hash so reloads don't trigger recovery mode again
+                if (window.history.replaceState) {
+                    window.history.replaceState(null, null, window.location.pathname);
+                }
+
                 // Clear recovery flag and show dashboard
                 AppState.isRecoveringPassword = false;
                 await renderDashboard(); 
@@ -869,12 +875,22 @@
                 $app.innerHTML = renderSpinner();
                 
                 // 1. PRIORITY CHECK: Detect Recovery Hash IMMEDIATELY
-                // We check this first to prevent race conditions where getSession() returns null 
-                // (because token isn't exchanged yet) and sends user to Login page.
                 const hash = window.location.hash;
                 if (hash && hash.includes('type=recovery')) {
                     console.log("Recovery hash detected. Pausing session check to allow event handler.");
                     AppState.isRecoveringPassword = true; 
+                    
+                    // FIX: Safety Timeout. If Supabase doesn't process the hash within 4s (e.g. invalid/used link),
+                    // force a normal load so the user isn't stuck on a spinner.
+                    setTimeout(() => {
+                        // If we are still "recovering" but the form hasn't appeared, something went wrong.
+                        if (AppState.isRecoveringPassword && !document.getElementById('update-password-form')) {
+                            console.warn("Recovery flow timed out. Clearing flag and loading normally.");
+                            AppState.isRecoveringPassword = false;
+                            checkSession(); // Retry normal session check
+                        }
+                    }, 4000);
+
                     return; // STOP HERE. Let onAuthStateChange handle the UI.
                 }
 
