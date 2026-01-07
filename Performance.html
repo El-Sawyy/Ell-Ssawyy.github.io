@@ -794,7 +794,7 @@
             // 2. You hit the strict Rate Limit (3 emails/hr on free tier).
             // 3. The Redirect URL is not whitelisted in Supabase dashboard.
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: window.location.href, 
+                redirectTo: window.location.origin + window.location.pathname, 
             });
             
             const spinner = $app.querySelector('.spinner');
@@ -868,17 +868,25 @@
             try {
                 $app.innerHTML = renderSpinner();
                 
-                // Manual Hash Check for Recovery Flow
+                // 1. PRIORITY CHECK: Detect Recovery Hash IMMEDIATELY
+                // We check this first to prevent race conditions where getSession() returns null 
+                // (because token isn't exchanged yet) and sends user to Login page.
                 const hash = window.location.hash;
                 if (hash && hash.includes('type=recovery')) {
-                    console.log("Recovery hash detected");
+                    console.log("Recovery hash detected. Pausing session check to allow event handler.");
                     AppState.isRecoveringPassword = true; 
-                    // Return early. Do NOT load session/dashboard yet.
-                    // Wait for Supabase to process hash and fire event.
-                    return; 
+                    return; // STOP HERE. Let onAuthStateChange handle the UI.
                 }
 
+                // 2. Normal Session Check
                 const { data } = await supabaseClient.auth.getSession();
+                
+                // 3. Double Check: Did an event handler set recovery mode while we were awaiting?
+                if (AppState.isRecoveringPassword) {
+                    console.log("Recovery mode active, skipping normal dashboard render.");
+                    return;
+                }
+
                 if (data.session && data.session.user) {
                     AppState.currentUser = data.session.user;
                     await renderDashboard();
@@ -1002,28 +1010,34 @@
         };
 
         // --- Init ---
+        // PRE-INIT: Check for recovery hash immediately when script loads to avoid race conditions
+        if (window.location.hash && window.location.hash.includes('type=recovery')) {
+            console.log("Recovery hash detected on load.");
+            AppState.isRecoveringPassword = true;
+        }
+
         // Add a listener for auth changes (like login/logout)
         supabaseClient.auth.onAuthStateChange((event, session) => {
+             console.log("Auth Event:", event);
+             
              if (event === 'PASSWORD_RECOVERY') {
-                 // Handle password recovery flow
                  AppState.isRecoveringPassword = true;
                  renderNewPasswordForm();
              } else if (event === 'SIGNED_OUT' || event === 'USER_DELETED') {
-                 // Handle logout
                  AppState.currentUser = null;
                  AppState.userProfile = null;
                  AppState.isRecoveringPassword = false;
                  renderLogin();
              } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-                 // Handle login or session refresh
                  if (session && session.user) {
                     AppState.currentUser = session.user;
                     
-                    // Critical check: If we are in recovery mode, do NOT show dashboard.
+                    // Critical: If we are in recovery mode (flagged via hash or event), FORCE password form.
+                    // This overrides the dashboard even if we have a valid session (which the recovery link provides).
                     if (AppState.isRecoveringPassword) {
                         renderNewPasswordForm();
                     } else {
-                        // Only render dashboard if not already rendered
+                        // Standard login
                         if (!$app.querySelector('main')) { 
                              renderDashboard();
                         }
