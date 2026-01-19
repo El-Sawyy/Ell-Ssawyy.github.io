@@ -1346,26 +1346,53 @@
                referenceReviewsHtml = `<div class="my-6">${selfReviewDisplay}${qaReviewDisplay}</div>`;
 
            } else if (reviewType === 'downward_ops' && reviewee) {
-               // --- For Ops Manager reviewing Manager/QA ---
+               // --- For Ops Manager reviewing Manager/QA (or Agent assigned directly) ---
                
-               // 1. Find Leader's Self-Review
+               // 1. Find Employee's Self-Review
                const selfReview = AppState.reviews.find(r => 
                    r.reviewee_id === revieweeId && r.review_type === 'self' && r.submitted_at
                );
 
+               // 2. Find QA's Downward Review (if applicable)
+               // This covers cases where an Agent reports directly to Ops Manager
+               const qaCoach = AppState.users.find(u => u.id === reviewee.qa_coach_id);
+               const qaCoachName = qaCoach ? qaCoach.email : 'the QA Coach';
+               const qaReview = AppState.reviews.find(r => 
+                   r.reviewee_id === revieweeId && r.review_type === 'downward_qa' && r.submitted_at
+               );
+
                referenceReviewsHtml = `<div class="my-6">`;
+               
+               // Display Self Review
                if (selfReview) {
                    referenceReviewsHtml += `
-                       <h3 class="text-lg font-semibold text-slate-800 mb-2">Leader's Self-Review (for reference)</h3>
+                       <h3 class="text-lg font-semibold text-slate-800 mb-2">Employee's Self-Review (for reference)</h3>
                        ${renderReleasedReview(`${reviewee.email}'s Self-Review`, selfReview, true, true)}
                    `;
                } else {
                    referenceReviewsHtml += `
                        <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                           <p class="text-sm font-medium text-yellow-800">Note: The leader's self-review has not been submitted yet.</p>
+                           <p class="text-sm font-medium text-yellow-800">Note: The employee's self-review has not been submitted yet.</p>
                        </div>
                    `;
                }
+
+               // Display QA Review if they have a QA Coach assigned
+               if (qaCoach) {
+                   if (qaReview) {
+                       referenceReviewsHtml += `
+                           <h3 class="text-lg font-semibold text-slate-800 mb-2 mt-4">QA Coach Review (for reference)</h3>
+                           ${renderReleasedReview(`${qaCoachName}'s QA Review`, qaReview, true, true)}
+                       `;
+                   } else {
+                       referenceReviewsHtml += `
+                           <div class="p-4 bg-yellow-50 border border-yellow-200 rounded-lg mt-4">
+                               <p class="text-sm font-medium text-yellow-800">Note: The QA review from ${qaCoachName} has not been submitted yet.</p>
+                           </div>
+                       `;
+                   }
+               }
+
                referenceReviewsHtml += `</div>`;
            }
            // --- END: Logic to show Contextual Reviews ---
