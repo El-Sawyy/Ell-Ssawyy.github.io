@@ -389,6 +389,10 @@
                         <h3 class="text-xl font-bold mb-2 text-gray-800">Assign Scenarios</h3>
                         <p class="text-gray-600">Assign specific training scenarios to users.</p>
                     </button>
+                    <button data-action="admin-pending-reviews" class="card bg-orange-100 p-6 rounded-lg cursor-pointer text-left">
+                        <h3 class="text-xl font-bold mb-2 text-orange-800">📝 Review Pending Assignments</h3>
+                        <p class="text-orange-700">Grade and provide feedback for assigned scenarios waiting for review.</p>
+                    </button>
                     <button data-action="admin-sessions" class="card bg-white p-6 rounded-lg cursor-pointer text-left">
                         <h3 class="text-xl font-bold mb-2 text-gray-800">Audit Sessions</h3>
                         <p class="text-gray-600">Review and manually edit feedback for all completed user sessions.</p>
@@ -429,6 +433,13 @@
                  <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
                  <h2 class="text-3xl font-bold mb-4 text-center">Assign Scenario to User</h2>
                  <div id="admin-assign-list-container" class="space-y-2"></div>
+            </div>
+
+            <!-- New Pending Reviews View -->
+            <div id="admin-pending-reviews-view" class="hidden bg-white p-8 rounded-2xl shadow-lg">
+                 <button class="back-to-admin-dash-btn mb-4 bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg">← Back to Admin</button>
+                 <h2 class="text-3xl font-bold mb-4 text-center">Pending Reviews</h2>
+                 <div id="admin-pending-reviews-container" class="space-y-4"></div>
             </div>
 
 
@@ -539,7 +550,8 @@
             completion: document.getElementById('completion-screen'),
             adminDashboard: document.getElementById('admin-dashboard-view'),
             adminUserList: document.getElementById('admin-user-list-view'),
-            adminAssignScenarios: document.getElementById('admin-assign-scenarios-view'), // New view
+            adminAssignScenarios: document.getElementById('admin-assign-scenarios-view'),
+            adminPendingReviews: document.getElementById('admin-pending-reviews-view'), // New view
             adminSessionList: document.getElementById('admin-session-list-view'),
             adminWeeklyChallenge: document.getElementById('admin-weekly-challenge-view'),
             adminChallengeCompletion: document.getElementById('admin-challenge-completion-view'),
@@ -787,20 +799,20 @@
              const state = { currentView: viewName, data: {} };
              switch (viewName) {
                  case 'empathyAssistant':
-                       state.data.situation = document.getElementById('situation-description').value;
-                       break;
+                        state.data.situation = document.getElementById('situation-description').value;
+                        break;
                  case 'emailCrafter':
-                       state.data.customerEmail = document.getElementById('customer-email-input').value;
-                       state.data.resolution = document.getElementById('resolution-input').value;
-                       state.data.alternatives = document.getElementById('alternatives-input').value;
-                       break;
+                        state.data.customerEmail = document.getElementById('customer-email-input').value;
+                        state.data.resolution = document.getElementById('resolution-input').value;
+                        state.data.alternatives = document.getElementById('alternatives-input').value;
+                        break;
                  case 'createScenario':
-                       state.data.topic = document.getElementById('scenario-topic').value;
-                       break;
+                        state.data.topic = document.getElementById('scenario-topic').value;
+                        break;
                  case 'rephraseTool':
-                       state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
-                       state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
-                       break;
+                        state.data.customerStatement = document.getElementById('rephrase-customer-statement').value;
+                        state.data.agentDraft = document.getElementById('rephrase-agent-draft').value;
+                        break;
              }
              sessionStorage.setItem('lastViewState', JSON.stringify(state));
         }
@@ -910,7 +922,6 @@
             }
         }
 
-        // Updated startScenario to handle 'isAssigned' flag
         function startScenario(scenarioData, challengeId = null, isAssigned = false) {
             currentScenario = { ...scenarioData, weekly_challenge_id: challengeId, isAssigned: isAssigned };
             currentStep = 0;
@@ -943,11 +954,6 @@
             }
 
             document.getElementById('scenario-title').textContent = currentScenario.title;
-            // Add visual indicator if assigned
-            if (currentScenario.isAssigned) {
-                 document.getElementById('scenario-title').innerHTML += ` <span class="text-sm font-normal text-white bg-blue-600 px-2 py-1 rounded-full align-middle ml-2">Assigned Task</span>`;
-            }
-
             document.getElementById('customer-persona').textContent = currentScenario.persona;
             document.getElementById('customer-dialogue').textContent = stepData.customer;
             
@@ -960,49 +966,47 @@
             const userResponse = document.getElementById('user-response');
             const responseText = userResponse.value.trim();
             if (!responseText) return;
+            
             document.getElementById('response-area').classList.add('hidden');
 
-            // CHECK: If this is an assigned scenario, bypass AI feedback
             if (currentScenario.isAssigned) {
+                // If assigned, skip AI feedback
                 handleAssignedResponse(responseText);
-                return;
+            } else {
+                // Default AI feedback flow
+                const feedbackPrompt = `You are an expert customer service training coach for Tempo. Evaluate a user's response. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}" | **User's Response:** "${responseText}". Provide your evaluation as a JSON object: { "score": <integer 0-100>, "feedback": "<concise, constructive feedback>" }`;
+                const feedbackSchema = { type: "OBJECT", properties: { "score": { "type": "INTEGER" }, "feedback": { "type": "STRING" } }, required: ["score", "feedback"] };
+                const bestAnswerPrompt = `You are a customer service expert for Tempo. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
+                const bestAnswerSchema = { type: "OBJECT", properties: { "ideal_responses": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["ideal_responses"] };
+                const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(feedbackPrompt, feedbackSchema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
+                handleAIResponse(responseText, feedbackResult, bestAnswerResult);
             }
-
-            const feedbackPrompt = `You are an expert customer service training coach for Tempo. Evaluate a user's response. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}" | **User's Response:** "${responseText}". Provide your evaluation as a JSON object: { "score": <integer 0-100>, "feedback": "<concise, constructive feedback>" }`;
-            const feedbackSchema = { type: "OBJECT", properties: { "score": { "type": "INTEGER" }, "feedback": { "type": "STRING" } }, required: ["score", "feedback"] };
-            const bestAnswerPrompt = `You are a customer service expert for Tempo. **Scenario:** ${currentScenario.title} | **Customer's Statement:** "${currentScenario.dialogue_tree[currentStep].customer}". Provide three distinct, ideal, and empathetic responses a top-tier agent would give. Return a JSON object: { "ideal_responses": ["<response 1>", "<response 2>", "<response 3>"] }`;
-            const bestAnswerSchema = { type: "OBJECT", properties: { "ideal_responses": { "type": "ARRAY", "items": { "type": "STRING" } } }, required: ["ideal_responses"] };
-            const [feedbackResult, bestAnswerResult] = await Promise.all([ getFromAI(feedbackPrompt, feedbackSchema), getFromAI(bestAnswerPrompt, bestAnswerSchema) ]);
-            handleAIResponse(responseText, feedbackResult, bestAnswerResult);
         }
 
-        // New function to handle assigned scenarios without AI
+        // New function to handle assigned scenarios (no immediate AI feedback)
         function handleAssignedResponse(userResp) {
-            // Create interaction record with placeholder values for AI fields
-            const interaction = {
+            sessionInteractions.push({
                 customerSays: currentScenario.dialogue_tree[currentStep].customer,
                 userResponse: userResp,
                 aiFeedback: "Pending Coach Review",
-                aiScore: 0, // 0 indicates pending/not graded by AI
-                idealResponses: [], // No ideal responses generated
-                coach_feedback: ""
-            };
-            
-            sessionInteractions.push(interaction);
+                aiScore: null,
+                idealResponses: [] 
+            });
 
-            // Show a simple confirmation card instead of AI feedback
+            // Show a simple confirmation instead of AI feedback
             const feedbackContainer = document.getElementById('feedback-container');
             feedbackContainer.innerHTML = `
                 <div class="feedback-card border border-blue-200 bg-blue-50 rounded-lg p-4">
-                    <h4 class="font-bold text-lg text-blue-800 mb-2">Response Recorded</h4>
-                    <p class="text-blue-700">Your response has been saved for coach review. You will not receive immediate AI scoring for this assigned scenario.</p>
-                </div>`;
+                    <h4 class="font-bold text-lg mb-2 text-blue-800">Response Recorded</h4>
+                    <p class="text-blue-700">Your response has been saved for manual review by a coach.</p>
+                </div>
+            `;
             feedbackContainer.classList.remove('hidden');
 
-            // Prepare next step
+            // Move to next step logic
             currentStep++;
             saveSessionState();
-
+            
             const nextBtn = document.getElementById('next-btn');
             if (currentScenario.dialogue_tree[currentStep]) {
                 nextBtn.textContent = "Next Step";
@@ -1052,6 +1056,9 @@
         }
 
         async function showCompletionScreen() {
+            // Guard clause: If currentScenario is null (e.g., user navigated away during delay), abort.
+            if (!currentScenario) return;
+
             // Capture the state before clearing it
             const scenarioToSave = currentScenario;
             const scoreToSave = empathyScore;
@@ -1062,9 +1069,10 @@
             document.getElementById('email-draft-content').classList.add('hidden');
             document.getElementById('email-draft-loading').classList.add('hidden');
             const finalFeedback = document.getElementById('final-feedback');
-
+            
+            // Logic for feedback message based on score
             if (scenarioToSave.isAssigned) {
-                 finalFeedback.textContent = "Session submitted successfully! Your coach will review your responses and provide feedback soon.";
+                finalFeedback.textContent = "Scenario completed. Your responses have been submitted to your coach for review.";
             } else {
                 if (empathyScore > 75) finalFeedback.textContent = "Outstanding! You consistently demonstrated strong empathy and effective communication.";
                 else if (empathyScore > 40) finalFeedback.textContent = "Good work. You navigated the conversation well. Continue to focus on consistently validating feelings.";
@@ -1078,12 +1086,15 @@
         async function saveCompletedSession(scenario, score, interactions) {
             if (!userId || !scenario || interactions.length === 0) return;
 
-            // Calculate average score - skip if assigned (score is 0)
-            let averageScore = 0;
-            if (!scenario.isAssigned) {
-                const totalAiScore = interactions.reduce((sum, interaction) => sum + (interaction.aiScore || 0), 0);
-                averageScore = Math.round(totalAiScore / interactions.length);
-            }
+            // Calculate the average score from the AI coach feedback.
+            // Filter out null scores (from assigned scenarios)
+            const validScores = interactions.filter(i => i.aiScore !== null).map(i => i.aiScore);
+            
+            // If we have valid scores, average them. If not (assigned scenario), set to 0 or null logic.
+            // For DB integer compatibility, we'll use 0 if no scores exist yet, but the UI will need to handle "0 means pending" or we assume pending based on absence of feedback.
+            const averageScore = validScores.length > 0 
+                ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length) 
+                : 0;
 
             const sessionPayload = { 
                 user_id: userId, 
@@ -1120,15 +1131,17 @@
             data.forEach(session => {
                 const item = document.createElement('div');
                 item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
-                // Show "Pending Review" if score is 0 (assigned scenario logic)
-                const scoreDisplay = session.final_empathy_score === 0 ? "Pending Review" : `Score: ${session.final_empathy_score}`;
+                // Check if score is "pending" (e.g. 0 score and interactions have null aiScore)
+                const isPending = session.interactions.some(i => i.aiScore === null);
+                const scoreDisplay = isPending ? '<span class="text-yellow-600">Pending Review</span>' : `Score: ${session.final_empathy_score}`;
+                
                 item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">${scoreDisplay}</div></div>`;
                 item.addEventListener('click', () => showHistoryDetail(session.id));
                 container.appendChild(item);
             });
         }
 
-        async function showHistoryDetail(sessionId, fromAdmin = false) {
+        async function showHistoryDetail(sessionId, fromAdmin = false, backSource = 'history') {
             showView('historyDetail');
             const container = document.getElementById('history-detail-interactions');
             container.innerHTML = '<div class="loader mx-auto"></div>';
@@ -1144,12 +1157,30 @@
                 return;
             }
 
+            // Check if scores are pending
+            const isPending = sessionData.interactions.some(i => i.aiScore === null);
             document.getElementById('history-detail-title').textContent = sessionData.scenario_title;
-            const scoreDisplay = sessionData.final_empathy_score === 0 ? "Pending Review" : sessionData.final_empathy_score;
-            document.getElementById('history-detail-score').textContent = scoreDisplay;
+            document.getElementById('history-detail-score').innerHTML = isPending 
+                ? '<span class="text-yellow-600">Pending Review</span>' 
+                : sessionData.final_empathy_score;
+                
             document.getElementById('history-summary-container').classList.add('hidden');
             document.getElementById('history-summary-container').innerHTML = '';
-            document.getElementById('back-to-history-list-btn').onclick = fromAdmin ? showAdminSessionList : showHistoryList;
+            
+            // Smart Back Button Logic
+            const backBtn = document.getElementById('back-to-history-list-btn');
+            if (fromAdmin) {
+                if (backSource === 'pending') {
+                    backBtn.onclick = showAdminPendingReviews;
+                    backBtn.textContent = "← Back to Pending Reviews";
+                } else {
+                    backBtn.onclick = showAdminSessionList;
+                    backBtn.textContent = "← Back to Audit List";
+                }
+            } else {
+                backBtn.onclick = showHistoryList;
+                backBtn.textContent = "← Back to History";
+            }
             
             container.innerHTML = '';
 
@@ -1159,13 +1190,14 @@
 
                 let coachFeedbackHTML = '';
                 const coachFeedback = interaction.coach_feedback || '';
+                const scoreDisplay = interaction.aiScore !== null ? interaction.aiScore : 'Pending';
 
                 if (fromAdmin) {
                     coachFeedbackHTML = `
                         <div id="coach-feedback-container-${sessionData.id}-${index}" class="mt-4 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
                             <div id="coach-feedback-view-${sessionData.id}-${index}">
                                 <div class="flex justify-between items-center mb-1">
-                                    <strong class="text-yellow-800">Coach Feedback:</strong>
+                                    <strong class="text-yellow-800">Coach Feedback & Score:</strong>
                                     <button data-session-id="${sessionData.id}" data-interaction-index="${index}" class="edit-coach-feedback-btn text-sm text-blue-600 hover:text-blue-800 font-semibold">
                                         ${coachFeedback ? 'Edit Feedback' : 'Add Feedback'}
                                     </button>
@@ -1180,21 +1212,17 @@
                              <strong class="text-yellow-800">Coach Feedback:</strong>
                              <p class="text-yellow-700 italic">${coachFeedback || 'No feedback has been added by a coach yet.'}</p>
                          </div>
-                     `;
+                      `;
                 }
-
-                const aiFeedbackDisplay = interaction.aiScore === 0 ? "No AI Feedback (Assigned)" : `AI Feedback (Score: ${interaction.aiScore}): ${interaction.aiFeedback}`;
-                const idealRespDisplay = interaction.idealResponses && interaction.idealResponses.length > 0 
-                    ? `<div class="p-2 bg-green-50 rounded"><strong class="text-green-700">Ideal Responses:</strong><ul class="list-disc list-inside mt-1 text-sm text-green-800">${interaction.idealResponses.map(r => `<li>${r}</li>`).join('')}</ul></div>`
-                    : '';
 
                 stepDiv.innerHTML = `
                     <p class="mb-2"><strong class="text-gray-500">Customer said:</strong> "${interaction.customerSays}"</p>
                     <p class="mb-2 p-2 bg-blue-50 rounded"><strong class="text-blue-700">User's response:</strong> "${interaction.userResponse}"</p>
                     <div class="mb-2 p-2 bg-gray-50 rounded">
-                        <p><strong class="text-gray-700">${aiFeedbackDisplay}</strong></p>
+                        <p><strong class="text-gray-700">AI/Coach Score:</strong> ${scoreDisplay}</p>
+                        ${interaction.aiFeedback !== "Pending Coach Review" ? `<p><strong class="text-gray-700">AI Feedback:</strong> ${interaction.aiFeedback}</p>` : ''}
                     </div>
-                    ${idealRespDisplay}
+                    ${interaction.idealResponses && interaction.idealResponses.length > 0 ? `<div class="p-2 bg-green-50 rounded"><strong class="text-green-700">Ideal Responses:</strong><ul class="list-disc list-inside mt-1 text-sm text-green-800">${interaction.idealResponses.map(r => `<li>${r}</li>`).join('')}</ul></div>` : ''}
                     ${coachFeedbackHTML}
                 `;
                 container.appendChild(stepDiv);
@@ -1209,47 +1237,80 @@
                         const index = button.dataset.interactionIndex;
                         const sessionId = button.dataset.sessionId;
                         const feedbackContainer = document.getElementById(`coach-feedback-container-${sessionId}-${index}`);
-                        const currentFeedback = sessionData.interactions[index].coach_feedback || '';
+                        const interactionData = sessionData.interactions[index];
+                        const currentFeedback = interactionData.coach_feedback || '';
+                        const currentScore = interactionData.aiScore !== null ? interactionData.aiScore : '';
 
                         feedbackContainer.innerHTML = `
                             <strong class="text-yellow-800">Coach Feedback:</strong>
-                            <textarea class="w-full border rounded p-2 text-sm mt-1" rows="3">${currentFeedback}</textarea>
+                            <textarea class="w-full border rounded p-2 text-sm mt-1" placeholder="Enter feedback here...">${currentFeedback}</textarea>
+                            <div class="mt-2">
+                                <label class="text-sm font-semibold text-gray-700">Manual Score (0-100):</label>
+                                <input type="number" min="0" max="100" class="border rounded p-1 w-20 text-sm" value="${currentScore}" placeholder="0-100">
+                            </div>
                             <div class="flex justify-end space-x-2 mt-2">
-                                <button type="button" class="cancel-coach-feedback-btn text-sm bg-gray-200 px-3 py-1 rounded-md">Cancel</button>
-                                <button type="button" class="save-coach-feedback-btn text-sm bg-green-500 text-white px-3 py-1 rounded-md">Save</button>
+                                <button class="cancel-coach-feedback-btn text-sm bg-gray-200 px-3 py-1 rounded-md">Cancel</button>
+                                <button class="save-coach-feedback-btn text-sm bg-green-500 text-white px-3 py-1 rounded-md">Save</button>
                             </div>
                         `;
 
-                        feedbackContainer.querySelector('.save-coach-feedback-btn').addEventListener('click', async (evt) => {
-                            // Prevent any default form submission behavior (fixing reload bug)
-                            evt.preventDefault(); 
-                            
+                        feedbackContainer.querySelector('.save-coach-feedback-btn').addEventListener('click', async () => {
                             const saveButton = feedbackContainer.querySelector('.save-coach-feedback-btn');
-                            saveButton.textContent = 'Saving...';
-                            saveButton.disabled = true;
-                            
-                            const newFeedback = feedbackContainer.querySelector('textarea').value;
-                            const newInteractions = [...sessionData.interactions];
-                            newInteractions[index] = { ...newInteractions[index], coach_feedback: newFeedback };
-                            
-                            const { error: updateError } = await db.from('sessions')
-                                .update({ interactions: newInteractions })
-                                .eq('id', sessionId);
-                            
-                            if (updateError) {
-                                console.error("Failed to save coach feedback:", updateError.message);
-                                showModal('Error', `Save Failed: ${updateError.message}. Ensure you have admin permissions.`, [{ text: 'OK', class: 'bg-red-500', action: hideModal }]);
-                                // Revert UI on failure
-                                showHistoryDetail(sessionId, true);
-                            } else {
-                                // Success - re-render to show saved data
-                                showHistoryDetail(sessionId, true);
+                            try {
+                                saveButton.textContent = 'Saving...';
+                                saveButton.disabled = true;
+                                
+                                const newFeedback = feedbackContainer.querySelector('textarea').value;
+                                const newScoreVal = feedbackContainer.querySelector('input[type="number"]').value;
+                                const newScore = newScoreVal === '' ? null : parseInt(newScoreVal);
+
+                                // FETCH FRESH DATA BEFORE SAVING to prevent race conditions/stale state
+                                const { data: freshSession, error: refreshError } = await db.from('sessions').select('interactions, final_empathy_score').eq('id', sessionId).single();
+                                
+                                if (refreshError) {
+                                    throw new Error("Could not sync with database: " + refreshError.message);
+                                }
+
+                                const newInteractions = [...freshSession.interactions];
+                                newInteractions[index] = { 
+                                    ...newInteractions[index], 
+                                    coach_feedback: newFeedback,
+                                    aiScore: newScore // Admin overrides or sets the score
+                                };
+                                
+                                // Recalculate average score for the session
+                                const validScores = newInteractions.filter(i => i.aiScore !== null).map(i => i.aiScore);
+                                const newFinalScore = validScores.length > 0 
+                                    ? Math.round(validScores.reduce((sum, s) => sum + s, 0) / validScores.length) 
+                                    : 0;
+
+                                const { error: updateError } = await db.from('sessions')
+                                    .update({ 
+                                        interactions: newInteractions,
+                                        final_empathy_score: newFinalScore
+                                    })
+                                    .eq('id', sessionId);
+
+                                if (updateError) {
+                                    throw new Error(updateError.message);
+                                } else {
+                                    saveButton.textContent = 'Saved!';
+                                    saveButton.classList.remove('bg-green-500');
+                                    saveButton.classList.add('bg-green-700');
+                                    setTimeout(() => {
+                                        showHistoryDetail(sessionId, true, backSource);
+                                    }, 500);
+                                }
+                            } catch (err) {
+                                console.error("Failed to save coach feedback:", err);
+                                showModal('Save Error', `Failed to save feedback: ${err.message || 'Unknown error'}. This is likely a permission issue.`, [{ text: 'OK', class: 'bg-red-500', action: hideModal }]);
+                                saveButton.textContent = 'Save';
+                                saveButton.disabled = false;
                             }
                         });
                         
-                        feedbackContainer.querySelector('.cancel-coach-feedback-btn').addEventListener('click', (evt) => {
-                             evt.preventDefault();
-                             showHistoryDetail(sessionId, true);
+                        feedbackContainer.querySelector('.cancel-coach-feedback-btn').addEventListener('click', () => {
+                             showHistoryDetail(sessionId, true, backSource);
                         });
                     });
                 });
@@ -1537,6 +1598,65 @@
             });
             container.querySelectorAll('.assign-scenario-btn').forEach(btn => btn.addEventListener('click', (e) => openAssignScenarioModal(e.target.dataset.uid)));
         }
+
+        // --- NEW: PENDING REVIEWS LOGIC ---
+        async function showAdminPendingReviews() {
+            showView('adminPendingReviews');
+            const container = document.getElementById('admin-pending-reviews-container');
+            container.innerHTML = '<div class="loader mx-auto"></div>';
+
+            // Fetch sessions. In a production app, we'd use better filtering server-side.
+            // Here we fetch all and filter in JS for simplicity given Supabase constraints.
+            const { data, error } = await db.from('sessions')
+                .select(`
+                    *,
+                    users (email)
+                `)
+                .order('completed_at', { ascending: false });
+
+            if (error) {
+                console.error("Error fetching sessions for pending review:", error.message);
+                container.innerHTML = '<p class="text-red-500">Could not load sessions.</p>';
+                return;
+            }
+
+            // Filter for sessions where at least one interaction has a null aiScore or pending feedback
+            const pendingSessions = data.filter(session => 
+                session.interactions && session.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review')
+            );
+
+            if (pendingSessions.length === 0) {
+                container.innerHTML = '<div class="text-center py-8"><p class="text-xl text-gray-600">🎉 All caught up!</p><p class="text-gray-500">No sessions are pending review.</p></div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            pendingSessions.forEach(session => {
+                const item = document.createElement('div');
+                item.className = 'history-item bg-orange-50 border border-orange-200 p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-all';
+                
+                const userEmail = session.users ? session.users.email : `User ${session.user_id.substring(0,8)}...`;
+                const date = new Date(session.completed_at).toLocaleDateString();
+
+                item.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-lg text-gray-800">${session.scenario_title}</h4>
+                            <p class="text-sm text-gray-600">Submitted by: <span class="font-medium text-gray-900">${userEmail}</span> on ${date}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                Pending Review
+                            </span>
+                            <span class="text-gray-400">→</span>
+                        </div>
+                    </div>
+                `;
+                // Pass 'pending' as the source so the back button knows where to go
+                item.addEventListener('click', () => showHistoryDetail(session.id, true, 'pending'));
+                container.appendChild(item);
+            });
+        }
         
         function handleToggleAdmin(e) {
             const button = e.target;
@@ -1687,7 +1807,11 @@
             data.forEach(session => {
                 const item = document.createElement('div');
                 item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
-                item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">User: ${session.users ? session.users.email : session.user_id.substring(0,8)+'...'} | Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">Score: ${session.final_empathy_score}</div></div>`;
+                // Check if score is pending (e.g. 0 because nulls existed)
+                const isPending = session.interactions.some(i => i.aiScore === null);
+                const scoreDisplay = isPending ? '<span class="text-yellow-600 font-bold">Pending Review</span>' : `Score: ${session.final_empathy_score}`;
+
+                item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">User: ${session.users ? session.users.email : session.user_id.substring(0,8)+'...'} | Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">${scoreDisplay}</div></div>`;
                 item.addEventListener('click', () => showHistoryDetail(session.id, true));
                  container.appendChild(item);
             });
@@ -2338,6 +2462,7 @@
                     else if (action === 'quick-fire') startAIQuickFireRound();
                     else if (action === 'admin-users') showAdminUserList();
                     else if (action === 'admin-assign-scenarios') showAssignScenariosAdminView();
+                    else if (action === 'admin-pending-reviews') showAdminPendingReviews();
                     else if (action === 'admin-sessions') showAdminSessionList();
                     else if (action === 'admin-weekly-challenge') showAdminWeeklyChallenge();
                     else if (action === 'empathy-help') showView('empathyAssistant');
@@ -2576,4 +2701,3 @@
     </script>
 </body>
 </html>
-
