@@ -1092,8 +1092,8 @@
                  </div>
             `;
         }
- 
-       function renderReleasedReview(title, review, isModalView = false, showSummarizeButton = true) {
+
+        function renderReleasedReview(title, review, isModalView = false, showSummarizeButton = true) {
             if (!review) {
                 const wrapperClass = isModalView ? 'border border-slate-200 p-4 rounded-lg' : 'bg-white rounded-lg shadow p-6';
                 return `
@@ -1109,7 +1109,14 @@
             const wrapperClass = isModalView ? 'border border-slate-200 p-4 rounded-lg' : 'bg-white rounded-lg shadow p-6';
 
             // Define sensitive questions that should not be shown to employees in the final view.
-            const sensitiveQuestionKeys = ['q7', 'q8', 'q9', 'q10'];
+            // q8, q9, q10 are always sensitive (Promotion, Compensation)
+            let sensitiveQuestionKeys = ['q8', 'q9', 'q10'];
+
+            // q7 in Downward reviews is "Attrition Risk" -> Sensitive
+            // q7 in Upward reviews is "What should manager change" -> Not Sensitive (Visible to all)
+            if (review.review_type.startsWith('downward')) {
+                sensitiveQuestionKeys.push('q7');
+            }
             
             // Determine if the current user should see sensitive info
             // Admins and Ops Managers see everything
