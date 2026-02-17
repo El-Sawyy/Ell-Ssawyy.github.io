@@ -2364,38 +2364,86 @@
         
         // Export Logic
         function handleExportCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,";
-            const headers = ["Reviewer", "Reviewee", "Review Type", "Submission Date", "Question", "Answer", "Score"];
-            csvContent += headers.join(",") + "\r\n";
+            // 1. Define Base Headers
+            const baseHeaders = ["Review ID", "Phase", "Reviewer", "Reviewer Role", "Reviewee", "Reviewee Role", "Review Type", "Submission Date", "Score"];
+            
+            // 2. Dynamically build question headers based on all available types
+            // This ensures every question from every type has a dedicated column.
+            const allTypes = ['self', 'downward_manager', 'downward_qa', 'downward_ops', 'upward_manager', 'upward_qa', 'upward_ops'];
+            const questionHeadersMap = new Map(); // Key: "Type-QKey", Value: "Column Name"
+            const questionColumns = [];
 
-            AppState.reviews.forEach(review => {
-                if (!review.submitted_at) return; // Only export submitted
-                const questions = getQuestionSet(review.review_type);
-                const reviewer = AppState.users.find(u => u.id === review.reviewer_id)?.email || 'N/A';
-                const reviewee = AppState.users.find(u => u.id === review.reviewee_id)?.email || 'N/A';
-                
-                Object.entries(review.questions).forEach(([key, answer]) => {
-                    const questionText = questions[key] || key;
-                    const row = [
-                        reviewer, 
-                        reviewee, 
-                        review.review_type, 
-                        review.submitted_at ? new Date(review.submitted_at).toLocaleDateString() : 'Not Submitted', 
-                        `"${questionText.replace(/"/g, '""')}"`, 
-                        `"${String(answer).replace(/"/g, '""')}"`, 
-                        review.score || '' 
-                    ];
-                    csvContent += row.join(",") + "\r\n";
+            allTypes.forEach(type => {
+                const qSet = getQuestionSet(type);
+                Object.entries(qSet).forEach(([qKey, qText]) => {
+                    // Create a descriptive header: "[ReviewType] Question Text"
+                    const colName = `[${type}] ${qText.replace(/\n/g, ' ')}`; 
+                    questionHeadersMap.set(`${type}-${qKey}`, colName);
+                    questionColumns.push(colName);
                 });
             });
 
+            // 3. Construct the full header row
+            const fullHeaders = [...baseHeaders, ...questionColumns];
+            
+            // 4. Build Rows
+            const rows = [];
+            
+            // Sort by date descending
+            const sortedReviews = [...AppState.reviews].sort((a, b) => new Date(b.submitted_at || 0) - new Date(a.submitted_at || 0));
+
+            sortedReviews.forEach(review => {
+                if (!review.submitted_at) return; // Only export submitted reviews
+
+                const reviewer = AppState.users.find(u => u.id === review.reviewer_id);
+                const reviewee = AppState.users.find(u => u.id === review.reviewee_id);
+                
+                const rowData = {
+                    "Review ID": review.id,
+                    "Phase": review.phase,
+                    "Reviewer": reviewer?.email || 'N/A',
+                    "Reviewer Role": reviewer?.role || 'N/A',
+                    "Reviewee": reviewee?.email || 'N/A',
+                    "Reviewee Role": reviewee?.role || 'N/A',
+                    "Review Type": review.review_type,
+                    "Submission Date": review.submitted_at ? new Date(review.submitted_at).toLocaleString() : 'Not Submitted',
+                    "Score": review.score || ''
+                };
+
+                // Map answers to the correct columns
+                Object.entries(review.questions).forEach(([qKey, answer]) => {
+                    // Find the column name for this specific review type + question key
+                    const colName = questionHeadersMap.get(`${review.review_type}-${qKey}`);
+                    if (colName) {
+                        rowData[colName] = answer;
+                    }
+                });
+
+                // Create array matching fullHeaders order
+                const rowArray = fullHeaders.map(header => {
+                    let val = rowData[header] || "";
+                    // Escape quotes and wrap in quotes to handle commas/newlines within cells
+                    val = String(val).replace(/"/g, '""'); 
+                    return `"${val}"`;
+                });
+                
+                rows.push(rowArray.join(","));
+            });
+
+            // 5. Create Blob and Download
+            // \uFEFF is the Byte Order Mark (BOM) to force Excel to read UTF-8
+            const csvString = "\uFEFF" + [fullHeaders.join(","), ...rows].join("\r\n"); 
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            
             const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
-            link.setAttribute("download", "performance_reviews.csv");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `tempo_reviews_full_data_${new Date().toISOString().slice(0,10)}.csv`);
             document.body.appendChild(link);
             link.click();
-            link.remove();
-            renderToast('CSV export started.', 'success');
+            document.body.removeChild(link);
+            
+            renderToast('Full data CSV export started.', 'success');
         }
 
         function handleExportPDF() {
@@ -2404,43 +2452,88 @@
             
             doc.text("Performance Review Full Report", 14, 16);
             doc.setFontSize(10);
-            doc.text(`Exported on: ${new Date().toLocaleDateString()}`, 14, 22);
+            doc.text(`Exported on: ${new Date().toLocaleString()}`, 14, 22);
 
             let yPos = 30;
             const sortedReviews = [...AppState.reviews]
                 .filter(r => r.submitted_at) // Only submitted
-                .sort((a, b) => { // Sort by reviewee, then type
+                .sort((a, b) => { 
+                    // Sort by reviewee, then type
                     const emailA = AppState.users.find(u => u.id === a.reviewee_id)?.email || '';
                     const emailB = AppState.users.find(u => u.id === b.reviewee_id)?.email || '';
                     if (emailA !== emailB) return emailA.localeCompare(emailB);
                     return a.review_type.localeCompare(b.review_type);
                 });
             
-            sortedReviews.forEach(review => {
-                if (yPos > 260) { doc.addPage(); yPos = 15; }
-                const reviewer = AppState.users.find(u => u.id === review.reviewer_id)?.email || 'N/A';
-                const reviewee = AppState.users.find(u => u.id === review.reviewee_id)?.email || 'N/A';
+            sortedReviews.forEach((review, index) => {
+                // Add page break if needed
+                if (yPos > 260) { 
+                    doc.addPage(); 
+                    yPos = 15; 
+                } else if (index > 0) {
+                    // Add some spacing between reviews
+                    yPos += 10;
+                    if (yPos > 260) { doc.addPage(); yPos = 15; }
+                }
+
+                const reviewer = AppState.users.find(u => u.id === review.reviewer_id);
+                const reviewee = AppState.users.find(u => u.id === review.reviewee_id);
                 const questions = getQuestionSet(review.review_type);
 
+                // Header Background
+                doc.setFillColor(241, 245, 249); // Slate-100
+                doc.rect(14, yPos - 5, 182, 18, 'F');
+
                 doc.setFont(undefined, 'bold');
-                doc.text(`Review for: ${reviewee} by ${reviewer} (${review.review_type})`, 14, yPos);
-                yPos += 7;
+                doc.setTextColor(15, 23, 42); // Slate-900
+                doc.text(`Review Type: ${review.review_type.toUpperCase().replace('_', ' ')}`, 16, yPos);
+                
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(9);
+                doc.text(`Reviewee: ${reviewee?.email || 'N/A'} (${reviewee?.role || ''})`, 16, yPos + 5);
+                doc.text(`Reviewer: ${reviewer?.email || 'N/A'} (${reviewer?.role || ''})`, 16, yPos + 10);
+                
+                if (review.score) {
+                    doc.setFont(undefined, 'bold');
+                    doc.text(`Score: ${review.score}`, 150, yPos + 5);
+                }
+
+                yPos += 18;
                 
                 const tableBody = Object.entries(review.questions).map(([key, answer]) => [questions[key] || key, String(answer)]);
+                
+                // Add Score to the table as well for clarity
                 if (review.score) tableBody.push(['Overall Score', String(review.score)]);
 
                 doc.autoTable({
                     startY: yPos,
                     head: [['Question', 'Answer']],
                     body: tableBody,
-                    theme: 'striped',
-                    headStyles: { fillColor: [34, 139, 230] }, // Sky color
+                    theme: 'grid',
+                    headStyles: { 
+                        fillColor: [14, 165, 233], // Sky-500
+                        textColor: 255,
+                        fontStyle: 'bold'
+                    }, 
+                    styles: {
+                        cellPadding: 3,
+                        fontSize: 9,
+                        overflow: 'linebreak',
+                        valign: 'top'
+                    },
+                    columnStyles: {
+                        0: { cellWidth: 80 }, // Question column width
+                        1: { cellWidth: 'auto' } // Answer column takes remaining space
+                    },
+                    margin: { left: 14, right: 14 },
                     didDrawPage: (data) => { yPos = data.cursor.y; }
                 });
-                yPos = doc.lastAutoTable.finalY + 10;
+                
+                // Update yPos after table
+                yPos = doc.lastAutoTable.finalY;
             });
             
-            doc.save("performance_reviews.pdf");
+            doc.save(`tempo_reviews_full_report_${new Date().toISOString().slice(0,10)}.pdf`);
             renderToast('PDF export started.', 'success');
         }
 
