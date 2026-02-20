@@ -232,7 +232,15 @@
                         <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
                             <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center shrink-0">
                                 <h4 class="text-sm font-bold text-gray-800">Validation: Agent's Tickets</h4>
-                                <span class="text-xs text-gray-500" id="ticketListCount">0 records</span>
+                                <div class="flex items-center gap-3">
+                                    <select id="agentTicketFilter" class="text-xs border border-gray-300 rounded px-2 py-1 outline-none bg-white cursor-pointer" onchange="renderAgentTicketsList()">
+                                        <option value="all">All Statuses</option>
+                                        <option value="true">Saved (Yes)</option>
+                                        <option value="false">Unsaved (No)</option>
+                                        <option value="pending">Pending</option>
+                                    </select>
+                                    <span class="text-xs text-gray-500" id="ticketListCount">0 records</span>
+                                </div>
                             </div>
                             <div class="flex-1 overflow-y-auto custom-scrollbar p-0 bg-white">
                                 <table class="w-full text-left text-xs whitespace-nowrap">
@@ -378,6 +386,7 @@
         let charts = { trend: null, status: null, topReasons: null, agentReason: null };
         let currentActiveTab = 'overview';
         let selectedAgentForSnapshot = null;
+        let currentAgentSpecificTickets = []; // Track tickets for current agent drill-down
 
         // Firebase Auth Variables
         let app, auth, db, user = null;
@@ -511,6 +520,44 @@
             window.closeModal = function() {
                 document.getElementById('recordModalContent').classList.remove('modal-enter-active');
                 setTimeout(() => { document.getElementById('recordModal').classList.add('hidden'); }, 200);
+            };
+
+            // Render Ticket List for Agent with filtering logic
+            window.renderAgentTicketsList = function() {
+                const filterVal = document.getElementById('agentTicketFilter').value;
+                const tbody = document.getElementById('agentTicketsBody');
+                tbody.innerHTML = '';
+                
+                let filtered = currentAgentSpecificTickets;
+                if (filterVal === 'true') filtered = filtered.filter(t => t._isSaved && !t._isPending);
+                else if (filterVal === 'false') filtered = filtered.filter(t => !t._isSaved && !t._isPending);
+                else if (filterVal === 'pending') filtered = filtered.filter(t => t._isPending);
+                
+                document.getElementById('ticketListCount').textContent = `${filtered.length} records`;
+                
+                filtered.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.className = "hover:bg-blue-50 transition-colors";
+                    
+                    let savedBadge = '';
+                    if(t._isPending) savedBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-[10px] font-bold">Pending</span>';
+                    else if(t._isSaved) savedBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>';
+                    else savedBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
+
+                    tr.innerHTML = `
+                        <td class="py-3 px-4 border-b border-gray-100">
+                            <div class="font-mono text-[11px] text-gray-800 font-medium">TKT: ${t['Ticket ID']}</div>
+                            <div class="font-mono text-[10px] text-gray-400 mt-1" title="Freshchat Conv ID">FC: ${t['Freshchat Conversation ID'] || '-'}</div>
+                        </td>
+                        <td class="py-3 px-4 border-b border-gray-100 font-mono text-[11px] text-gray-600">
+                            ${t['Order ID'] || '-'}
+                        </td>
+                        <td class="py-3 px-4 border-b border-gray-100 text-right">
+                            ${savedBadge}
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             };
         }
 
@@ -982,36 +1029,11 @@
                 }
             });
 
-            // Populate Drill-down Ticket Table for Validation
-            const agentTicketsBody = document.getElementById('agentTicketsBody');
-            agentTicketsBody.innerHTML = '';
+            // Setup globally for the list filter
+            currentAgentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
             
-            const agentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
-            document.getElementById('ticketListCount').textContent = `${agentSpecificTickets.length} records`;
-            
-            agentSpecificTickets.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-blue-50 transition-colors";
-                
-                let savedBadge = '';
-                if(t._isPending) savedBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-[10px] font-bold">Pending</span>';
-                else if(t._isSaved) savedBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>';
-                else savedBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
-
-                tr.innerHTML = `
-                    <td class="py-3 px-4 border-b border-gray-100">
-                        <div class="font-mono text-[11px] text-gray-800 font-medium">TKT: ${t['Ticket ID']}</div>
-                        <div class="font-mono text-[10px] text-gray-400 mt-1" title="Freshchat Conv ID">FC: ${t['Freshchat Conversation ID'] || '-'}</div>
-                    </td>
-                    <td class="py-3 px-4 border-b border-gray-100 font-mono text-[11px] text-gray-600">
-                        ${t['Order ID'] || '-'}
-                    </td>
-                    <td class="py-3 px-4 border-b border-gray-100 text-right">
-                        ${savedBadge}
-                    </td>
-                `;
-                agentTicketsBody.appendChild(tr);
-            });
+            // Execute the render for tickets
+            window.renderAgentTicketsList();
         }
 
         // --- TAB 3: Reasons Render ---
