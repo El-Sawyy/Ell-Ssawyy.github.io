@@ -170,7 +170,7 @@
             <div id="tab-agents" class="tab-pane hidden flex-col gap-6">
                 <div class="grid grid-cols-3 gap-6">
                     <!-- Agent Table -->
-                    <div class="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[600px]">
+                    <div class="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[700px]">
                         <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                             <h3 class="text-sm font-bold text-gray-900">Agent Leaderboard</h3>
                             <span class="text-xs text-gray-500">Rate excludes pending cases</span>
@@ -194,8 +194,8 @@
                     </div>
 
                     <!-- Agent Details Panel -->
-                    <div class="col-span-1 flex flex-col gap-4 h-[600px]">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col">
+                    <div class="col-span-1 flex flex-col gap-4 h-[700px]">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
                             <h3 class="text-sm font-bold text-gray-800 mb-4" id="selectedAgentTitle">Agent Snapshot</h3>
                             
                             <div id="agentSnapshotEmpty" class="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
@@ -203,8 +203,9 @@
                                 <p class="text-xs">Select an agent from the leaderboard to view their breakdown.</p>
                             </div>
 
-                            <div id="agentSnapshotData" class="hidden flex-1 flex flex-col gap-4">
-                                <div class="grid grid-cols-2 gap-2">
+                            <div id="agentSnapshotData" class="hidden flex-1 flex flex-col gap-4 overflow-hidden">
+                                <!-- Top summary -->
+                                <div class="grid grid-cols-2 gap-2 shrink-0">
                                     <div class="bg-blue-50 p-3 rounded-lg text-center">
                                         <div class="text-xs text-blue-600 font-semibold mb-1">Retention Rate</div>
                                         <div class="text-xl font-bold text-blue-900" id="snapRate">0%</div>
@@ -214,9 +215,34 @@
                                         <div class="text-xl font-bold text-gray-900" id="snapVol">0</div>
                                     </div>
                                 </div>
-                                <div class="flex-1 min-h-[200px] mt-4">
-                                    <h4 class="text-xs font-semibold text-gray-500 mb-2">Agent's Top Challenges</h4>
-                                    <canvas id="agentReasonChart"></canvas>
+                                
+                                <!-- Reason Chart -->
+                                <div class="shrink-0 mt-2">
+                                    <h4 class="text-xs font-semibold text-gray-500 mb-2">Top Challenges</h4>
+                                    <div class="h-[140px]">
+                                        <canvas id="agentReasonChart"></canvas>
+                                    </div>
+                                </div>
+
+                                <!-- Ticket Drill Down List -->
+                                <div class="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden border border-gray-200 rounded-lg">
+                                    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 shrink-0">
+                                        <h4 class="text-xs font-bold text-gray-700">Ticket Validation</h4>
+                                    </div>
+                                    <div class="flex-1 overflow-y-auto custom-scrollbar p-0 bg-white">
+                                        <table class="w-full text-left text-[11px] whitespace-nowrap">
+                                            <thead class="bg-white sticky top-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] z-10">
+                                                <tr class="text-gray-500 uppercase">
+                                                    <th class="py-2 px-3 font-semibold">Ticket / FC ID</th>
+                                                    <th class="py-2 px-3 font-semibold">Order ID</th>
+                                                    <th class="py-2 px-3 font-semibold text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="agentTicketsBody" class="divide-y divide-gray-100">
+                                                <!-- Drill down tickets go here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -243,7 +269,7 @@
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                         <div>
                             <h3 class="text-sm font-bold text-gray-900">Live Team Database Explorer</h3>
-                            <p class="text-xs text-gray-500">View or remove individual records affecting everyone's dashboard.</p>
+                            <p class="text-xs text-gray-500">View, edit, or remove individual records affecting everyone's dashboard.</p>
                         </div>
                         <button onclick="clearAllData()" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded transition-colors flex items-center gap-1">
                             <i class="ph ph-trash"></i> Wipe Database
@@ -283,8 +309,8 @@
             <div class="p-6">
                 <form id="recordForm" class="grid grid-cols-2 gap-4">
                     <div class="col-span-1">
-                        <label class="block text-xs font-semibold text-gray-700 mb-1">Ticket ID (Optional)</label>
-                        <input type="text" id="formTicketId" placeholder="Auto-generated if blank" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Ticket ID (Primary Key)</label>
+                        <input type="text" id="formTicketId" placeholder="Auto-generated if blank" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none disabled:bg-gray-100 disabled:text-gray-500">
                     </div>
                     <div class="col-span-1">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Created Date</label>
@@ -294,6 +320,17 @@
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Agent (Submitted By)</label>
                         <input type="text" id="formAgent" required placeholder="e.g. agent@company.com" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     </div>
+                    
+                    <!-- New Fields for Order ID and Freshchat Convo ID -->
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Order ID</label>
+                        <input type="text" id="formOrderId" placeholder="Optional" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Freshchat Convo ID</label>
+                        <input type="text" id="formFreshchatId" placeholder="Optional" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+
                     <div class="col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Cancellation Reason</label>
                         <input type="text" id="formReason" required placeholder="e.g. Pricing, Content, etc." list="reasonSuggestions" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
@@ -363,7 +400,6 @@
                 db = getFirestore(app);
 
                 try {
-                    // Authenticate the user silently in the background
                     await signInAnonymously(auth);
                 } catch (err) {
                     console.error("Auth Error", err);
@@ -447,6 +483,8 @@
             // Modal Controls
             window.openAddRecordModal = function() {
                 document.getElementById('recordForm').reset();
+                document.getElementById('modalTitle').textContent = 'Add Database Record';
+                document.getElementById('formTicketId').disabled = false; // Enabled for new records
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 document.getElementById('formDate').value = now.toISOString().slice(0,16);
@@ -457,11 +495,6 @@
                 document.getElementById('recordModalContent').classList.remove('modal-enter-active');
                 setTimeout(() => { document.getElementById('recordModal').classList.add('hidden'); }, 200);
             };
-
-            // Default dates
-            const now = new Date();
-            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-            document.getElementById('formDate').value = now.toISOString().slice(0,16);
         }
 
         function showEmptyState(title, desc, iconClass) {
@@ -472,7 +505,6 @@
             document.getElementById('emptyStateTitle').textContent = title;
             document.getElementById('emptyStateDesc').textContent = desc;
             
-            // Add upload button ONLY if it's the default zero-data state
             if(title === "Database Connected. Awaiting Data.") {
                  if(!document.getElementById('btnUploadStart')) {
                      const btn = document.createElement('button');
@@ -525,7 +557,7 @@
         async function syncToDatabase(dataArray) {
             if (!user) { alert("Not authenticated to database yet. Please wait."); return; }
             
-            showEmptyState("Syncing to Cloud Database...", "Please wait while we merge your data securely. Duplicates are being handled.", "ph-spinner animate-spin text-blue-500");
+            showEmptyState("Syncing to Cloud Database...", "Please wait while we merge your data securely. Duplicates are being updated.", "ph-spinner animate-spin text-blue-500");
 
             const dedupedData = new Map();
             
@@ -546,10 +578,16 @@
                 let cleanReason = (row['Cancellation & Return Reason'] || 'Unspecified').trim();
                 if(cleanReason === '') cleanReason = 'Unspecified';
 
+                // Ensure we capture Order ID and Freshchat ID specifically for validation!
+                const orderId = row['Order ID'] || row['order_id'] || '';
+                const fcId = row['Freshchat Conversation ID'] || row['freshchat_conversation_id'] || '';
+
                 dedupedData.set(tId, {
                     'Ticket ID': tId,
                     'Submitted By': row['Submitted By'].trim(),
                     'Created date': parsedDate.toISOString(),
+                    'Order ID': String(orderId).trim(),
+                    'Freshchat Conversation ID': String(fcId).trim(),
                     'Cancellation & Return Reason': cleanReason,
                     'Status': row['Status'] || '',
                     'New Request Prevented': row['New Request Prevented'] || '',
@@ -566,19 +604,17 @@
 
             try {
                 for (const [tId, rowData] of dedupedData.entries()) {
-                    const safeTId = tId.replace(/[^a-zA-Z0-9_-]/g, '_'); // Prevent Firebase path errors
+                    const safeTId = tId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
                     const docRef = doc(collectionRef, safeTId);
-                    batch.set(docRef, rowData);
+                    batch.set(docRef, rowData); // Overwrites the existing document if ID matches
                     count++;
-                    if (count === 490) { // Keep under 500 document limit per batch
+                    if (count === 490) { 
                         await batch.commit();
                         batch = writeBatch(db);
                         count = 0;
                     }
                 }
                 if (count > 0) await batch.commit();
-                
-                // Real-time listener will automatically restore the UI state when it fetches the new data!
             } catch (err) {
                 console.error("Batch Sync Error:", err);
                 alert("An error occurred while saving to the database. Check console.");
@@ -587,16 +623,52 @@
         }
 
         // --- Manual Database Writes ---
+        window.editRecord = function(ticketId) {
+            const record = globalDataMap.get(ticketId);
+            if(!record) return;
+            
+            document.getElementById('modalTitle').textContent = 'Edit Database Record';
+            document.getElementById('formTicketId').value = record['Ticket ID'];
+            document.getElementById('formTicketId').disabled = true; // Prevent changing the primary ID key
+            
+            const localDate = new Date(record._timestamp);
+            localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
+            document.getElementById('formDate').value = localDate.toISOString().slice(0,16);
+            
+            document.getElementById('formAgent').value = record['Submitted By'];
+            document.getElementById('formReason').value = record['Cancellation & Return Reason'];
+            document.getElementById('formStatus').value = record['Status'];
+            
+            // Map the internal value back to select input
+            let prevVal = "False";
+            if (record._isPending) prevVal = "Pending";
+            else if (record._isSaved) prevVal = "True";
+            document.getElementById('formPrevented').value = prevVal;
+            
+            document.getElementById('formOrderId').value = record['Order ID'] || '';
+            document.getElementById('formFreshchatId').value = record['Freshchat Conversation ID'] || '';
+
+            document.getElementById('recordModal').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('recordModalContent').classList.add('modal-enter-active'); }, 10);
+        };
+
         window.saveRecord = async function() {
             if (!user) return;
+            
+            // Re-fetch the ID in case it is disabled
             let tId = document.getElementById('formTicketId').value.trim();
-            if(!tId) tId = 'MANUAL-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            if(!tId && !document.getElementById('formTicketId').disabled) {
+                tId = 'MANUAL-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            }
             
             const agent = document.getElementById('formAgent').value.trim();
             const dateStr = document.getElementById('formDate').value;
             const reason = document.getElementById('formReason').value.trim() || 'Unspecified';
             const status = document.getElementById('formStatus').value;
             const preventedRaw = document.getElementById('formPrevented').value;
+            
+            const orderId = document.getElementById('formOrderId').value.trim();
+            const fcId = document.getElementById('formFreshchatId').value.trim();
 
             if(!agent || !dateStr) { alert("Agent and Date are required."); return; }
             
@@ -607,6 +679,8 @@
                 'Ticket ID': tId,
                 'Submitted By': agent,
                 'Created date': new Date(dateStr).toISOString(),
+                'Order ID': orderId,
+                'Freshchat Conversation ID': fcId,
                 'Cancellation & Return Reason': reason,
                 'Status': status,
                 'New Request Prevented': preventedRaw,
@@ -658,7 +732,6 @@
                     document.getElementById('startDateFilter').value = '';
                     document.getElementById('endDateFilter').value = '';
                     excludedReasons.clear();
-                    // Listener will trigger empty state automatically
                 } catch (err) { console.error(err); alert("Failed to erase database."); }
             }
         };
@@ -725,7 +798,7 @@
             let total = data.length;
             let saved = data.filter(d => d._isSaved).length;
             let pending = data.filter(d => d._isPending).length;
-            let resolvedCases = total - pending; // Math explicitly excludes pending!
+            let resolvedCases = total - pending; 
             let rate = resolvedCases > 0 ? ((saved / resolvedCases) * 100).toFixed(1) : '0.0';
             
             // Top Level KPIs
@@ -826,7 +899,7 @@
                 tr.className = `hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 ${selectedAgentForSnapshot === entry.agent ? 'bg-blue-50' : ''}`;
                 tr.onclick = () => {
                     selectedAgentForSnapshot = entry.agent;
-                    renderAgentSnapshot(entry);
+                    renderAgentSnapshot(entry, data);
                     Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
                     tr.classList.add('bg-blue-50');
                 };
@@ -852,11 +925,11 @@
                     selectedAgentForSnapshot = leaderboard[0].agent;
                 }
                 const currentEntry = leaderboard.find(l => l.agent === selectedAgentForSnapshot);
-                if(currentEntry) renderAgentSnapshot(currentEntry);
+                if(currentEntry) renderAgentSnapshot(currentEntry, data);
             }
         }
 
-        function renderAgentSnapshot(agentData) {
+        function renderAgentSnapshot(agentData, allFilteredData) {
             document.getElementById('agentSnapshotEmpty').classList.add('hidden');
             const snData = document.getElementById('agentSnapshotData');
             snData.classList.remove('hidden');
@@ -879,6 +952,36 @@
                     plugins: { legend: { display: false } },
                     scales: { x: { beginAtZero: true, ticks:{stepSize:1} } }
                 }
+            });
+
+            // Populate Drill-down Ticket Table for Validation
+            const agentTicketsBody = document.getElementById('agentTicketsBody');
+            agentTicketsBody.innerHTML = '';
+            
+            const agentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
+            
+            agentSpecificTickets.forEach(t => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                
+                let savedBadge = '';
+                if(t._isPending) savedBadge = '<span class="text-yellow-600 font-bold">Pending</span>';
+                else if(t._isSaved) savedBadge = '<span class="text-green-600 font-bold">Yes</span>';
+                else savedBadge = '<span class="text-gray-400 font-bold">No</span>';
+
+                tr.innerHTML = `
+                    <td class="py-2 px-3 border-b border-gray-100">
+                        <div class="font-mono text-[10px] text-gray-800">TKT: ${t['Ticket ID']}</div>
+                        <div class="font-mono text-[9px] text-gray-400 mt-0.5" title="Freshchat Conv ID">FC: ${t['Freshchat Conversation ID'] || '-'}</div>
+                    </td>
+                    <td class="py-2 px-3 border-b border-gray-100 font-mono text-[10px] text-gray-600">
+                        ${t['Order ID'] || '-'}
+                    </td>
+                    <td class="py-2 px-3 border-b border-gray-100 text-right">
+                        ${savedBadge}
+                    </td>
+                `;
+                agentTicketsBody.appendChild(tr);
             });
         }
 
@@ -929,7 +1032,7 @@
 
             displayData.forEach(row => {
                 const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50';
+                tr.className = 'hover:bg-gray-50 group';
                 
                 const dStr = row._parsedDate.toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
                 
@@ -945,8 +1048,9 @@
                     <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${row._cleanReason}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
-                    <td class="py-2 px-4 border-b border-gray-100 text-right">
-                        <button onclick="deleteRecord('${row['Ticket ID']}')" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                    <td class="py-2 px-4 border-b border-gray-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button onclick="editRecord('${row['Ticket ID']}')" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit Record"><i class="ph ph-pencil-simple text-base"></i></button>
+                        <button onclick="deleteRecord('${row['Ticket ID']}')" class="text-red-400 hover:text-red-600" title="Delete Record"><i class="ph ph-trash text-base"></i></button>
                     </td>
                 `;
                 tbody.appendChild(tr);
