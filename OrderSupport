@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Retention MBR Dashboard</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse for robust CSV reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- SheetJS for Excel reading -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .drag-active { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+        .tab-active { color: #2563eb; border-bottom: 2px solid #2563eb; font-weight: 600; }
+        .tab-inactive { color: #64748b; border-bottom: 2px solid transparent; hover:border-gray-300; }
+        
+        /* Modal transitions */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: all 0.2s ease-out; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden text-sm">
+
+    <!-- Top Navigation -->
+    <header class="bg-white shadow-sm z-20 border-b border-gray-200">
+        <div class="max-w-[1600px] mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-blue-600 text-white p-1.5 rounded-lg">
+                    <i class="ph ph-trend-up text-2xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900 leading-tight">Retention MBR Dashboard</h1>
+                    <p class="text-xs text-gray-500">Order Support Team Analytics</p>
+                </div>
+            </div>
+            
+            <!-- Navigation Tabs -->
+            <div class="flex space-x-6" id="navTabs">
+                <button onclick="switchTab('overview')" class="tab-active pb-1 px-1 transition-colors outline-none" data-tab="overview">Overview</button>
+                <button onclick="switchTab('agents')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agents">Agent Performance</button>
+                <button onclick="switchTab('reasons')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="reasons">Reason Analytics</button>
+                <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data">Data Manager</button>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md" id="recordCountBadge">0 Records</span>
+                <button onclick="openAddRecordModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1">
+                    <i class="ph ph-plus"></i> Add Data
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="flex-1 flex overflow-hidden max-w-[1600px] w-full mx-auto">
+        
+        <!-- Sidebar: Global Controls -->
+        <aside class="w-72 bg-white border-r border-gray-200 flex flex-col z-10 overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+            
+            <!-- Upload Section -->
+            <div class="p-4 border-b border-gray-100 bg-gray-50/50">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-database"></i> Add to Dataset</h2>
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors bg-white" onclick="document.getElementById('csvFileInput').click()">
+                    <i class="ph ph-upload-simple text-2xl text-blue-500 mb-1"></i>
+                    <p class="text-xs text-gray-600 font-medium">Upload CSV or XLSX</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Merges by Ticket ID</p>
+                    <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" class="hidden">
+                </div>
+            </div>
+
+            <!-- Date Filter -->
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1"><i class="ph ph-calendar-blank"></i> Date Range</h2>
+                <div class="flex flex-col gap-2">
+                    <div>
+                        <label class="text-[10px] text-gray-500 block mb-1">Start Date</label>
+                        <input type="date" id="startDateFilter" class="w-full text-xs border border-gray-300 rounded p-1.5 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 block mb-1">End Date</label>
+                        <input type="date" id="endDateFilter" class="w-full text-xs border border-gray-300 rounded p-1.5 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <button onclick="clearDateFilters()" class="text-xs text-blue-600 hover:text-blue-800 mt-1 text-left w-max">Clear Dates</button>
+                </div>
+            </div>
+
+            <!-- Reason Filters -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <div class="p-4 pb-2 flex justify-between items-center bg-white">
+                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1"><i class="ph ph-funnel"></i> Exclude Reasons</h2>
+                    <button id="selectAllBtn" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded">Toggle All</button>
+                </div>
+                <div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4" id="reasonFilterContainer">
+                    <p class="text-xs text-gray-400 italic mt-2 text-center">No data loaded yet.</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Dynamic Content Area -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#f8fafc] relative" id="mainContent">
+            
+            <!-- Empty State Overlay -->
+            <div id="emptyState" class="absolute inset-0 flex flex-col items-center justify-center bg-[#f8fafc] z-10">
+                <div class="bg-white p-8 rounded-2xl shadow-sm border border-gray-200 text-center max-w-md">
+                    <div class="mx-auto w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4">
+                        <i class="ph ph-chart-polar text-3xl"></i>
+                    </div>
+                    <h2 class="text-xl font-bold text-gray-900 mb-2">Welcome to MBR Analytics</h2>
+                    <p class="text-gray-500 text-sm mb-6">Upload your Freshchat exported data using the sidebar, or manually add your first record to begin generating analytics.</p>
+                    <button onclick="document.getElementById('csvFileInput').click()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors w-full">
+                        Upload Data to Start
+                    </button>
+                </div>
+            </div>
+
+            <!-- TAB 1: OVERVIEW -->
+            <div id="tab-overview" class="tab-pane hidden flex-col gap-6">
+                <!-- Summary KPI Cards -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Cases</p>
+                        <h3 class="text-2xl font-bold text-gray-900" id="kpiTotalCases">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Prevented / Saved</p>
+                        <h3 class="text-2xl font-bold text-green-600" id="kpiSavedCases">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Overall Retention Rate</p>
+                        <h3 class="text-2xl font-bold text-blue-600" id="kpiRetentionRate">0%</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Active Agents</p>
+                        <h3 class="text-2xl font-bold text-purple-600" id="kpiActiveAgents">0</h3>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <!-- Timeline Chart -->
+                    <div class="col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4">Retention Trend Over Time</h3>
+                        <div class="w-full h-72">
+                            <canvas id="trendChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Status Distribution -->
+                    <div class="col-span-1 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4">Ticket Status Breakdown</h3>
+                        <div class="w-full h-64 flex justify-center">
+                            <canvas id="statusChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: AGENTS -->
+            <div id="tab-agents" class="tab-pane hidden flex-col gap-6">
+                <div class="grid grid-cols-3 gap-6">
+                    <!-- Agent Table -->
+                    <div class="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[600px]">
+                        <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                            <h3 class="text-sm font-bold text-gray-900">Agent Leaderboard</h3>
+                            <span class="text-xs text-gray-500">Click a row for deep dive</span>
+                        </div>
+                        <div class="overflow-y-auto flex-1 custom-scrollbar">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="sticky top-0 bg-white shadow-sm">
+                                    <tr class="text-xs text-gray-500 uppercase tracking-wider">
+                                        <th class="py-3 px-5 font-semibold">Agent</th>
+                                        <th class="py-3 px-5 font-semibold text-center">Cases</th>
+                                        <th class="py-3 px-5 font-semibold text-center">Saved</th>
+                                        <th class="py-3 px-5 font-semibold text-right">Retention</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="agentTableBody" class="divide-y divide-gray-100 text-gray-800">
+                                    <!-- Injected via JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Agent Details Panel -->
+                    <div class="col-span-1 flex flex-col gap-4 h-[600px]">
+                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col">
+                            <h3 class="text-sm font-bold text-gray-800 mb-4" id="selectedAgentTitle">Agent Snapshot</h3>
+                            
+                            <div id="agentSnapshotEmpty" class="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
+                                <i class="ph ph-user text-4xl mb-2"></i>
+                                <p class="text-xs">Select an agent from the leaderboard to view their breakdown.</p>
+                            </div>
+
+                            <div id="agentSnapshotData" class="hidden flex-1 flex flex-col gap-4">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div class="bg-blue-50 p-3 rounded-lg text-center">
+                                        <div class="text-xs text-blue-600 font-semibold mb-1">Rate</div>
+                                        <div class="text-xl font-bold text-blue-900" id="snapRate">0%</div>
+                                    </div>
+                                    <div class="bg-gray-50 p-3 rounded-lg text-center">
+                                        <div class="text-xs text-gray-600 font-semibold mb-1">Volume</div>
+                                        <div class="text-xl font-bold text-gray-900" id="snapVol">0</div>
+                                    </div>
+                                </div>
+                                <div class="flex-1 min-h-[200px] mt-4">
+                                    <h4 class="text-xs font-semibold text-gray-500 mb-2">Agent's Top Challenges</h4>
+                                    <canvas id="agentReasonChart"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: REASONS -->
+            <div id="tab-reasons" class="tab-pane hidden flex-col gap-6">
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-sm font-bold text-gray-900">Cancellation Reasons Analysis</h3>
+                        <p class="text-xs text-gray-500">Sorted by frequency. Excluded reasons are hidden.</p>
+                    </div>
+                    <div class="w-full h-[500px]">
+                        <canvas id="topReasonsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: DATA MANAGER -->
+            <div id="tab-data" class="tab-pane hidden flex-col h-full gap-4">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">Raw Data Explorer</h3>
+                            <p class="text-xs text-gray-500">View, edit, or remove individual records.</p>
+                        </div>
+                        <button onclick="clearAllData()" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                            <i class="ph ph-trash"></i> Clear All Data
+                        </button>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scrollbar p-0">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                <tr class="text-xs text-gray-500 uppercase tracking-wider bg-gray-50">
+                                    <th class="py-2 px-4 font-semibold border-b">Date</th>
+                                    <th class="py-2 px-4 font-semibold border-b">Ticket ID</th>
+                                    <th class="py-2 px-4 font-semibold border-b">Agent</th>
+                                    <th class="py-2 px-4 font-semibold border-b">Reason</th>
+                                    <th class="py-2 px-4 font-semibold border-b">Status</th>
+                                    <th class="py-2 px-4 font-semibold border-b">Prevented</th>
+                                    <th class="py-2 px-4 font-semibold border-b text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rawDataTableBody" class="divide-y divide-gray-100 text-xs">
+                                <!-- Data injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal for Adding/Editing Record -->
+    <div id="recordModal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all modal-enter" id="recordModalContent">
+            <div class="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                <h3 class="text-lg font-bold text-gray-900" id="modalTitle">Add New Record</h3>
+                <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
+            </div>
+            <div class="p-6">
+                <form id="recordForm" class="grid grid-cols-2 gap-4">
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Ticket ID (Optional)</label>
+                        <input type="text" id="formTicketId" placeholder="Auto-generated if blank" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Created Date</label>
+                        <input type="datetime-local" id="formDate" required class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Agent (Submitted By)</label>
+                        <input type="text" id="formAgent" required placeholder="e.g. agent@company.com" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Cancellation Reason</label>
+                        <input type="text" id="formReason" required placeholder="e.g. Pricing, Content, etc." list="reasonSuggestions" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        <datalist id="reasonSuggestions"></datalist>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
+                        <select id="formStatus" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                            <option value="Resolved">Resolved</option>
+                            <option value="Closed">Closed</option>
+                            <option value="Pending">Pending</option>
+                            <option value="Open">Open</option>
+                        </select>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Request Prevented (Saved)?</label>
+                        <select id="formPrevented" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                            <option value="False">No (False)</option>
+                            <option value="True">Yes (True)</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-end gap-3">
+                <button onclick="closeModal()" class="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800">Cancel</button>
+                <button onclick="saveRecord()" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors">Save Record</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Core State Management ---
+        // Using a Map to ensure unique Ticket IDs. This allows appending data easily.
+        let globalDataMap = new Map(); 
+        let uniqueReasons = new Set();
+        let excludedReasons = new Set();
+        
+        // Chart Instances
+        let charts = {
+            trend: null,
+            status: null,
+            topReasons: null,
+            agentReason: null
+        };
+
+        let currentActiveTab = 'overview';
+        let selectedAgentForSnapshot = null;
+
+        // --- DOM Elements ---
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('csvFileInput');
+        const emptyState = document.getElementById('emptyState');
+        
+        // --- Initialize ---
+        function init() {
+            setupDragAndDrop();
+            setupDateFilters();
+            
+            // Set default date for form
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('formDate').value = now.toISOString().slice(0,16);
+            
+            // Switch to overview, but show empty state initially
+            switchTab('overview');
+            updateUIState();
+        }
+
+        // --- Navigation ---
+        function switchTab(tabId) {
+            currentActiveTab = tabId;
+            
+            // Update Tab Styling
+            document.querySelectorAll('#navTabs button').forEach(btn => {
+                if(btn.dataset.tab === tabId) {
+                    btn.className = 'tab-active pb-1 px-1 transition-colors outline-none';
+                } else {
+                    btn.className = 'tab-inactive pb-1 px-1 transition-colors outline-none';
+                }
+            });
+
+            // Update Content Visibility
+            document.querySelectorAll('.tab-pane').forEach(pane => {
+                pane.classList.add('hidden');
+                pane.classList.remove('flex');
+            });
+            
+            if (globalDataMap.size > 0) {
+                const activePane = document.getElementById(`tab-${tabId}`);
+                activePane.classList.remove('hidden');
+                activePane.classList.add('flex');
+                
+                // Re-render specific charts based on tab to handle resizing correctly
+                refreshDashboard();
+            }
+        }
+
+        function updateUIState() {
+            if (globalDataMap.size === 0) {
+                emptyState.classList.remove('hidden');
+                document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
+            } else {
+                emptyState.classList.add('hidden');
+                document.getElementById(`tab-${currentActiveTab}`).classList.remove('hidden');
+                document.getElementById(`tab-${currentActiveTab}`).classList.add('flex');
+            }
+            document.getElementById('recordCountBadge').textContent = `${globalDataMap.size} Records`;
+        }
+
+        // --- Data Ingestion (Upload) ---
+        function setupDragAndDrop() {
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+            ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drag-active')));
+            dropZone.addEventListener('drop', e => {
+                e.preventDefault(); dropZone.classList.remove('drag-active');
+                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+            });
+            fileInput.addEventListener('change', e => {
+                if (e.target.files.length) handleFile(e.target.files[0]);
+                fileInput.value = ''; // Reset for re-upload
+            });
+        }
+
+        function handleFile(file) {
+            const fileName = file.name.toLowerCase();
+            if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+                alert('Please upload a valid CSV or Excel file.');
+                return;
+            }
+
+            if (fileName.endsWith('.csv')) {
+                Papa.parse(file, {
+                    header: true, skipEmptyLines: true,
+                    complete: results => processNewData(results.data),
+                    error: err => alert('CSV Error: ' + err.message)
+                });
+            } else {
+                const reader = new FileReader();
+                reader.onload = e => {
+                    try {
+                        const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                        const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {raw: false});
+                        processNewData(data);
+                    } catch (err) { alert('Excel Error: ' + err.message); }
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        // Add array of objects to Map (Merge operation)
+        function processNewData(dataArray) {
+            let added = 0, updated = 0;
+            
+            dataArray.forEach(row => {
+                // Ensure required minimal fields exist before adding
+                if(!row['Submitted By'] || row['Submitted By'].trim() === '') return;
+
+                // Identify or create Ticket ID
+                let tId = row['Ticket ID'] || row['ticket_id'] || row['Freshchat Conversation ID'];
+                if (!tId || String(tId).trim() === '') {
+                    tId = 'TKT-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+                }
+                tId = String(tId).trim();
+
+                // Normalize Prevented Flag
+                const pStr = String(row['New Request Prevented'] || '').trim().toLowerCase();
+                row['_isSaved'] = (pStr === 'true' || pStr === 'yes' || pStr === '1');
+
+                // Normalize Date
+                row['_parsedDate'] = new Date(row['Created date'] || new Date());
+                if (isNaN(row['_parsedDate'].getTime())) row['_parsedDate'] = new Date(); // fallback
+
+                // Normalize Reason
+                row['_cleanReason'] = (row['Cancellation & Return Reason'] || 'Unspecified').trim();
+                if(row['_cleanReason'] === '') row['_cleanReason'] = 'Unspecified';
+                uniqueReasons.add(row['_cleanReason']);
+
+                if (globalDataMap.has(tId)) updated++; else added++;
+                globalDataMap.set(tId, row);
+            });
+
+            // alert(`Imported data successfully. Added: ${added}, Updated: ${updated}`);
+            updateFilterSidebar();
+            updateUIState();
+            refreshDashboard();
+        }
+
+        // --- Manual Record Management ---
+        function openAddRecordModal() {
+            document.getElementById('recordForm').reset();
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('formDate').value = now.toISOString().slice(0,16);
+            
+            document.getElementById('recordModal').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('recordModalContent').classList.add('modal-enter-active'); }, 10);
+        }
+
+        function closeModal() {
+            document.getElementById('recordModalContent').classList.remove('modal-enter-active');
+            setTimeout(() => { document.getElementById('recordModal').classList.add('hidden'); }, 200);
+        }
+
+        function saveRecord() {
+            let tId = document.getElementById('formTicketId').value.trim();
+            if(!tId) tId = 'MANUAL-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+            
+            const agent = document.getElementById('formAgent').value.trim();
+            const dateStr = document.getElementById('formDate').value;
+            const reason = document.getElementById('formReason').value.trim() || 'Unspecified';
+            const status = document.getElementById('formStatus').value;
+            const prevented = document.getElementById('formPrevented').value;
+
+            if(!agent || !dateStr) { alert("Agent and Date are required."); return; }
+
+            const row = {
+                'Ticket ID': tId,
+                'Submitted By': agent,
+                'Created date': dateStr,
+                'Cancellation & Return Reason': reason,
+                'Status': status,
+                'New Request Prevented': prevented,
+                '_isSaved': prevented === 'True',
+                '_parsedDate': new Date(dateStr),
+                '_cleanReason': reason
+            };
+
+            uniqueReasons.add(reason);
+            globalDataMap.set(tId, row);
+            
+            closeModal();
+            updateFilterSidebar();
+            updateUIState();
+            refreshDashboard();
+        }
+
+        function deleteRecord(ticketId) {
+            if(confirm('Are you sure you want to delete this record?')) {
+                globalDataMap.delete(ticketId);
+                updateUIState();
+                refreshDashboard();
+            }
+        }
+
+        function clearAllData() {
+            if(confirm('WARNING: This will remove all data from memory. Are you sure?')) {
+                globalDataMap.clear();
+                uniqueReasons.clear();
+                excludedReasons.clear();
+                document.getElementById('startDateFilter').value = '';
+                document.getElementById('endDateFilter').value = '';
+                updateFilterSidebar();
+                updateUIState();
+                
+                // Clear charts
+                Object.keys(charts).forEach(key => {
+                    if(charts[key]) { charts[key].destroy(); charts[key] = null; }
+                });
+            }
+        }
+
+        // --- Filtering Engine ---
+        function setupDateFilters() {
+            document.getElementById('startDateFilter').addEventListener('change', refreshDashboard);
+            document.getElementById('endDateFilter').addEventListener('change', refreshDashboard);
+        }
+        function clearDateFilters() {
+            document.getElementById('startDateFilter').value = '';
+            document.getElementById('endDateFilter').value = '';
+            refreshDashboard();
+        }
+
+        function updateFilterSidebar() {
+            const container = document.getElementById('reasonFilterContainer');
+            const dataList = document.getElementById('reasonSuggestions');
+            container.innerHTML = '';
+            dataList.innerHTML = '';
+            
+            Array.from(uniqueReasons).sort().forEach(reason => {
+                // Populate Datalist for form
+                const opt = document.createElement('option'); opt.value = reason; dataList.appendChild(opt);
+
+                // Populate Checkboxes
+                const id = `chk_${Math.random().toString(36).substr(2, 9)}`;
+                const isChecked = !excludedReasons.has(reason);
+                const div = document.createElement('div');
+                div.className = 'flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded px-1';
+                div.innerHTML = `
+                    <input type="checkbox" id="${id}" value="${reason.replace(/"/g, '&quot;')}" class="mt-0.5 w-3.5 h-3.5 text-blue-600 rounded cursor-pointer" ${isChecked ? 'checked' : ''}>
+                    <label for="${id}" class="text-xs text-gray-700 cursor-pointer flex-1 truncate select-none" title="${reason}">${reason}</label>
+                `;
+                div.querySelector('input').addEventListener('change', (e) => {
+                    if (e.target.checked) excludedReasons.delete(e.target.value);
+                    else excludedReasons.add(e.target.value);
+                    refreshDashboard();
+                });
+                container.appendChild(div);
+            });
+
+            document.getElementById('selectAllBtn').onclick = () => {
+                const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => {
+                    cb.checked = !allChecked;
+                    if(cb.checked) excludedReasons.delete(cb.value); else excludedReasons.add(cb.value);
+                });
+                refreshDashboard();
+            };
+        }
+
+        // Core data pipeline
+        function getFilteredData() {
+            const startDateStr = document.getElementById('startDateFilter').value;
+            const endDateStr = document.getElementById('endDateFilter').value;
+            
+            let start = startDateStr ? new Date(startDateStr) : null;
+            let end = endDateStr ? new Date(endDateStr) : null;
+            if(end) end.setHours(23, 59, 59, 999);
+
+            let result = [];
+            globalDataMap.forEach(row => {
+                // Date Filter
+                if (start && row._parsedDate < start) return;
+                if (end && row._parsedDate > end) return;
+                
+                // Reason Filter
+                if (excludedReasons.has(row._cleanReason)) return;
+
+                result.push(row);
+            });
+            
+            // Sort by date desc
+            return result.sort((a,b) => b._parsedDate - a._parsedDate);
+        }
+
+        // --- Core Rendering Logic ---
+        function refreshDashboard() {
+            if(globalDataMap.size === 0) return;
+            const data = getFilteredData();
+            
+            // Reusable metrics
+            let total = data.length;
+            let saved = data.filter(d => d._isSaved).length;
+            let rate = total > 0 ? ((saved / total) * 100).toFixed(1) : '0.0';
+            
+            // Top Level KPIs
+            document.getElementById('kpiTotalCases').textContent = total.toLocaleString();
+            document.getElementById('kpiSavedCases').textContent = saved.toLocaleString();
+            document.getElementById('kpiRetentionRate').textContent = `${rate}%`;
+            
+            // Render specific tab
+            if(currentActiveTab === 'overview') renderOverview(data);
+            if(currentActiveTab === 'agents') renderAgents(data);
+            if(currentActiveTab === 'reasons') renderReasons(data);
+            if(currentActiveTab === 'data') renderDataTable(data);
+        }
+
+        // Clean agent name utility
+        function formatAgentName(emailStr) {
+            let name = String(emailStr).split('@')[0].replace('.', ' ');
+            return name.replace(/\b\w/g, l => l.toUpperCase());
+        }
+
+        // --- TAB 1: Overview Render ---
+        function renderOverview(data) {
+            // Count active agents based on filtered data
+            const agentSet = new Set(data.map(d => d['Submitted By']));
+            document.getElementById('kpiActiveAgents').textContent = agentSet.size;
+
+            // Prepare Timeline Data (Group by Day)
+            const timelineMap = {};
+            const statusMap = {};
+
+            data.forEach(row => {
+                // Timeline
+                const dayKey = row._parsedDate.toISOString().split('T')[0];
+                if(!timelineMap[dayKey]) timelineMap[dayKey] = { total: 0, saved: 0 };
+                timelineMap[dayKey].total++;
+                if(row._isSaved) timelineMap[dayKey].saved++;
+
+                // Status
+                const stat = (row['Status'] || 'Unknown').trim();
+                statusMap[stat] = (statusMap[stat] || 0) + 1;
+            });
+
+            // Build Timeline Chart
+            const sortedDays = Object.keys(timelineMap).sort();
+            if(charts.trend) charts.trend.destroy();
+            charts.trend = new Chart(document.getElementById('trendChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: sortedDays,
+                    datasets: [
+                        { label: 'Total Cases', data: sortedDays.map(d => timelineMap[d].total), borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,5], tension: 0.3 },
+                        { label: 'Saved Cases', data: sortedDays.map(d => timelineMap[d].saved), borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.1)', fill: true, tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } }
+            });
+
+            // Build Status Doughnut
+            if(charts.status) charts.status.destroy();
+            charts.status = new Chart(document.getElementById('statusChart').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(statusMap),
+                    datasets: [{ data: Object.values(statusMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{boxWidth:12, font:{size:10}} } } }
+            });
+        }
+
+        // --- TAB 2: Agents Render ---
+        function renderAgents(data) {
+            const agentStats = {};
+            data.forEach(row => {
+                const ag = row['Submitted By'];
+                if(!agentStats[ag]) agentStats[ag] = { total: 0, saved: 0, reasons: {} };
+                agentStats[ag].total++;
+                if(row._isSaved) agentStats[ag].saved++;
+                
+                // track reasons for drilldown
+                const r = row._cleanReason;
+                agentStats[ag].reasons[r] = (agentStats[ag].reasons[r] || 0) + 1;
+            });
+
+            let leaderboard = Object.keys(agentStats).map(ag => {
+                return { 
+                    agent: ag, 
+                    total: agentStats[ag].total, 
+                    saved: agentStats[ag].saved, 
+                    rate: agentStats[ag].total > 0 ? (agentStats[ag].saved / agentStats[ag].total)*100 : 0,
+                    reasons: agentStats[ag].reasons
+                };
+            }).sort((a,b) => b.rate !== a.rate ? b.rate - a.rate : b.total - a.total);
+
+            const tbody = document.getElementById('agentTableBody');
+            tbody.innerHTML = '';
+            
+            leaderboard.forEach((entry, idx) => {
+                const tr = document.createElement('tr');
+                tr.className = `hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 ${selectedAgentForSnapshot === entry.agent ? 'bg-blue-50' : ''}`;
+                tr.onclick = () => {
+                    selectedAgentForSnapshot = entry.agent;
+                    renderAgentSnapshot(entry);
+                    // Update selection visual
+                    Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
+                    tr.classList.add('bg-blue-50');
+                };
+
+                let medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
+                tr.innerHTML = `
+                    <td class="py-3 px-5 whitespace-nowrap"><div class="font-medium text-gray-900">${medal} ${formatAgentName(entry.agent)}</div><div class="text-[10px] text-gray-400">${entry.agent}</div></td>
+                    <td class="py-3 px-5 text-center text-sm">${entry.total}</td>
+                    <td class="py-3 px-5 text-center text-sm font-medium text-green-600">${entry.saved}</td>
+                    <td class="py-3 px-5">
+                        <div class="flex items-center justify-end gap-2">
+                            <div class="w-16 bg-gray-200 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width:${entry.rate}%"></div></div>
+                            <span class="text-xs font-bold w-10 text-right">${entry.rate.toFixed(1)}%</span>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Initial load select first agent if none selected
+            if(leaderboard.length > 0) {
+                if(!selectedAgentForSnapshot || !agentStats[selectedAgentForSnapshot]) {
+                    selectedAgentForSnapshot = leaderboard[0].agent;
+                }
+                const currentEntry = leaderboard.find(l => l.agent === selectedAgentForSnapshot);
+                if(currentEntry) renderAgentSnapshot(currentEntry);
+            }
+        }
+
+        function renderAgentSnapshot(agentData) {
+            document.getElementById('agentSnapshotEmpty').classList.add('hidden');
+            const snData = document.getElementById('agentSnapshotData');
+            snData.classList.remove('hidden');
+
+            document.getElementById('selectedAgentTitle').textContent = `Profile: ${formatAgentName(agentData.agent)}`;
+            document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
+            document.getElementById('snapVol').textContent = agentData.total;
+
+            // Top 5 Reasons Chart for this agent
+            const reasonsArr = Object.entries(agentData.reasons).map(([k,v]) => ({reason: k, count: v})).sort((a,b) => b.count - a.count).slice(0,5);
+            
+            if(charts.agentReason) charts.agentReason.destroy();
+            charts.agentReason = new Chart(document.getElementById('agentReasonChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: reasonsArr.map(r => r.reason.length > 20 ? r.reason.substring(0,20)+'...' : r.reason),
+                    datasets: [{ label: 'Cases', data: reasonsArr.map(r => r.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, ticks:{stepSize:1} } }
+                }
+            });
+        }
+
+        // --- TAB 3: Reasons Render ---
+        function renderReasons(data) {
+            const reasonCounts = {};
+            data.forEach(row => {
+                const r = row._cleanReason;
+                if(!reasonCounts[r]) reasonCounts[r] = {total: 0, saved: 0};
+                reasonCounts[r].total++;
+                if(row._isSaved) reasonCounts[r].saved++;
+            });
+
+            const sorted = Object.keys(reasonCounts)
+                .map(k => ({reason: k, ...reasonCounts[k]}))
+                .sort((a,b) => b.total - a.total)
+                .slice(0, 15); // Top 15
+
+            if(charts.topReasons) charts.topReasons.destroy();
+            charts.topReasons = new Chart(document.getElementById('topReasonsChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: sorted.map(s => s.reason),
+                    datasets: [
+                        { label: 'Unsaved Cases', data: sorted.map(s => s.total - s.saved), backgroundColor: '#cbd5e1', stacked: true },
+                        { label: 'Saved Cases', data: sorted.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { tooltip: { mode: 'index', intersect: false } },
+                    scales: {
+                        x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } },
+                        y: { stacked: true, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // --- TAB 4: Data Table Render ---
+        function renderDataTable(data) {
+            const tbody = document.getElementById('rawDataTableBody');
+            tbody.innerHTML = '';
+            
+            // Render maximum 500 rows to prevent browser freeze, latest first
+            const displayData = data.slice(0, 500); 
+
+            displayData.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                
+                const dStr = row._parsedDate.toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                const savedBadge = row._isSaved ? '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>' : '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
+                
+                tr.innerHTML = `
+                    <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">${row['Ticket ID']}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[150px]" title="${row['Submitted By']}">${formatAgentName(row['Submitted By'])}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${row._cleanReason}</td>
+                    <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
+                    <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 text-right">
+                        <button onclick="deleteRecord('${row['Ticket ID']}')" class="text-red-400 hover:text-red-600"><i class="ph ph-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if(data.length > 500) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td colspan="7" class="py-3 text-center text-gray-400 italic">Showing latest 500 of ${data.length} records...</td>`;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // Run Initialization
+        init();
+
+    </script>
+</body>
+</html>
