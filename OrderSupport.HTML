@@ -166,88 +166,92 @@
                 </div>
             </div>
 
-            <!-- TAB 2: AGENTS -->
-            <div id="tab-agents" class="tab-pane hidden flex-col gap-6">
-                <div class="grid grid-cols-3 gap-6">
-                    <!-- Agent Table -->
-                    <div class="col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[700px]">
-                        <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                            <h3 class="text-sm font-bold text-gray-900">Agent Leaderboard</h3>
-                            <span class="text-xs text-gray-500">Rate excludes pending cases</span>
+            <!-- TAB 2: AGENTS (Drill-Down Setup) -->
+            <div id="tab-agents" class="tab-pane hidden h-[calc(100vh-140px)] flex-col gap-6 pb-6">
+                
+                <!-- View 1: Leaderboard -->
+                <div id="agentLeaderboardView" class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="text-sm font-bold text-gray-900">Agent Performance Leaderboard</h3>
+                        <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">Click any agent to view full profile & tickets</span>
+                    </div>
+                    <div class="overflow-y-auto flex-1 custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                <tr class="text-xs text-gray-500 uppercase tracking-wider">
+                                    <th class="py-3 px-6 font-semibold bg-white border-b border-gray-100">Agent Name / Email</th>
+                                    <th class="py-3 px-6 font-semibold text-center bg-white border-b border-gray-100">Total Cases</th>
+                                    <th class="py-3 px-6 font-semibold text-center bg-white border-b border-gray-100">Saved</th>
+                                    <th class="py-3 px-6 font-semibold text-center bg-white border-b border-gray-100 text-yellow-600">Pending</th>
+                                    <th class="py-3 px-6 font-semibold text-right bg-white border-b border-gray-100">Retention Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="agentTableBody" class="divide-y divide-gray-100 text-gray-800">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- View 2: Detailed Agent Profile -->
+                <div id="agentProfileView" class="hidden flex-col h-full gap-4">
+                    <!-- Top Toolbar for Profile -->
+                    <div class="flex items-center justify-between shrink-0 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex items-center gap-4">
+                            <button onclick="backToLeaderboard()" class="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 rounded-md border border-gray-200 transition-colors">
+                                <i class="ph ph-arrow-left text-lg"></i> Back to Leaderboard
+                            </button>
+                            <div class="w-px h-6 bg-gray-300"></div>
+                            <h3 class="text-lg font-bold text-gray-900" id="selectedAgentTitle">Agent Name</h3>
                         </div>
-                        <div class="overflow-y-auto flex-1 custom-scrollbar">
-                            <table class="w-full text-left border-collapse">
-                                <thead class="sticky top-0 bg-white shadow-sm z-10">
-                                    <tr class="text-xs text-gray-500 uppercase tracking-wider">
-                                        <th class="py-3 px-5 font-semibold bg-white border-b border-gray-100">Agent</th>
-                                        <th class="py-3 px-5 font-semibold text-center bg-white border-b border-gray-100">Total</th>
-                                        <th class="py-3 px-5 font-semibold text-center bg-white border-b border-gray-100">Saved</th>
-                                        <th class="py-3 px-5 font-semibold text-center bg-white border-b border-gray-100 text-yellow-600">Pending</th>
-                                        <th class="py-3 px-5 font-semibold text-right bg-white border-b border-gray-100">Retention</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="agentTableBody" class="divide-y divide-gray-100 text-gray-800">
-                                    <!-- Injected via JS -->
-                                </tbody>
-                            </table>
+                    </div>
+                    
+                    <!-- Stats Cards -->
+                    <div class="grid grid-cols-2 gap-4 shrink-0">
+                        <div class="bg-white border border-gray-200 p-6 rounded-xl shadow-sm text-center">
+                            <div class="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-2">Retention Rate</div>
+                            <div class="text-4xl font-bold text-blue-600" id="snapRate">0%</div>
+                        </div>
+                        <div class="bg-white border border-gray-200 p-6 rounded-xl shadow-sm text-center">
+                            <div class="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-2">Resolved Volume</div>
+                            <div class="text-4xl font-bold text-gray-900" id="snapVol">0</div>
                         </div>
                     </div>
 
-                    <!-- Agent Details Panel -->
-                    <div class="col-span-1 flex flex-col gap-4 h-[700px]">
-                        <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 flex-1 flex flex-col overflow-hidden">
-                            <h3 class="text-sm font-bold text-gray-800 mb-4" id="selectedAgentTitle">Agent Snapshot</h3>
-                            
-                            <div id="agentSnapshotEmpty" class="flex-1 flex flex-col items-center justify-center text-center text-gray-400">
-                                <i class="ph ph-user text-4xl mb-2"></i>
-                                <p class="text-xs">Select an agent from the leaderboard to view their breakdown.</p>
+                    <!-- Bottom Split: Charts & Tickets -->
+                    <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
+                        <!-- Left: Reasons Chart -->
+                        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col">
+                            <h4 class="text-sm font-bold text-gray-800 mb-4">Top Cancellation Reasons Handled</h4>
+                            <div class="flex-1 relative min-h-[250px]">
+                                <canvas id="agentReasonChart"></canvas>
                             </div>
+                        </div>
 
-                            <div id="agentSnapshotData" class="hidden flex-1 flex flex-col gap-4 overflow-hidden">
-                                <!-- Top summary -->
-                                <div class="grid grid-cols-2 gap-2 shrink-0">
-                                    <div class="bg-blue-50 p-3 rounded-lg text-center">
-                                        <div class="text-xs text-blue-600 font-semibold mb-1">Retention Rate</div>
-                                        <div class="text-xl font-bold text-blue-900" id="snapRate">0%</div>
-                                    </div>
-                                    <div class="bg-gray-50 p-3 rounded-lg text-center">
-                                        <div class="text-xs text-gray-600 font-semibold mb-1">Resolved Vol</div>
-                                        <div class="text-xl font-bold text-gray-900" id="snapVol">0</div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Reason Chart -->
-                                <div class="shrink-0 mt-2">
-                                    <h4 class="text-xs font-semibold text-gray-500 mb-2">Top Challenges</h4>
-                                    <div class="h-[140px]">
-                                        <canvas id="agentReasonChart"></canvas>
-                                    </div>
-                                </div>
-
-                                <!-- Ticket Drill Down List -->
-                                <div class="flex-1 flex flex-col min-h-0 mt-2 overflow-hidden border border-gray-200 rounded-lg">
-                                    <div class="bg-gray-50 px-3 py-2 border-b border-gray-200 shrink-0">
-                                        <h4 class="text-xs font-bold text-gray-700">Ticket Validation</h4>
-                                    </div>
-                                    <div class="flex-1 overflow-y-auto custom-scrollbar p-0 bg-white">
-                                        <table class="w-full text-left text-[11px] whitespace-nowrap">
-                                            <thead class="bg-white sticky top-0 shadow-[0_1px_2px_rgba(0,0,0,0.05)] z-10">
-                                                <tr class="text-gray-500 uppercase">
-                                                    <th class="py-2 px-3 font-semibold">Ticket / FC ID</th>
-                                                    <th class="py-2 px-3 font-semibold">Order ID</th>
-                                                    <th class="py-2 px-3 font-semibold text-right">Status</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="agentTicketsBody" class="divide-y divide-gray-100">
-                                                <!-- Drill down tickets go here -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                        <!-- Right: Ticket Validation List -->
+                        <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
+                            <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center shrink-0">
+                                <h4 class="text-sm font-bold text-gray-800">Validation: Agent's Tickets</h4>
+                                <span class="text-xs text-gray-500" id="ticketListCount">0 records</span>
+                            </div>
+                            <div class="flex-1 overflow-y-auto custom-scrollbar p-0 bg-white">
+                                <table class="w-full text-left text-xs whitespace-nowrap">
+                                    <thead class="bg-white sticky top-0 shadow-sm z-10">
+                                        <tr class="text-gray-500 uppercase">
+                                            <th class="py-3 px-4 font-semibold border-b border-gray-100">Ticket / FC ID</th>
+                                            <th class="py-3 px-4 font-semibold border-b border-gray-100">Order ID</th>
+                                            <th class="py-3 px-4 font-semibold border-b border-gray-100 text-right">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="agentTicketsBody" class="divide-y divide-gray-100">
+                                        <!-- Drill down tickets go here -->
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
+
             </div>
 
             <!-- TAB 3: REASONS -->
@@ -455,6 +459,19 @@
                     activePane.classList.remove('hidden'); activePane.classList.add('flex');
                     refreshDashboard();
                 }
+            };
+
+            // Back to Leaderboard function
+            window.backToLeaderboard = function() {
+                selectedAgentForSnapshot = null;
+                document.getElementById('agentProfileView').classList.add('hidden');
+                document.getElementById('agentProfileView').classList.remove('flex');
+                document.getElementById('agentLeaderboardView').classList.remove('hidden');
+                document.getElementById('agentLeaderboardView').classList.add('flex');
+                
+                // Clear row highlighting
+                const tbody = document.getElementById('agentTableBody');
+                Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
             };
 
             // Drag and Drop
@@ -899,42 +916,53 @@
                 tr.className = `hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 ${selectedAgentForSnapshot === entry.agent ? 'bg-blue-50' : ''}`;
                 tr.onclick = () => {
                     selectedAgentForSnapshot = entry.agent;
+                    
+                    // Toggle Views before rendering to ensure chart sizes properly
+                    document.getElementById('agentLeaderboardView').classList.add('hidden');
+                    document.getElementById('agentLeaderboardView').classList.remove('flex');
+                    document.getElementById('agentProfileView').classList.remove('hidden');
+                    document.getElementById('agentProfileView').classList.add('flex');
+                    
                     renderAgentSnapshot(entry, data);
+                    
                     Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
                     tr.classList.add('bg-blue-50');
                 };
 
                 let medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
                 tr.innerHTML = `
-                    <td class="py-3 px-5 whitespace-nowrap"><div class="font-medium text-gray-900">${medal} ${formatAgentName(entry.agent)}</div><div class="text-[10px] text-gray-400">${entry.agent}</div></td>
-                    <td class="py-3 px-5 text-center text-sm">${entry.total}</td>
-                    <td class="py-3 px-5 text-center text-sm font-medium text-green-600">${entry.saved}</td>
-                    <td class="py-3 px-5 text-center text-sm font-medium text-yellow-600">${entry.pending}</td>
-                    <td class="py-3 px-5">
-                        <div class="flex items-center justify-end gap-2">
-                            <div class="w-16 bg-gray-200 rounded-full h-1.5"><div class="bg-blue-600 h-1.5 rounded-full" style="width:${entry.rate}%"></div></div>
-                            <span class="text-xs font-bold w-10 text-right">${entry.rate.toFixed(1)}%</span>
+                    <td class="py-4 px-6 whitespace-nowrap"><div class="font-medium text-gray-900">${medal} ${formatAgentName(entry.agent)}</div><div class="text-[11px] text-gray-400 mt-0.5">${entry.agent}</div></td>
+                    <td class="py-4 px-6 text-center text-base">${entry.total}</td>
+                    <td class="py-4 px-6 text-center text-base font-medium text-green-600">${entry.saved}</td>
+                    <td class="py-4 px-6 text-center text-base font-medium text-yellow-600">${entry.pending}</td>
+                    <td class="py-4 px-6">
+                        <div class="flex items-center justify-end gap-3">
+                            <div class="w-24 bg-gray-200 rounded-full h-2"><div class="bg-blue-600 h-2 rounded-full" style="width:${entry.rate}%"></div></div>
+                            <span class="text-sm font-bold w-12 text-right">${entry.rate.toFixed(1)}%</span>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
 
-            if(leaderboard.length > 0) {
-                if(!selectedAgentForSnapshot || !agentStats[selectedAgentForSnapshot]) {
-                    selectedAgentForSnapshot = leaderboard[0].agent;
-                }
+            // Ensure we show the appropriate view based on state
+            if (selectedAgentForSnapshot) {
                 const currentEntry = leaderboard.find(l => l.agent === selectedAgentForSnapshot);
-                if(currentEntry) renderAgentSnapshot(currentEntry, data);
+                if (currentEntry) {
+                    renderAgentSnapshot(currentEntry, data);
+                } else {
+                    window.backToLeaderboard();
+                }
+            } else {
+                document.getElementById('agentProfileView').classList.add('hidden');
+                document.getElementById('agentProfileView').classList.remove('flex');
+                document.getElementById('agentLeaderboardView').classList.remove('hidden');
+                document.getElementById('agentLeaderboardView').classList.add('flex');
             }
         }
 
         function renderAgentSnapshot(agentData, allFilteredData) {
-            document.getElementById('agentSnapshotEmpty').classList.add('hidden');
-            const snData = document.getElementById('agentSnapshotData');
-            snData.classList.remove('hidden');
-
-            document.getElementById('selectedAgentTitle').textContent = `Profile: ${formatAgentName(agentData.agent)}`;
+            document.getElementById('selectedAgentTitle').textContent = `Agent Profile: ${formatAgentName(agentData.agent)}`;
             document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
             document.getElementById('snapVol').textContent = agentData.resolved;
 
@@ -944,7 +972,7 @@
             charts.agentReason = new Chart(document.getElementById('agentReasonChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: reasonsArr.map(r => r.reason.length > 20 ? r.reason.substring(0,20)+'...' : r.reason),
+                    labels: reasonsArr.map(r => r.reason.length > 25 ? r.reason.substring(0,25)+'...' : r.reason),
                     datasets: [{ label: 'Cases', data: reasonsArr.map(r => r.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
                 },
                 options: {
@@ -959,25 +987,26 @@
             agentTicketsBody.innerHTML = '';
             
             const agentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
+            document.getElementById('ticketListCount').textContent = `${agentSpecificTickets.length} records`;
             
             agentSpecificTickets.forEach(t => {
                 const tr = document.createElement('tr');
-                tr.className = "hover:bg-gray-50";
+                tr.className = "hover:bg-blue-50 transition-colors";
                 
                 let savedBadge = '';
-                if(t._isPending) savedBadge = '<span class="text-yellow-600 font-bold">Pending</span>';
-                else if(t._isSaved) savedBadge = '<span class="text-green-600 font-bold">Yes</span>';
-                else savedBadge = '<span class="text-gray-400 font-bold">No</span>';
+                if(t._isPending) savedBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-[10px] font-bold">Pending</span>';
+                else if(t._isSaved) savedBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>';
+                else savedBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
 
                 tr.innerHTML = `
-                    <td class="py-2 px-3 border-b border-gray-100">
-                        <div class="font-mono text-[10px] text-gray-800">TKT: ${t['Ticket ID']}</div>
-                        <div class="font-mono text-[9px] text-gray-400 mt-0.5" title="Freshchat Conv ID">FC: ${t['Freshchat Conversation ID'] || '-'}</div>
+                    <td class="py-3 px-4 border-b border-gray-100">
+                        <div class="font-mono text-[11px] text-gray-800 font-medium">TKT: ${t['Ticket ID']}</div>
+                        <div class="font-mono text-[10px] text-gray-400 mt-1" title="Freshchat Conv ID">FC: ${t['Freshchat Conversation ID'] || '-'}</div>
                     </td>
-                    <td class="py-2 px-3 border-b border-gray-100 font-mono text-[10px] text-gray-600">
+                    <td class="py-3 px-4 border-b border-gray-100 font-mono text-[11px] text-gray-600">
                         ${t['Order ID'] || '-'}
                     </td>
-                    <td class="py-2 px-3 border-b border-gray-100 text-right">
+                    <td class="py-3 px-4 border-b border-gray-100 text-right">
                         ${savedBadge}
                     </td>
                 `;
