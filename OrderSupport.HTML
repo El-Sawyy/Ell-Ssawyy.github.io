@@ -50,9 +50,9 @@
             <div class="flex space-x-6" id="navTabs">
                 <button onclick="switchTab('overview')" class="tab-active pb-1 px-1 transition-colors outline-none" data-tab="overview">Overview</button>
                 <button onclick="switchTab('agents')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agents">Agent Performance</button>
-                <button onclick="switchTab('reasons')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="reasons">Reason Analytics</button>
+                <button onclick="switchTab('insights')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="insights">Insights & Channels</button>
                 <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data">Data Manager</button>
-                <button onclick="switchTab('uploads')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="uploads">Uploads History</button>
+                <button onclick="switchTab('uploads')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="uploads">Uploads</button>
             </div>
             
             <div class="flex items-center gap-3">
@@ -178,9 +178,8 @@
                 </div>
             </div>
 
-            <!-- TAB 2: AGENTS (Drill-Down Setup) -->
+            <!-- TAB 2: AGENTS -->
             <div id="tab-agents" class="tab-pane hidden h-[calc(100vh-140px)] flex-col gap-6 pb-6">
-                
                 <!-- View 1: Leaderboard -->
                 <div id="agentLeaderboardView" class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
@@ -207,7 +206,6 @@
 
                 <!-- View 2: Detailed Agent Profile -->
                 <div id="agentProfileView" class="hidden flex-col h-full gap-4">
-                    <!-- Top Toolbar for Profile -->
                     <div class="flex items-center justify-between shrink-0 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                         <div class="flex items-center gap-4">
                             <button onclick="backToLeaderboard()" class="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 rounded-md border border-gray-200 transition-colors">
@@ -218,7 +216,6 @@
                         </div>
                     </div>
                     
-                    <!-- Stats Cards -->
                     <div class="grid grid-cols-2 gap-4 shrink-0">
                         <div class="bg-white border border-gray-200 p-6 rounded-xl shadow-sm text-center">
                             <div class="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-2">Retention Rate</div>
@@ -230,9 +227,7 @@
                         </div>
                     </div>
 
-                    <!-- Bottom Split: Charts & Tickets -->
                     <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
-                        <!-- Left: Reasons Chart -->
                         <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col">
                             <h4 class="text-sm font-bold text-gray-800 mb-4">Top Cancellation Reasons Handled</h4>
                             <div class="flex-1 relative min-h-[250px]">
@@ -240,7 +235,6 @@
                             </div>
                         </div>
 
-                        <!-- Right: Ticket Validation List -->
                         <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
                             <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center shrink-0">
                                 <h4 class="text-sm font-bold text-gray-800">Validation: Agent's Tickets</h4>
@@ -264,25 +258,71 @@
                                         </tr>
                                     </thead>
                                     <tbody id="agentTicketsBody" class="divide-y divide-gray-100">
-                                        <!-- Drill down tickets go here -->
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
                 </div>
-
             </div>
 
-            <!-- TAB 3: REASONS -->
-            <div id="tab-reasons" class="tab-pane hidden flex-col gap-6">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-sm font-bold text-gray-900">Cancellation Reasons Analysis</h3>
-                        <p class="text-xs text-gray-500">Sorted by frequency. Excluded reasons are hidden.</p>
+            <!-- TAB 3: INSIGHTS & CHANNELS -->
+            <div id="tab-insights" class="tab-pane hidden flex-col gap-6">
+                <!-- Top Row: Channels -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="bg-gray-50 px-5 py-4 border-b border-gray-200">
+                            <h3 class="text-sm font-bold text-gray-900">Channel Performance</h3>
+                            <p class="text-xs text-gray-500">Volume and retention by request channel</p>
+                        </div>
+                        <div class="p-0 flex-1">
+                            <table class="w-full text-left border-collapse whitespace-nowrap">
+                                <thead>
+                                    <tr class="text-xs text-gray-500 uppercase tracking-wider bg-white">
+                                        <th class="py-3 px-5 font-semibold border-b border-gray-100">Channel</th>
+                                        <th class="py-3 px-5 font-semibold text-center border-b border-gray-100">Total</th>
+                                        <th class="py-3 px-5 font-semibold text-center border-b border-gray-100">Saved</th>
+                                        <th class="py-3 px-5 font-semibold text-right border-b border-gray-100">Rate</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="channelTableBody" class="divide-y divide-gray-100 text-sm">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    <div class="w-full h-[500px]">
-                        <canvas id="topReasonsChart"></canvas>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-gray-900">Channel Retention Rate</h3>
+                            </div>
+                        </div>
+                        <div class="w-full h-48 relative">
+                            <canvas id="channelChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Reasons -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold text-gray-900">Cancellation Reasons (Why they leave)</h3>
+                            <p class="text-xs text-gray-500">Sorted by total frequency. Excluded reasons hidden.</p>
+                        </div>
+                        <div class="w-full h-72 relative">
+                            <canvas id="topReasonsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <div class="mb-4">
+                            <h3 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                Prevention Strategies <span class="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold">Saved Cases Only</span>
+                            </h3>
+                            <p class="text-xs text-gray-500">How we successfully retained customers (New Prevention Reason).</p>
+                        </div>
+                        <div class="w-full h-72 relative">
+                            <canvas id="preventionChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -290,7 +330,7 @@
             <!-- TAB 4: DATA MANAGER -->
             <div id="tab-data" class="tab-pane hidden flex-col h-full gap-4">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
-                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center shrink-0">
                         <div>
                             <h3 class="text-sm font-bold text-gray-900">Live Team Database Explorer</h3>
                             <p class="text-xs text-gray-500">View, edit, or remove individual records affecting everyone's dashboard.</p>
@@ -306,8 +346,9 @@
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Date</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Ticket ID</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Agent</th>
-                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Reason</th>
-                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Source File</th>
+                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Channel</th>
+                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Reason / Prevention</th>
+                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Status</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Prevented</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200 text-right">Actions</th>
                                 </tr>
@@ -316,6 +357,14 @@
                                 <!-- Data injected here -->
                             </tbody>
                         </table>
+                    </div>
+                    <!-- Data Manager Pagination Footer -->
+                    <div class="px-5 py-3 border-t border-gray-200 bg-white flex justify-between items-center shrink-0">
+                        <div class="text-xs text-gray-500" id="dataManagerPaginationInfo">Showing 0 records</div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="changeDataManagerPage(-1)" class="px-3 py-1.5 border border-gray-300 rounded text-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" id="btnPrevPage">Previous</button>
+                            <button onclick="changeDataManagerPage(1)" class="px-3 py-1.5 border border-gray-300 rounded text-xs hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" id="btnNextPage">Next</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -357,7 +406,7 @@
                 <h3 class="text-lg font-bold text-gray-900" id="modalTitle">Add Database Record</h3>
                 <button onclick="closeModal()" class="text-gray-400 hover:text-gray-600"><i class="ph ph-x text-xl"></i></button>
             </div>
-            <div class="p-6">
+            <div class="p-6 overflow-y-auto max-h-[70vh]">
                 <form id="recordForm" class="grid grid-cols-2 gap-4">
                     <div class="col-span-1">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Ticket ID (Primary Key)</label>
@@ -367,12 +416,12 @@
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Created Date</label>
                         <input type="datetime-local" id="formDate" required class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     </div>
+                    
                     <div class="col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Agent (Submitted By)</label>
                         <input type="text" id="formAgent" required placeholder="e.g. agent@company.com" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     </div>
                     
-                    <!-- New Fields for Order ID and Freshchat Convo ID -->
                     <div class="col-span-1">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Order ID</label>
                         <input type="text" id="formOrderId" placeholder="Optional" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
@@ -381,12 +430,28 @@
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Freshchat Convo ID</label>
                         <input type="text" id="formFreshchatId" placeholder="Optional" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                     </div>
+                    
+                    <div class="col-span-2 border-t border-gray-100 pt-3 mt-1">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Request Channel</label>
+                        <select id="formChannel" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
+                            <option value="Chat">Chat</option>
+                            <option value="Call">Call</option>
+                            <option value="Email">Email</option>
+                            <option value="Unknown">Unknown</option>
+                        </select>
+                    </div>
 
                     <div class="col-span-2">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Cancellation Reason</label>
                         <input type="text" id="formReason" required placeholder="e.g. Pricing, Content, etc." list="reasonSuggestions" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
                         <datalist id="reasonSuggestions"></datalist>
                     </div>
+
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-gray-700 mb-1">Prevention Reason (If Saved)</label>
+                        <input type="text" id="formPreventionReason" placeholder="e.g. Concession Offered, Account Paused..." class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    </div>
+
                     <div class="col-span-1">
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Status</label>
                         <select id="formStatus" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
@@ -418,7 +483,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Team Definitions (Lowercase for robust comparison)
+        // Team Definitions
         const TEAM_ORDER_SUPPORT = [
             'mohamed.kheer@tempo.fit',
             'rima.khaled@tempo.fit',
@@ -444,16 +509,19 @@
         let globalDataMap = new Map(); 
         let uniqueReasons = new Set();
         let excludedReasons = new Set();
-        let charts = { trend: null, status: null, topReasons: null, agentReason: null };
+        let charts = { trend: null, status: null, topReasons: null, agentReason: null, channel: null, prevention: null };
         let currentActiveTab = 'overview';
         let selectedAgentForSnapshot = null;
         let currentAgentSpecificTickets = []; 
 
+        // Pagination State
+        let dataManagerCurrentPage = 1;
+        const dataManagerRowsPerPage = 100;
+
         // Firebase Auth Variables
         let app, auth, db, user = null;
         
-        // --- YOUR FIREBASE CONFIGURATION GOES HERE ---
-        const appId = 'order-support-retention'; // Updated to match your project
+        const appId = 'order-support-retention'; 
         const firebaseConfig = {
             apiKey: "AIzaSyAdEiz5ZHa8T6qgReekxYCtjHppPZ66kA8",
             authDomain: "order-support-retention.firebaseapp.com",
@@ -467,7 +535,6 @@
         document.addEventListener('DOMContentLoaded', async () => {
             setupUIControls();
             
-            // Firebase setup
             if (firebaseConfig) {
                 app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
@@ -515,7 +582,6 @@
 
         // --- UI & Utility Hooks ---
         function setupUIControls() {
-            // Navigation
             window.switchTab = function(tabId) {
                 currentActiveTab = tabId;
                 document.querySelectorAll('#navTabs button').forEach(btn => {
@@ -531,7 +597,6 @@
                 }
             };
 
-            // Back to Leaderboard function
             window.backToLeaderboard = function() {
                 selectedAgentForSnapshot = null;
                 document.getElementById('agentProfileView').classList.add('hidden');
@@ -539,12 +604,10 @@
                 document.getElementById('agentLeaderboardView').classList.remove('hidden');
                 document.getElementById('agentLeaderboardView').classList.add('flex');
                 
-                // Clear row highlighting
                 const tbody = document.getElementById('agentTableBody');
                 Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
             };
 
-            // Drag and Drop
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('csvFileInput');
             dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
@@ -558,7 +621,6 @@
                 fileInput.value = ''; 
             });
 
-            // Filters Check
             document.getElementById('startDateFilter').addEventListener('change', refreshDashboard);
             document.getElementById('endDateFilter').addEventListener('change', refreshDashboard);
             document.getElementById('teamFilter').addEventListener('change', refreshDashboard);
@@ -569,11 +631,15 @@
                 refreshDashboard();
             };
 
-            // Modal Controls
+            window.changeDataManagerPage = function(delta) {
+                dataManagerCurrentPage += delta;
+                renderDataTable(getFilteredData());
+            };
+
             window.openAddRecordModal = function() {
                 document.getElementById('recordForm').reset();
                 document.getElementById('modalTitle').textContent = 'Add Database Record';
-                document.getElementById('formTicketId').disabled = false; // Enabled for new records
+                document.getElementById('formTicketId').disabled = false;
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
                 document.getElementById('formDate').value = now.toISOString().slice(0,16);
@@ -585,7 +651,6 @@
                 setTimeout(() => { document.getElementById('recordModal').classList.add('hidden'); }, 200);
             };
 
-            // Render Ticket List for Agent with filtering logic
             window.renderAgentTicketsList = function() {
                 const filterVal = document.getElementById('agentTicketFilter').value;
                 const tbody = document.getElementById('agentTicketsBody');
@@ -655,7 +720,6 @@
                 document.getElementById(`tab-${currentActiveTab}`).classList.remove('hidden');
                 document.getElementById(`tab-${currentActiveTab}`).classList.add('flex');
             }
-            // Count based on current team filter
             const count = getFilteredData().length;
             document.getElementById('recordCountBadge').textContent = `${count} Records`;
         }
@@ -711,6 +775,10 @@
 
                 const orderId = row['Order ID'] || row['order_id'] || '';
                 const fcId = row['Freshchat Conversation ID'] || row['freshchat_conversation_id'] || '';
+                
+                // New Fields for Insights Tab
+                const channel = (row['Order Request Channel'] || row['Source'] || 'Unknown').trim();
+                const prevReason = (row['New Prevention Reason'] || '').trim();
 
                 dedupedData.set(tId, {
                     'Ticket ID': tId,
@@ -719,11 +787,15 @@
                     'Order ID': String(orderId).trim(),
                     'Freshchat Conversation ID': String(fcId).trim(),
                     'Cancellation & Return Reason': cleanReason,
+                    'New Prevention Reason': prevReason,
+                    'Order Request Channel': channel,
                     'Status': row['Status'] || '',
                     'New Request Prevented': row['New Request Prevented'] || '',
                     '_isSaved': isSaved,
                     '_isPending': isPending,
                     '_cleanReason': cleanReason,
+                    '_preventionReason': prevReason,
+                    '_channel': channel,
                     '_timestamp': parsedDate.getTime(),
                     '_batchId': batchId,
                     '_batchName': originalFileName,
@@ -762,7 +834,7 @@
             
             document.getElementById('modalTitle').textContent = 'Edit Database Record';
             document.getElementById('formTicketId').value = record['Ticket ID'];
-            document.getElementById('formTicketId').disabled = true; // Prevent changing the primary ID key
+            document.getElementById('formTicketId').disabled = true; 
             
             const localDate = new Date(record._timestamp);
             localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
@@ -770,9 +842,15 @@
             
             document.getElementById('formAgent').value = record['Submitted By'];
             document.getElementById('formReason').value = record['Cancellation & Return Reason'];
+            document.getElementById('formPreventionReason').value = record['New Prevention Reason'] || '';
             document.getElementById('formStatus').value = record['Status'];
             
-            // Map the internal value back to select input
+            // Set Channel
+            const chan = record['_channel'] || 'Unknown';
+            let selChan = Array.from(document.getElementById('formChannel').options).find(o => o.value.toLowerCase() === chan.toLowerCase());
+            if(selChan) document.getElementById('formChannel').value = selChan.value;
+            else document.getElementById('formChannel').value = 'Unknown';
+            
             let prevVal = "False";
             if (record._isPending) prevVal = "Pending";
             else if (record._isSaved) prevVal = "True";
@@ -788,7 +866,6 @@
         window.saveRecord = async function() {
             if (!user) return;
             
-            // Re-fetch the ID in case it is disabled
             let tId = document.getElementById('formTicketId').value.trim();
             if(!tId && !document.getElementById('formTicketId').disabled) {
                 tId = 'MANUAL-' + Math.random().toString(36).substr(2, 9).toUpperCase();
@@ -797,6 +874,8 @@
             const agent = document.getElementById('formAgent').value.trim();
             const dateStr = document.getElementById('formDate').value;
             const reason = document.getElementById('formReason').value.trim() || 'Unspecified';
+            const prevReason = document.getElementById('formPreventionReason').value.trim();
+            const channel = document.getElementById('formChannel').value;
             const status = document.getElementById('formStatus').value;
             const preventedRaw = document.getElementById('formPrevented').value;
             
@@ -808,7 +887,6 @@
             const isPending = (preventedRaw.toLowerCase() === 'pending');
             const isSaved = (preventedRaw.toLowerCase() === 'true' || preventedRaw.toLowerCase() === 'yes');
 
-            // Retain batch ID if editing, otherwise tag as manual
             const existingRecord = globalDataMap.get(tId);
 
             const row = {
@@ -818,11 +896,15 @@
                 'Order ID': orderId,
                 'Freshchat Conversation ID': fcId,
                 'Cancellation & Return Reason': reason,
+                'New Prevention Reason': prevReason,
+                'Order Request Channel': channel,
                 'Status': status,
                 'New Request Prevented': preventedRaw,
                 '_isSaved': isSaved,
                 '_isPending': isPending,
                 '_cleanReason': reason,
+                '_preventionReason': prevReason,
+                '_channel': channel,
                 '_timestamp': new Date(dateStr).getTime(),
                 '_batchId': existingRecord ? existingRecord._batchId : null,
                 '_batchName': existingRecord ? existingRecord._batchName : 'Manual Entry',
@@ -848,7 +930,6 @@
             }
         };
 
-        // --- Bulk Delete Batch ---
         window.deleteBatch = async function(batchId) {
             if (!user) return;
             if(confirm('Are you sure you want to completely delete all tickets that were last updated by this specific file upload? This cannot be undone.')) {
@@ -860,7 +941,7 @@
                     
                     for (const [id, row] of globalDataMap.entries()) {
                         if (row._batchId === batchId) {
-                            const docRef = doc(colRef, id); // id is already the safeTId from snapshot
+                            const docRef = doc(colRef, id);
                             firestoreBatch.delete(docRef);
                             count++;
                             if (count === 490) {
@@ -968,7 +1049,6 @@
                 result.push(row);
             });
             
-            // Update the record badge with the filtered length
             document.getElementById('recordCountBadge').textContent = `${result.length} Records`;
             return result.sort((a,b) => b._parsedDate - a._parsedDate);
         }
@@ -978,23 +1058,20 @@
             const data = getFilteredData();
             if(globalDataMap.size === 0) return;
             
-            // Reusable metrics (Pending handling)
             let total = data.length;
             let saved = data.filter(d => d._isSaved).length;
             let pending = data.filter(d => d._isPending).length;
             let resolvedCases = total - pending; 
             let rate = resolvedCases > 0 ? ((saved / resolvedCases) * 100).toFixed(1) : '0.0';
             
-            // Top Level KPIs
             document.getElementById('kpiTotalCases').textContent = total.toLocaleString();
             document.getElementById('kpiSavedCases').textContent = saved.toLocaleString();
             document.getElementById('kpiPendingCases').textContent = pending.toLocaleString();
             document.getElementById('kpiRetentionRate').textContent = `${rate}%`;
             
-            // Render specific tab
             if(currentActiveTab === 'overview') renderOverview(data);
             if(currentActiveTab === 'agents') renderAgents(data);
-            if(currentActiveTab === 'reasons') renderReasons(data);
+            if(currentActiveTab === 'insights') renderInsights(data);
             if(currentActiveTab === 'data') renderDataTable(data);
             if(currentActiveTab === 'uploads') renderUploads();
         }
@@ -1023,8 +1100,6 @@
                 if(row._isPending) timelineMap[dayKey].pending++;
 
                 let stat = (row['Status'] || 'Unknown').trim();
-                
-                // Merge Closed and Resolved into a single category for the chart
                 if (stat.toLowerCase() === 'closed' || stat.toLowerCase() === 'resolved') {
                     stat = 'Resolved / Closed';
                 }
@@ -1065,11 +1140,8 @@
                 if(!agentStats[ag]) agentStats[ag] = { total: 0, saved: 0, pending: 0, reasons: {} };
                 agentStats[ag].total++;
                 
-                if(row._isPending) {
-                    agentStats[ag].pending++;
-                } else if(row._isSaved) {
-                    agentStats[ag].saved++;
-                }
+                if(row._isPending) agentStats[ag].pending++;
+                else if(row._isSaved) agentStats[ag].saved++;
                 
                 const r = row._cleanReason;
                 agentStats[ag].reasons[r] = (agentStats[ag].reasons[r] || 0) + 1;
@@ -1128,14 +1200,10 @@
                 tbody.appendChild(tr);
             });
 
-            // Ensure we show the appropriate view based on state
             if (selectedAgentForSnapshot) {
                 const currentEntry = leaderboard.find(l => l.agent === selectedAgentForSnapshot);
-                if (currentEntry) {
-                    renderAgentSnapshot(currentEntry, data);
-                } else {
-                    window.backToLeaderboard();
-                }
+                if (currentEntry) renderAgentSnapshot(currentEntry, data);
+                else window.backToLeaderboard();
             } else {
                 document.getElementById('agentProfileView').classList.add('hidden');
                 document.getElementById('agentProfileView').classList.remove('flex');
@@ -1165,38 +1233,52 @@
                 }
             });
 
-            // Setup globally for the list filter
             currentAgentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
-            
-            // Execute the render for tickets
             window.renderAgentTicketsList();
         }
 
-        // --- TAB 3: Reasons Render ---
-        function renderReasons(data) {
+        // --- TAB 3: Insights & Channels Render ---
+        function renderInsights(data) {
             const reasonCounts = {};
+            const prevCounts = {};
+            const channelStats = {};
+
             data.forEach(row => {
+                // Cancellation Reasons
                 const r = row._cleanReason;
                 if(!reasonCounts[r]) reasonCounts[r] = {total: 0, saved: 0, pending: 0};
                 reasonCounts[r].total++;
                 if(row._isSaved) reasonCounts[r].saved++;
                 if(row._isPending) reasonCounts[r].pending++;
+
+                // Prevention Reasons (Saved Cases Only)
+                if(row._isSaved) {
+                    const pr = row._preventionReason || 'Not Specified';
+                    prevCounts[pr] = (prevCounts[pr] || 0) + 1;
+                }
+
+                // Channels
+                const ch = row._channel || 'Unknown';
+                if(!channelStats[ch]) channelStats[ch] = {total: 0, saved: 0, pending: 0};
+                channelStats[ch].total++;
+                if(row._isSaved) channelStats[ch].saved++;
+                if(row._isPending) channelStats[ch].pending++;
             });
 
-            const sorted = Object.keys(reasonCounts)
+            // 1. Render Top Cancellation Reasons Chart
+            const sortedReasons = Object.keys(reasonCounts)
                 .map(k => ({reason: k, ...reasonCounts[k]}))
-                .sort((a,b) => b.total - a.total)
-                .slice(0, 15);
+                .sort((a,b) => b.total - a.total).slice(0, 15);
 
             if(charts.topReasons) charts.topReasons.destroy();
             charts.topReasons = new Chart(document.getElementById('topReasonsChart').getContext('2d'), {
                 type: 'bar',
                 data: {
-                    labels: sorted.map(s => s.reason),
+                    labels: sortedReasons.map(s => s.reason),
                     datasets: [
-                        { label: 'Unsaved Cases', data: sorted.map(s => s.total - s.saved - s.pending), backgroundColor: '#cbd5e1', stacked: true },
-                        { label: 'Saved Cases', data: sorted.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true },
-                        { label: 'Pending Cases', data: sorted.map(s => s.pending), backgroundColor: '#facc15', stacked: true }
+                        { label: 'Unsaved', data: sortedReasons.map(s => s.total - s.saved - s.pending), backgroundColor: '#cbd5e1', stacked: true },
+                        { label: 'Saved', data: sortedReasons.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true },
+                        { label: 'Pending', data: sortedReasons.map(s => s.pending), backgroundColor: '#facc15', stacked: true }
                     ]
                 },
                 options: {
@@ -1208,6 +1290,64 @@
                     }
                 }
             });
+
+            // 2. Render Prevention Strategies Chart
+            const sortedPreventions = Object.keys(prevCounts)
+                .map(k => ({reason: k, count: prevCounts[k]}))
+                .sort((a,b) => b.count - a.count).slice(0, 10);
+
+            if(charts.prevention) charts.prevention.destroy();
+            charts.prevention = new Chart(document.getElementById('preventionChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: sortedPreventions.map(s => s.reason),
+                    datasets: [{ label: 'Times Saved', data: sortedPreventions.map(s => s.count), backgroundColor: '#10b981', borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { maxRotation: 45, minRotation: 45 } },
+                        y: { beginAtZero: true }
+                    }
+                }
+            });
+
+            // 3. Render Channels
+            const sortedChannels = Object.keys(channelStats).map(ch => {
+                const stats = channelStats[ch];
+                const resolved = stats.total - stats.pending;
+                const rate = resolved > 0 ? (stats.saved / resolved) * 100 : 0;
+                return { channel: ch, ...stats, resolved, rate };
+            }).sort((a,b) => b.total - a.total);
+
+            const cBody = document.getElementById('channelTableBody');
+            cBody.innerHTML = '';
+            sortedChannels.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                tr.innerHTML = `
+                    <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${c.channel}</td>
+                    <td class="py-3 px-5 border-b border-gray-100 text-center">${c.total}</td>
+                    <td class="py-3 px-5 border-b border-gray-100 text-center text-green-600 font-medium">${c.saved}</td>
+                    <td class="py-3 px-5 border-b border-gray-100 text-right font-bold">${c.rate.toFixed(1)}%</td>
+                `;
+                cBody.appendChild(tr);
+            });
+
+            if(charts.channel) charts.channel.destroy();
+            charts.channel = new Chart(document.getElementById('channelChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: sortedChannels.map(c => c.channel),
+                    datasets: [{ label: 'Retention Rate %', data: sortedChannels.map(c => c.rate), backgroundColor: '#3b82f6', borderRadius: 4 }]
+                },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+                }
+            });
         }
 
         // --- TAB 4: Data Table Render ---
@@ -1215,7 +1355,14 @@
             const tbody = document.getElementById('rawDataTableBody');
             tbody.innerHTML = '';
             
-            const displayData = data.slice(0, 500); 
+            const totalPages = Math.ceil(data.length / dataManagerRowsPerPage) || 1;
+            if (dataManagerCurrentPage > totalPages) dataManagerCurrentPage = totalPages;
+            if (dataManagerCurrentPage < 1) dataManagerCurrentPage = 1;
+
+            const startIndex = (dataManagerCurrentPage - 1) * dataManagerRowsPerPage;
+            const endIndex = Math.min(startIndex + dataManagerRowsPerPage, data.length);
+            
+            const displayData = data.slice(startIndex, endIndex);
 
             displayData.forEach(row => {
                 const tr = document.createElement('tr');
@@ -1230,15 +1377,22 @@
                 else savedBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
                 
                 const sourceFileName = row._batchName ? row._batchName : 'Manual Entry';
+                
+                // Show prevention reason if it exists, otherwise cancellation reason
+                let displayReason = row._cleanReason;
+                if (row._isSaved && row._preventionReason) {
+                    displayReason = `<span class="text-green-600 font-medium">Saved via:</span> ${row._preventionReason}`;
+                }
 
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
                     <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">${row['Ticket ID']}</td>
-                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row['Submitted By']}">
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[150px]" title="${row['Submitted By']}">
                         <div class="flex items-center">${formatAgentName(row['Submitted By'])} ${teamBadge}</div>
                     </td>
-                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${row._cleanReason}</td>
-                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[120px] text-[10px] text-gray-400" title="${sourceFileName}">${sourceFileName}</td>
+                    <td class="py-2 px-4 border-b border-gray-100">${row._channel || '-'}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${displayReason}</td>
+                    <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
                     <td class="py-2 px-4 border-b border-gray-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onclick="editRecord('${row['Ticket ID']}')" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit Record"><i class="ph ph-pencil-simple text-base"></i></button>
@@ -1248,33 +1402,31 @@
                 tbody.appendChild(tr);
             });
 
-            if(data.length > 500) {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="8" class="py-3 text-center text-gray-400 italic">Showing latest 500 of ${data.length} records...</td>`;
-                tbody.appendChild(tr);
+            const pageInfo = document.getElementById('dataManagerPaginationInfo');
+            const btnPrev = document.getElementById('btnPrevPage');
+            const btnNext = document.getElementById('btnNextPage');
+
+            if (pageInfo) {
+                if (data.length === 0) pageInfo.textContent = 'No records found.';
+                else pageInfo.textContent = `Showing ${startIndex + 1} to ${endIndex} of ${data.length.toLocaleString()} records`;
             }
+            if (btnPrev) btnPrev.disabled = (dataManagerCurrentPage === 1);
+            if (btnNext) btnNext.disabled = (dataManagerCurrentPage === totalPages || data.length === 0);
         }
 
         // --- TAB 5: Uploads Render ---
         function renderUploads() {
             const batchesMap = {};
             
-            // Note: Uploads view looks at ALL data (ignoring filters) so you don't miss an upload accidentally
             globalDataMap.forEach(row => {
-                if (!row._batchId) return; // Skip legacy data or manual entries without a batch
+                if (!row._batchId) return; 
                 
                 if (!batchesMap[row._batchId]) {
-                    batchesMap[row._batchId] = {
-                        id: row._batchId,
-                        name: row._batchName,
-                        date: row._batchDate,
-                        count: 0
-                    };
+                    batchesMap[row._batchId] = { id: row._batchId, name: row._batchName, date: row._batchDate, count: 0 };
                 }
                 batchesMap[row._batchId].count++;
             });
 
-            // Convert to array and sort newest first
             const batchArray = Object.values(batchesMap).sort((a, b) => new Date(b.date) - new Date(a.date));
             const tbody = document.getElementById('uploadsTableBody');
             tbody.innerHTML = '';
