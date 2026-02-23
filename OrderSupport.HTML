@@ -52,6 +52,7 @@
                 <button onclick="switchTab('agents')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agents">Agent Performance</button>
                 <button onclick="switchTab('reasons')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="reasons">Reason Analytics</button>
                 <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data">Data Manager</button>
+                <button onclick="switchTab('uploads')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="uploads">Uploads History</button>
             </div>
             
             <div class="flex items-center gap-3">
@@ -306,13 +307,40 @@
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Ticket ID</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Agent</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Reason</th>
-                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Status</th>
+                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Source File</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Prevented</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="rawDataTableBody" class="divide-y divide-gray-100 text-xs">
                                 <!-- Data injected here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: UPLOADS HISTORY -->
+            <div id="tab-uploads" class="tab-pane hidden flex-col h-full gap-4">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
+                    <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <div>
+                            <h3 class="text-sm font-bold text-gray-900">Upload History Manager</h3>
+                            <p class="text-xs text-gray-500">Track and delete bulk files uploaded to the database.</p>
+                        </div>
+                    </div>
+                    <div class="flex-1 overflow-auto custom-scrollbar p-0">
+                        <table class="w-full text-left border-collapse whitespace-nowrap">
+                            <thead class="sticky top-0 bg-white shadow-sm z-10">
+                                <tr class="text-xs text-gray-500 uppercase tracking-wider bg-gray-50">
+                                    <th class="py-3 px-5 font-semibold border-b border-gray-200">Date Uploaded</th>
+                                    <th class="py-3 px-5 font-semibold border-b border-gray-200">File Name</th>
+                                    <th class="py-3 px-5 font-semibold text-center border-b border-gray-200">Active Records</th>
+                                    <th class="py-3 px-5 font-semibold border-b border-gray-200 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="uploadsTableBody" class="divide-y divide-gray-100 text-sm text-gray-700">
+                                <!-- Uploads injected here -->
                             </tbody>
                         </table>
                     </div>
@@ -641,26 +669,28 @@
             }
 
             if (fileName.endsWith('.csv')) {
-                Papa.parse(file, { header: true, skipEmptyLines: true, complete: results => syncToDatabase(results.data), error: err => alert('CSV Error: ' + err.message) });
+                Papa.parse(file, { header: true, skipEmptyLines: true, complete: results => syncToDatabase(results.data, file.name), error: err => alert('CSV Error: ' + err.message) });
             } else {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
                         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                         const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {raw: false});
-                        syncToDatabase(data);
+                        syncToDatabase(data, file.name);
                     } catch (err) { alert('Excel Error: ' + err.message); }
                 };
                 reader.readAsArrayBuffer(file);
             }
         }
 
-        async function syncToDatabase(dataArray) {
+        async function syncToDatabase(dataArray, originalFileName) {
             if (!user) { alert("Not authenticated to database yet. Please wait."); return; }
             
             showEmptyState("Syncing to Cloud Database...", "Please wait while we merge your data securely. Duplicates are being updated.", "ph-spinner animate-spin text-blue-500");
 
             const dedupedData = new Map();
+            const batchId = 'BATCH_' + Date.now();
+            const batchDate = new Date().toISOString();
             
             dataArray.forEach(row => {
                 if(!row['Submitted By'] || row['Submitted By'].trim() === '') return;
@@ -694,27 +724,30 @@
                     '_isSaved': isSaved,
                     '_isPending': isPending,
                     '_cleanReason': cleanReason,
-                    '_timestamp': parsedDate.getTime()
+                    '_timestamp': parsedDate.getTime(),
+                    '_batchId': batchId,
+                    '_batchName': originalFileName,
+                    '_batchDate': batchDate
                 });
             });
 
             const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'retention_records');
-            let batch = writeBatch(db);
+            let firestoreBatch = writeBatch(db);
             let count = 0;
 
             try {
                 for (const [tId, rowData] of dedupedData.entries()) {
                     const safeTId = tId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
                     const docRef = doc(collectionRef, safeTId);
-                    batch.set(docRef, rowData); 
+                    firestoreBatch.set(docRef, rowData); 
                     count++;
                     if (count === 490) { 
-                        await batch.commit();
-                        batch = writeBatch(db);
+                        await firestoreBatch.commit();
+                        firestoreBatch = writeBatch(db);
                         count = 0;
                     }
                 }
-                if (count > 0) await batch.commit();
+                if (count > 0) await firestoreBatch.commit();
             } catch (err) {
                 console.error("Batch Sync Error:", err);
                 alert("An error occurred while saving to the database. Check console.");
@@ -775,6 +808,9 @@
             const isPending = (preventedRaw.toLowerCase() === 'pending');
             const isSaved = (preventedRaw.toLowerCase() === 'true' || preventedRaw.toLowerCase() === 'yes');
 
+            // Retain batch ID if editing, otherwise tag as manual
+            const existingRecord = globalDataMap.get(tId);
+
             const row = {
                 'Ticket ID': tId,
                 'Submitted By': agent,
@@ -787,7 +823,10 @@
                 '_isSaved': isSaved,
                 '_isPending': isPending,
                 '_cleanReason': reason,
-                '_timestamp': new Date(dateStr).getTime()
+                '_timestamp': new Date(dateStr).getTime(),
+                '_batchId': existingRecord ? existingRecord._batchId : null,
+                '_batchName': existingRecord ? existingRecord._batchName : 'Manual Entry',
+                '_batchDate': existingRecord ? existingRecord._batchDate : null
             };
 
             try {
@@ -806,6 +845,34 @@
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'retention_records', safeTId);
                     await deleteDoc(docRef);
                 } catch(err) { console.error(err); alert("Failed to delete record."); }
+            }
+        };
+
+        // --- Bulk Delete Batch ---
+        window.deleteBatch = async function(batchId) {
+            if (!user) return;
+            if(confirm('Are you sure you want to completely delete all tickets that were last updated by this specific file upload? This cannot be undone.')) {
+                showEmptyState("Removing Uploaded File...", "Deleting associated records from the database.", "ph-spinner animate-spin text-red-500");
+                try {
+                    let firestoreBatch = writeBatch(db);
+                    let count = 0;
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'retention_records');
+                    
+                    for (const [id, row] of globalDataMap.entries()) {
+                        if (row._batchId === batchId) {
+                            const docRef = doc(colRef, id); // id is already the safeTId from snapshot
+                            firestoreBatch.delete(docRef);
+                            count++;
+                            if (count === 490) {
+                                await firestoreBatch.commit();
+                                firestoreBatch = writeBatch(db);
+                                count = 0;
+                            }
+                        }
+                    }
+                    if (count > 0) await firestoreBatch.commit();
+                    
+                } catch (err) { console.error(err); alert("Failed to delete the uploaded file."); updateUIState(); }
             }
         };
 
@@ -929,6 +996,7 @@
             if(currentActiveTab === 'agents') renderAgents(data);
             if(currentActiveTab === 'reasons') renderReasons(data);
             if(currentActiveTab === 'data') renderDataTable(data);
+            if(currentActiveTab === 'uploads') renderUploads();
         }
 
         function formatAgentName(emailStr) {
@@ -1161,6 +1229,8 @@
                 else if(row._isSaved) savedBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>';
                 else savedBadge = '<span class="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-bold">No</span>';
                 
+                const sourceFileName = row._batchName ? row._batchName : 'Manual Entry';
+
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
                     <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">${row['Ticket ID']}</td>
@@ -1168,7 +1238,7 @@
                         <div class="flex items-center">${formatAgentName(row['Submitted By'])} ${teamBadge}</div>
                     </td>
                     <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${row._cleanReason}</td>
-                    <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[120px] text-[10px] text-gray-400" title="${sourceFileName}">${sourceFileName}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
                     <td class="py-2 px-4 border-b border-gray-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onclick="editRecord('${row['Ticket ID']}')" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit Record"><i class="ph ph-pencil-simple text-base"></i></button>
@@ -1180,9 +1250,57 @@
 
             if(data.length > 500) {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td colspan="7" class="py-3 text-center text-gray-400 italic">Showing latest 500 of ${data.length} records...</td>`;
+                tr.innerHTML = `<td colspan="8" class="py-3 text-center text-gray-400 italic">Showing latest 500 of ${data.length} records...</td>`;
                 tbody.appendChild(tr);
             }
+        }
+
+        // --- TAB 5: Uploads Render ---
+        function renderUploads() {
+            const batchesMap = {};
+            
+            // Note: Uploads view looks at ALL data (ignoring filters) so you don't miss an upload accidentally
+            globalDataMap.forEach(row => {
+                if (!row._batchId) return; // Skip legacy data or manual entries without a batch
+                
+                if (!batchesMap[row._batchId]) {
+                    batchesMap[row._batchId] = {
+                        id: row._batchId,
+                        name: row._batchName,
+                        date: row._batchDate,
+                        count: 0
+                    };
+                }
+                batchesMap[row._batchId].count++;
+            });
+
+            // Convert to array and sort newest first
+            const batchArray = Object.values(batchesMap).sort((a, b) => new Date(b.date) - new Date(a.date));
+            const tbody = document.getElementById('uploadsTableBody');
+            tbody.innerHTML = '';
+
+            if(batchArray.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-gray-400 italic">No tracked uploads found.</td></tr>`;
+                return;
+            }
+
+            batchArray.forEach(b => {
+                const dStr = new Date(b.date).toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-gray-50';
+                
+                tr.innerHTML = `
+                    <td class="py-3 px-5 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
+                    <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${b.name}</td>
+                    <td class="py-3 px-5 border-b border-gray-100 text-center"><span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-xs font-bold">${b.count} tickets</span></td>
+                    <td class="py-3 px-5 border-b border-gray-100 text-right">
+                        <button onclick="deleteBatch('${b.id}')" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-2 py-1 rounded transition-colors flex items-center gap-1 ml-auto">
+                            <i class="ph ph-trash"></i> Delete File Data
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
         }
     </script>
 </body>
