@@ -80,6 +80,17 @@
                 </div>
             </div>
 
+            <!-- Team Filter -->
+            <div class="p-4 border-b border-gray-100">
+                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1"><i class="ph ph-users-three"></i> Team Filter</h2>
+                <select id="teamFilter" class="w-full text-xs border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white cursor-pointer">
+                    <option value="all">All Teams (Overall)</option>
+                    <option value="order_support">Order Support</option>
+                    <option value="mentors">Mentors</option>
+                    <option value="mx">MX</option>
+                </select>
+            </div>
+
             <!-- Date Filter -->
             <div class="p-4 border-b border-gray-100">
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1"><i class="ph ph-calendar-blank"></i> Date Range</h2>
@@ -202,7 +213,7 @@
                                 <i class="ph ph-arrow-left text-lg"></i> Back to Leaderboard
                             </button>
                             <div class="w-px h-6 bg-gray-300"></div>
-                            <h3 class="text-lg font-bold text-gray-900" id="selectedAgentTitle">Agent Name</h3>
+                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2" id="selectedAgentTitle">Agent Name</h3>
                         </div>
                     </div>
                     
@@ -379,6 +390,28 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Team Definitions (Lowercase for robust comparison)
+        const TEAM_ORDER_SUPPORT = [
+            'mohamed.kheer@tempo.fit',
+            'rima.khaled@tempo.fit',
+            'santos.nyikang@tempo.fit',
+            'youkabed.farid@tempo.fit',
+            'ahmed.elsawy@tempo.fit'
+        ];
+        
+        const TEAM_MENTORS = [
+            'noha.radwan@tempo.fit',
+            'rashad.mohamed@tempo.fit',
+            'emad.mohamed@tempo.fit'
+        ];
+
+        function getAgentTeam(emailStr) {
+            const email = String(emailStr).trim().toLowerCase();
+            if (TEAM_ORDER_SUPPORT.includes(email)) return 'Order Support';
+            if (TEAM_MENTORS.includes(email)) return 'Mentors';
+            return 'MX';
+        }
+
         // Global State
         let globalDataMap = new Map(); 
         let uniqueReasons = new Set();
@@ -386,7 +419,7 @@
         let charts = { trend: null, status: null, topReasons: null, agentReason: null };
         let currentActiveTab = 'overview';
         let selectedAgentForSnapshot = null;
-        let currentAgentSpecificTickets = []; // Track tickets for current agent drill-down
+        let currentAgentSpecificTickets = []; 
 
         // Firebase Auth Variables
         let app, auth, db, user = null;
@@ -497,9 +530,11 @@
                 fileInput.value = ''; 
             });
 
-            // Date Filters
+            // Filters Check
             document.getElementById('startDateFilter').addEventListener('change', refreshDashboard);
             document.getElementById('endDateFilter').addEventListener('change', refreshDashboard);
+            document.getElementById('teamFilter').addEventListener('change', refreshDashboard);
+
             window.clearDateFilters = function() {
                 document.getElementById('startDateFilter').value = '';
                 document.getElementById('endDateFilter').value = '';
@@ -592,7 +627,9 @@
                 document.getElementById(`tab-${currentActiveTab}`).classList.remove('hidden');
                 document.getElementById(`tab-${currentActiveTab}`).classList.add('flex');
             }
-            document.getElementById('recordCountBadge').textContent = `${globalDataMap.size} Records`;
+            // Count based on current team filter
+            const count = getFilteredData().length;
+            document.getElementById('recordCountBadge').textContent = `${count} Records`;
         }
 
         // --- File Upload & Firebase Batch Sync ---
@@ -642,7 +679,6 @@
                 let cleanReason = (row['Cancellation & Return Reason'] || 'Unspecified').trim();
                 if(cleanReason === '') cleanReason = 'Unspecified';
 
-                // Ensure we capture Order ID and Freshchat ID specifically for validation!
                 const orderId = row['Order ID'] || row['order_id'] || '';
                 const fcId = row['Freshchat Conversation ID'] || row['freshchat_conversation_id'] || '';
 
@@ -670,7 +706,7 @@
                 for (const [tId, rowData] of dedupedData.entries()) {
                     const safeTId = tId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
                     const docRef = doc(collectionRef, safeTId);
-                    batch.set(docRef, rowData); // Overwrites the existing document if ID matches
+                    batch.set(docRef, rowData); 
                     count++;
                     if (count === 490) { 
                         await batch.commit();
@@ -839,24 +875,41 @@
         function getFilteredData() {
             const startDateStr = document.getElementById('startDateFilter').value;
             const endDateStr = document.getElementById('endDateFilter').value;
+            const teamFilter = document.getElementById('teamFilter').value;
+
             let start = startDateStr ? new Date(startDateStr) : null;
             let end = endDateStr ? new Date(endDateStr) : null;
             if(end) end.setHours(23, 59, 59, 999);
 
             let result = [];
             globalDataMap.forEach(row => {
+                // Date Filter
                 if (start && row._parsedDate < start) return;
                 if (end && row._parsedDate > end) return;
+                
+                // Reason Exclusions
                 if (excludedReasons.has(row._cleanReason)) return;
+
+                // Team Filter
+                if (teamFilter !== 'all') {
+                    const agentTeam = getAgentTeam(row['Submitted By']);
+                    if (teamFilter === 'order_support' && agentTeam !== 'Order Support') return;
+                    if (teamFilter === 'mentors' && agentTeam !== 'Mentors') return;
+                    if (teamFilter === 'mx' && agentTeam !== 'MX') return;
+                }
+
                 result.push(row);
             });
+            
+            // Update the record badge with the filtered length
+            document.getElementById('recordCountBadge').textContent = `${result.length} Records`;
             return result.sort((a,b) => b._parsedDate - a._parsedDate);
         }
 
         // --- Core Rendering Logic ---
         function refreshDashboard() {
-            if(globalDataMap.size === 0) return;
             const data = getFilteredData();
+            if(globalDataMap.size === 0) return;
             
             // Reusable metrics (Pending handling)
             let total = data.length;
@@ -883,6 +936,12 @@
             return name.replace(/\b\w/g, l => l.toUpperCase());
         }
 
+        function getTeamBadge(teamName) {
+            if(teamName === 'Order Support') return '<span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">Order Support</span>';
+            if(teamName === 'Mentors') return '<span class="bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">Mentors</span>';
+            return '<span class="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">MX</span>';
+        }
+
         // --- TAB 1: Overview Render ---
         function renderOverview(data) {
             const timelineMap = {};
@@ -895,7 +954,13 @@
                 if(row._isSaved) timelineMap[dayKey].saved++;
                 if(row._isPending) timelineMap[dayKey].pending++;
 
-                const stat = (row['Status'] || 'Unknown').trim();
+                let stat = (row['Status'] || 'Unknown').trim();
+                
+                // Merge Closed and Resolved into a single category for the chart
+                if (stat.toLowerCase() === 'closed' || stat.toLowerCase() === 'resolved') {
+                    stat = 'Resolved / Closed';
+                }
+                
                 statusMap[stat] = (statusMap[stat] || 0) + 1;
             });
 
@@ -946,6 +1011,7 @@
                 const resolved = agentStats[ag].total - agentStats[ag].pending;
                 return { 
                     agent: ag, 
+                    team: getAgentTeam(ag),
                     total: agentStats[ag].total, 
                     saved: agentStats[ag].saved,
                     pending: agentStats[ag].pending,
@@ -964,7 +1030,6 @@
                 tr.onclick = () => {
                     selectedAgentForSnapshot = entry.agent;
                     
-                    // Toggle Views before rendering to ensure chart sizes properly
                     document.getElementById('agentLeaderboardView').classList.add('hidden');
                     document.getElementById('agentLeaderboardView').classList.remove('flex');
                     document.getElementById('agentProfileView').classList.remove('hidden');
@@ -978,7 +1043,10 @@
 
                 let medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
                 tr.innerHTML = `
-                    <td class="py-4 px-6 whitespace-nowrap"><div class="font-medium text-gray-900">${medal} ${formatAgentName(entry.agent)}</div><div class="text-[11px] text-gray-400 mt-0.5">${entry.agent}</div></td>
+                    <td class="py-4 px-6 whitespace-nowrap">
+                        <div class="font-medium text-gray-900 flex items-center">${medal} ${formatAgentName(entry.agent)} ${getTeamBadge(entry.team)}</div>
+                        <div class="text-[11px] text-gray-400 mt-0.5 ml-${medal ? '6' : '0'}">${entry.agent}</div>
+                    </td>
                     <td class="py-4 px-6 text-center text-base">${entry.total}</td>
                     <td class="py-4 px-6 text-center text-base font-medium text-green-600">${entry.saved}</td>
                     <td class="py-4 px-6 text-center text-base font-medium text-yellow-600">${entry.pending}</td>
@@ -1009,7 +1077,7 @@
         }
 
         function renderAgentSnapshot(agentData, allFilteredData) {
-            document.getElementById('selectedAgentTitle').textContent = `Agent Profile: ${formatAgentName(agentData.agent)}`;
+            document.getElementById('selectedAgentTitle').innerHTML = `${formatAgentName(agentData.agent)} ${getTeamBadge(agentData.team)}`;
             document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
             document.getElementById('snapVol').textContent = agentData.resolved;
 
@@ -1086,7 +1154,8 @@
                 tr.className = 'hover:bg-gray-50 group';
                 
                 const dStr = row._parsedDate.toLocaleString([], {year:'numeric', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-                
+                const teamBadge = getTeamBadge(getAgentTeam(row['Submitted By']));
+
                 let savedBadge = '';
                 if(row._isPending) savedBadge = '<span class="bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded text-[10px] font-bold">Pending</span>';
                 else if(row._isSaved) savedBadge = '<span class="bg-green-100 text-green-700 px-2 py-0.5 rounded text-[10px] font-bold">Yes</span>';
@@ -1095,7 +1164,9 @@
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
                     <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">${row['Ticket ID']}</td>
-                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[150px]" title="${row['Submitted By']}">${formatAgentName(row['Submitted By'])}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row['Submitted By']}">
+                        <div class="flex items-center">${formatAgentName(row['Submitted By'])} ${teamBadge}</div>
+                    </td>
                     <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[200px]" title="${row._cleanReason}">${row._cleanReason}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
