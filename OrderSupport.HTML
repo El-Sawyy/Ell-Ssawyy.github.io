@@ -405,6 +405,10 @@
                             <p class="text-xs text-gray-500">View, edit, or remove individual records affecting everyone's dashboard.</p>
                         </div>
                         <div class="flex items-center gap-3">
+                            <div class="relative">
+                                <i class="ph ph-magnifying-glass absolute left-2.5 top-1.5 text-gray-400 text-sm"></i>
+                                <input type="text" id="dataManagerSearch" placeholder="Search Order ID or Ticket ID..." class="text-xs border border-gray-300 rounded pl-7 pr-2 py-1.5 outline-none bg-white w-52 focus:border-blue-500 transition-colors">
+                            </div>
                             <select id="dataManagerStatusFilter" class="text-xs border border-gray-300 rounded px-2 py-1.5 outline-none bg-white cursor-pointer">
                                 <option value="all">All Statuses</option>
                                 <option value="true">Saved (Yes)</option>
@@ -674,47 +678,61 @@
                 });
                 if (globalDataMap.size > 0) {
                     const activePane = document.getElementById(`tab-${tabId}`);
-                    activePane.classList.remove('hidden'); activePane.classList.add('flex');
+                    if (activePane) {
+                        activePane.classList.remove('hidden'); 
+                        activePane.classList.add('flex');
+                    }
                     refreshDashboard();
                 }
             };
 
             window.backToLeaderboard = function() {
                 selectedAgentForSnapshot = null;
-                document.getElementById('agentProfileView').classList.add('hidden');
-                document.getElementById('agentProfileView').classList.remove('flex');
-                document.getElementById('agentLeaderboardView').classList.remove('hidden');
-                document.getElementById('agentLeaderboardView').classList.add('flex');
+                document.getElementById('agentProfileView')?.classList.add('hidden');
+                document.getElementById('agentProfileView')?.classList.remove('flex');
+                document.getElementById('agentLeaderboardView')?.classList.remove('hidden');
+                document.getElementById('agentLeaderboardView')?.classList.add('flex');
                 
                 const tbody = document.getElementById('agentTableBody');
-                Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
+                if (tbody) {
+                    Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
+                }
             };
 
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('csvFileInput');
-            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
-            ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drag-active')));
-            dropZone.addEventListener('drop', e => {
-                e.preventDefault(); dropZone.classList.remove('drag-active');
-                if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
-            });
-            fileInput.addEventListener('change', e => {
-                if (e.target.files.length) handleFile(e.target.files[0]);
-                fileInput.value = ''; 
+            if (dropZone && fileInput) {
+                dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-active'); });
+                ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drag-active')));
+                dropZone.addEventListener('drop', e => {
+                    e.preventDefault(); dropZone.classList.remove('drag-active');
+                    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+                });
+                fileInput.addEventListener('change', e => {
+                    if (e.target.files.length) handleFile(e.target.files[0]);
+                    fileInput.value = ''; 
+                });
+            }
+
+            document.getElementById('startDateFilter')?.addEventListener('change', refreshDashboard);
+            document.getElementById('endDateFilter')?.addEventListener('change', refreshDashboard);
+            document.getElementById('teamFilter')?.addEventListener('change', refreshDashboard);
+            
+            document.getElementById('dataManagerStatusFilter')?.addEventListener('change', () => {
+                dataManagerCurrentPage = 1;
+                renderDataTable(getFilteredData());
             });
 
-            document.getElementById('startDateFilter').addEventListener('change', refreshDashboard);
-            document.getElementById('endDateFilter').addEventListener('change', refreshDashboard);
-            document.getElementById('teamFilter').addEventListener('change', refreshDashboard);
-            
-            document.getElementById('dataManagerStatusFilter').addEventListener('change', () => {
+            document.getElementById('dataManagerSearch')?.addEventListener('input', () => {
                 dataManagerCurrentPage = 1;
                 renderDataTable(getFilteredData());
             });
 
             window.clearDateFilters = function() {
-                document.getElementById('startDateFilter').value = '';
-                document.getElementById('endDateFilter').value = '';
+                const start = document.getElementById('startDateFilter');
+                const end = document.getElementById('endDateFilter');
+                if (start) start.value = '';
+                if (end) end.value = '';
                 refreshDashboard();
             };
 
@@ -724,23 +742,26 @@
             };
 
             window.openAddRecordModal = function() {
-                document.getElementById('recordForm').reset();
-                document.getElementById('modalTitle').textContent = 'Add Database Record';
-                document.getElementById('formTicketId').disabled = false;
+                document.getElementById('recordForm')?.reset();
+                if (document.getElementById('modalTitle')) document.getElementById('modalTitle').textContent = 'Add Database Record';
+                if (document.getElementById('formTicketId')) document.getElementById('formTicketId').disabled = false;
                 const now = new Date();
                 now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-                document.getElementById('formDate').value = now.toISOString().slice(0,16);
-                document.getElementById('recordModal').classList.remove('hidden');
-                setTimeout(() => { document.getElementById('recordModalContent').classList.add('modal-enter-active'); }, 10);
+                if (document.getElementById('formDate')) document.getElementById('formDate').value = now.toISOString().slice(0,16);
+                document.getElementById('recordModal')?.classList.remove('hidden');
+                setTimeout(() => { document.getElementById('recordModalContent')?.classList.add('modal-enter-active'); }, 10);
             };
             window.closeModal = function() {
-                document.getElementById('recordModalContent').classList.remove('modal-enter-active');
-                setTimeout(() => { document.getElementById('recordModal').classList.add('hidden'); }, 200);
+                document.getElementById('recordModalContent')?.classList.remove('modal-enter-active');
+                setTimeout(() => { document.getElementById('recordModal')?.classList.add('hidden'); }, 200);
             };
 
             window.renderAgentTicketsList = function() {
-                const filterVal = document.getElementById('agentTicketFilter').value;
+                const filterEl = document.getElementById('agentTicketFilter');
+                if (!filterEl) return;
+                const filterVal = filterEl.value;
                 const tbody = document.getElementById('agentTicketsBody');
+                if (!tbody) return;
                 tbody.innerHTML = '';
                 
                 let filtered = currentAgentSpecificTickets;
@@ -748,7 +769,8 @@
                 else if (filterVal === 'false') filtered = filtered.filter(t => !t._isSaved && !t._isPending);
                 else if (filterVal === 'pending') filtered = filtered.filter(t => t._isPending);
                 
-                document.getElementById('ticketListCount').textContent = `${filtered.length} records`;
+                const countEl = document.getElementById('ticketListCount');
+                if (countEl) countEl.textContent = `${filtered.length} records`;
                 
                 filtered.forEach(t => {
                     const tr = document.createElement('tr');
@@ -777,12 +799,16 @@
         }
 
         function showEmptyState(title, desc, iconClass) {
-            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('emptyState')?.classList.remove('hidden');
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
             
-            document.getElementById('emptyStateIcon').className = `ph ${iconClass} text-4xl`;
-            document.getElementById('emptyStateTitle').textContent = title;
-            document.getElementById('emptyStateDesc').textContent = desc;
+            const iconEl = document.getElementById('emptyStateIcon');
+            const titleEl = document.getElementById('emptyStateTitle');
+            const descEl = document.getElementById('emptyStateDesc');
+            
+            if(iconEl) iconEl.className = `ph ${iconClass} text-4xl`;
+            if(titleEl) titleEl.textContent = title;
+            if(descEl) descEl.textContent = desc;
             
             if(title === "Database Connected. Awaiting Data.") {
                  if(!document.getElementById('btnUploadStart')) {
@@ -791,7 +817,7 @@
                      btn.className = "bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors w-full mt-4 flex justify-center items-center gap-2";
                      btn.innerHTML = `<i class="ph ph-cloud-arrow-up text-xl"></i> Upload Data to Start`;
                      btn.onclick = () => document.getElementById('csvFileInput').click();
-                     document.getElementById('emptyStateBox').appendChild(btn);
+                     document.getElementById('emptyStateBox')?.appendChild(btn);
                  }
             } else {
                 const btn = document.getElementById('btnUploadStart');
@@ -803,12 +829,16 @@
             if (globalDataMap.size === 0) {
                 showEmptyState("Database Connected. Awaiting Data.", "Upload your CSV/XLSX. Duplicates will be safely updated based on Ticket ID.", "ph-database text-blue-500");
             } else {
-                document.getElementById('emptyState').classList.add('hidden');
-                document.getElementById(`tab-${currentActiveTab}`).classList.remove('hidden');
-                document.getElementById(`tab-${currentActiveTab}`).classList.add('flex');
+                document.getElementById('emptyState')?.classList.add('hidden');
+                const activePane = document.getElementById(`tab-${currentActiveTab}`);
+                if (activePane) {
+                    activePane.classList.remove('hidden');
+                    activePane.classList.add('flex');
+                }
             }
             const count = getFilteredData().length;
-            document.getElementById('recordCountBadge').textContent = `${count} Records`;
+            const badge = document.getElementById('recordCountBadge');
+            if(badge) badge.textContent = `${count} Records`;
         }
 
         // --- File Upload & Firebase Batch Sync ---
@@ -928,58 +958,63 @@
             const record = globalDataMap.get(ticketId);
             if(!record) return;
             
-            document.getElementById('modalTitle').textContent = 'Edit Database Record';
-            document.getElementById('formTicketId').value = record['Ticket ID'];
-            document.getElementById('formTicketId').disabled = true; 
+            if (document.getElementById('modalTitle')) document.getElementById('modalTitle').textContent = 'Edit Database Record';
+            if (document.getElementById('formTicketId')) {
+                document.getElementById('formTicketId').value = record['Ticket ID'];
+                document.getElementById('formTicketId').disabled = true; 
+            }
             
             const localDate = new Date(record._timestamp);
             localDate.setMinutes(localDate.getMinutes() - localDate.getTimezoneOffset());
-            document.getElementById('formDate').value = localDate.toISOString().slice(0,16);
+            if (document.getElementById('formDate')) document.getElementById('formDate').value = localDate.toISOString().slice(0,16);
             
-            document.getElementById('formAgent').value = record['Submitted By'];
-            document.getElementById('formReason').value = record['Cancellation & Return Reason'];
-            document.getElementById('formPreventionReason').value = record['New Prevention Reason'] || '';
-            document.getElementById('formStatus').value = record['Status'];
+            if (document.getElementById('formAgent')) document.getElementById('formAgent').value = record['Submitted By'];
+            if (document.getElementById('formReason')) document.getElementById('formReason').value = record['Cancellation & Return Reason'];
+            if (document.getElementById('formPreventionReason')) document.getElementById('formPreventionReason').value = record['New Prevention Reason'] || '';
+            if (document.getElementById('formStatus')) document.getElementById('formStatus').value = record['Status'];
             
             // Set Channel
             const chan = record['_channel'] || 'Unknown';
-            let selChan = Array.from(document.getElementById('formChannel').options).find(o => o.value.toLowerCase() === chan.toLowerCase());
-            if(selChan) document.getElementById('formChannel').value = selChan.value;
-            else document.getElementById('formChannel').value = 'Unknown';
+            const chanEl = document.getElementById('formChannel');
+            if (chanEl) {
+                let selChan = Array.from(chanEl.options).find(o => o.value.toLowerCase() === chan.toLowerCase());
+                if(selChan) chanEl.value = selChan.value;
+                else chanEl.value = 'Unknown';
+            }
             
-            document.getElementById('formRequestType').value = record['_requestType'] || '';
+            if (document.getElementById('formRequestType')) document.getElementById('formRequestType').value = record['_requestType'] || '';
             
             let prevVal = "False";
             if (record._isPending) prevVal = "Pending";
             else if (record._isSaved) prevVal = "True";
-            document.getElementById('formPrevented').value = prevVal;
+            if (document.getElementById('formPrevented')) document.getElementById('formPrevented').value = prevVal;
             
-            document.getElementById('formOrderId').value = record['Order ID'] || '';
-            document.getElementById('formFreshchatId').value = record['Freshchat Conversation ID'] || '';
+            if (document.getElementById('formOrderId')) document.getElementById('formOrderId').value = record['Order ID'] || '';
+            if (document.getElementById('formFreshchatId')) document.getElementById('formFreshchatId').value = record['Freshchat Conversation ID'] || '';
 
-            document.getElementById('recordModal').classList.remove('hidden');
-            setTimeout(() => { document.getElementById('recordModalContent').classList.add('modal-enter-active'); }, 10);
+            document.getElementById('recordModal')?.classList.remove('hidden');
+            setTimeout(() => { document.getElementById('recordModalContent')?.classList.add('modal-enter-active'); }, 10);
         };
 
         window.saveRecord = async function() {
             if (!user) return;
             
-            let tId = document.getElementById('formTicketId').value.trim();
-            if(!tId && !document.getElementById('formTicketId').disabled) {
+            let tId = document.getElementById('formTicketId')?.value.trim();
+            if(!tId && !document.getElementById('formTicketId')?.disabled) {
                 tId = 'MANUAL-' + Math.random().toString(36).substr(2, 9).toUpperCase();
             }
             
-            const agent = document.getElementById('formAgent').value.trim();
-            const dateStr = document.getElementById('formDate').value;
-            const reason = document.getElementById('formReason').value.trim() || 'Unspecified';
-            const prevReason = document.getElementById('formPreventionReason').value.trim();
-            const channel = document.getElementById('formChannel').value;
-            let reqTypeRaw = document.getElementById('formRequestType').value.trim() || 'Unknown';
-            const status = document.getElementById('formStatus').value;
-            const preventedRaw = document.getElementById('formPrevented').value;
+            const agent = document.getElementById('formAgent')?.value.trim();
+            const dateStr = document.getElementById('formDate')?.value;
+            const reason = document.getElementById('formReason')?.value.trim() || 'Unspecified';
+            const prevReason = document.getElementById('formPreventionReason')?.value.trim();
+            const channel = document.getElementById('formChannel')?.value;
+            let reqTypeRaw = document.getElementById('formRequestType')?.value.trim() || 'Unknown';
+            const status = document.getElementById('formStatus')?.value;
+            const preventedRaw = document.getElementById('formPrevented')?.value;
             
-            const orderId = document.getElementById('formOrderId').value.trim();
-            const fcId = document.getElementById('formFreshchatId').value.trim();
+            const orderId = document.getElementById('formOrderId')?.value.trim();
+            const fcId = document.getElementById('formFreshchatId')?.value.trim();
 
             if(!agent || !dateStr) { alert("Agent and Date are required."); return; }
             
@@ -1083,8 +1118,8 @@
                     }
                     if(count > 0) await batch.commit();
                     
-                    document.getElementById('startDateFilter').value = '';
-                    document.getElementById('endDateFilter').value = '';
+                    if (document.getElementById('startDateFilter')) document.getElementById('startDateFilter').value = '';
+                    if (document.getElementById('endDateFilter')) document.getElementById('endDateFilter').value = '';
                     excludedReasons.clear();
                 } catch (err) { console.error(err); alert("Failed to erase database."); }
             }
@@ -1094,6 +1129,8 @@
         function updateFilterSidebar() {
             const container = document.getElementById('reasonFilterContainer');
             const dataList = document.getElementById('reasonSuggestions');
+            if(!container || !dataList) return;
+            
             container.innerHTML = ''; dataList.innerHTML = '';
             
             Array.from(uniqueReasons).sort().forEach(reason => {
@@ -1115,21 +1152,24 @@
                 container.appendChild(div);
             });
 
-            document.getElementById('selectAllBtn').onclick = () => {
-                const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-                checkboxes.forEach(cb => {
-                    cb.checked = !allChecked;
-                    if(cb.checked) excludedReasons.delete(cb.value); else excludedReasons.add(cb.value);
-                });
-                refreshDashboard();
-            };
+            const selectAllBtn = document.getElementById('selectAllBtn');
+            if (selectAllBtn) {
+                selectAllBtn.onclick = () => {
+                    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    checkboxes.forEach(cb => {
+                        cb.checked = !allChecked;
+                        if(cb.checked) excludedReasons.delete(cb.value); else excludedReasons.add(cb.value);
+                    });
+                    refreshDashboard();
+                };
+            }
         }
 
         function getFilteredData() {
-            const startDateStr = document.getElementById('startDateFilter').value;
-            const endDateStr = document.getElementById('endDateFilter').value;
-            const teamFilter = document.getElementById('teamFilter').value;
+            const startDateStr = document.getElementById('startDateFilter')?.value;
+            const endDateStr = document.getElementById('endDateFilter')?.value;
+            const teamFilter = document.getElementById('teamFilter')?.value || 'all';
 
             let start = startDateStr ? new Date(startDateStr) : null;
             let end = endDateStr ? new Date(endDateStr) : null;
@@ -1155,7 +1195,8 @@
                 result.push(row);
             });
             
-            document.getElementById('recordCountBadge').textContent = `${result.length} Records`;
+            const badge = document.getElementById('recordCountBadge');
+            if(badge) badge.textContent = `${result.length} Records`;
             return result.sort((a,b) => b._parsedDate - a._parsedDate);
         }
 
@@ -1170,10 +1211,10 @@
             let resolvedCases = total - pending; 
             let rate = resolvedCases > 0 ? ((saved / resolvedCases) * 100).toFixed(1) : '0.0';
             
-            document.getElementById('kpiTotalCases').textContent = total.toLocaleString();
-            document.getElementById('kpiSavedCases').textContent = saved.toLocaleString();
-            document.getElementById('kpiPendingCases').textContent = pending.toLocaleString();
-            document.getElementById('kpiRetentionRate').textContent = `${rate}%`;
+            if (document.getElementById('kpiTotalCases')) document.getElementById('kpiTotalCases').textContent = total.toLocaleString();
+            if (document.getElementById('kpiSavedCases')) document.getElementById('kpiSavedCases').textContent = saved.toLocaleString();
+            if (document.getElementById('kpiPendingCases')) document.getElementById('kpiPendingCases').textContent = pending.toLocaleString();
+            if (document.getElementById('kpiRetentionRate')) document.getElementById('kpiRetentionRate').textContent = `${rate}%`;
             
             // Render specific tab
             if(currentActiveTab === 'overview') renderOverview(data);
@@ -1217,27 +1258,34 @@
 
             const sortedDays = Object.keys(timelineMap).sort();
             if(charts.trend) charts.trend.destroy();
-            charts.trend = new Chart(document.getElementById('trendChart').getContext('2d'), {
-                type: 'line',
-                data: {
-                    labels: sortedDays,
-                    datasets: [
-                        { label: 'Total Cases', data: sortedDays.map(d => timelineMap[d].total), borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,5], tension: 0.3 },
-                        { label: 'Saved Cases', data: sortedDays.map(d => timelineMap[d].saved), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } }
-            });
+            
+            const trendCtx = document.getElementById('trendChart')?.getContext('2d');
+            if (trendCtx) {
+                charts.trend = new Chart(trendCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [
+                            { label: 'Total Cases', data: sortedDays.map(d => timelineMap[d].total), borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,5], tension: 0.3 },
+                            { label: 'Saved Cases', data: sortedDays.map(d => timelineMap[d].saved), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } }
+                });
+            }
 
             if(charts.status) charts.status.destroy();
-            charts.status = new Chart(document.getElementById('statusChart').getContext('2d'), {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(statusMap),
-                    datasets: [{ data: Object.values(statusMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{boxWidth:12, font:{size:10}} } } }
-            });
+            const statusCtx = document.getElementById('statusChart')?.getContext('2d');
+            if (statusCtx) {
+                charts.status = new Chart(statusCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusMap),
+                        datasets: [{ data: Object.values(statusMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{boxWidth:12, font:{size:10}} } } }
+                });
+            }
         }
 
         // --- TAB 2: Agents Render ---
@@ -1270,6 +1318,7 @@
             }).sort((a,b) => b.rate !== a.rate ? b.rate - a.rate : b.resolved - a.resolved);
 
             const tbody = document.getElementById('agentTableBody');
+            if (!tbody) return;
             tbody.innerHTML = '';
             
             leaderboard.forEach((entry, idx) => {
@@ -1278,10 +1327,10 @@
                 tr.onclick = () => {
                     selectedAgentForSnapshot = entry.agent;
                     
-                    document.getElementById('agentLeaderboardView').classList.add('hidden');
-                    document.getElementById('agentLeaderboardView').classList.remove('flex');
-                    document.getElementById('agentProfileView').classList.remove('hidden');
-                    document.getElementById('agentProfileView').classList.add('flex');
+                    document.getElementById('agentLeaderboardView')?.classList.add('hidden');
+                    document.getElementById('agentLeaderboardView')?.classList.remove('flex');
+                    document.getElementById('agentProfileView')?.classList.remove('hidden');
+                    document.getElementById('agentProfileView')?.classList.add('flex');
                     
                     renderAgentSnapshot(entry, data);
                     
@@ -1313,33 +1362,36 @@
                 if (currentEntry) renderAgentSnapshot(currentEntry, data);
                 else window.backToLeaderboard();
             } else {
-                document.getElementById('agentProfileView').classList.add('hidden');
-                document.getElementById('agentProfileView').classList.remove('flex');
-                document.getElementById('agentLeaderboardView').classList.remove('hidden');
-                document.getElementById('agentLeaderboardView').classList.add('flex');
+                document.getElementById('agentProfileView')?.classList.add('hidden');
+                document.getElementById('agentProfileView')?.classList.remove('flex');
+                document.getElementById('agentLeaderboardView')?.classList.remove('hidden');
+                document.getElementById('agentLeaderboardView')?.classList.add('flex');
             }
         }
 
         function renderAgentSnapshot(agentData, allFilteredData) {
-            document.getElementById('selectedAgentTitle').innerHTML = `${formatAgentName(agentData.agent)} ${getTeamBadge(agentData.team)}`;
-            document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
-            document.getElementById('snapVol').textContent = agentData.resolved;
+            if (document.getElementById('selectedAgentTitle')) document.getElementById('selectedAgentTitle').innerHTML = `${formatAgentName(agentData.agent)} ${getTeamBadge(agentData.team)}`;
+            if (document.getElementById('snapRate')) document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
+            if (document.getElementById('snapVol')) document.getElementById('snapVol').textContent = agentData.resolved;
 
             const reasonsArr = Object.entries(agentData.reasons).map(([k,v]) => ({reason: k, count: v})).sort((a,b) => b.count - a.count).slice(0,5);
             
             if(charts.agentReason) charts.agentReason.destroy();
-            charts.agentReason = new Chart(document.getElementById('agentReasonChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: reasonsArr.map(r => r.reason.length > 25 ? r.reason.substring(0,25)+'...' : r.reason),
-                    datasets: [{ label: 'Cases', data: reasonsArr.map(r => r.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true, ticks:{stepSize:1} } }
-                }
-            });
+            const arCtx = document.getElementById('agentReasonChart')?.getContext('2d');
+            if (arCtx) {
+                charts.agentReason = new Chart(arCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: reasonsArr.map(r => r.reason.length > 25 ? r.reason.substring(0,25)+'...' : r.reason),
+                        datasets: [{ label: 'Cases', data: reasonsArr.map(r => r.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
+                    },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { beginAtZero: true, ticks:{stepSize:1} } }
+                    }
+                });
+            }
 
             currentAgentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
             window.renderAgentTicketsList();
@@ -1379,25 +1431,28 @@
                 .sort((a,b) => b.total - a.total).slice(0, 15);
 
             if(charts.topReasons) charts.topReasons.destroy();
-            charts.topReasons = new Chart(document.getElementById('topReasonsChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: sortedReasons.map(s => s.reason),
-                    datasets: [
-                        { label: 'Unsaved', data: sortedReasons.map(s => s.total - s.saved - s.pending), backgroundColor: '#cbd5e1', stacked: true },
-                        { label: 'Saved', data: sortedReasons.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true },
-                        { label: 'Pending', data: sortedReasons.map(s => s.pending), backgroundColor: '#facc15', stacked: true }
-                    ]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { tooltip: { mode: 'index', intersect: false } },
-                    scales: {
-                        x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } },
-                        y: { stacked: true, beginAtZero: true }
+            const trCtx = document.getElementById('topReasonsChart')?.getContext('2d');
+            if (trCtx) {
+                charts.topReasons = new Chart(trCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedReasons.map(s => s.reason),
+                        datasets: [
+                            { label: 'Unsaved', data: sortedReasons.map(s => s.total - s.saved - s.pending), backgroundColor: '#cbd5e1', stacked: true },
+                            { label: 'Saved', data: sortedReasons.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true },
+                            { label: 'Pending', data: sortedReasons.map(s => s.pending), backgroundColor: '#facc15', stacked: true }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { tooltip: { mode: 'index', intersect: false } },
+                        scales: {
+                            x: { stacked: true, ticks: { maxRotation: 45, minRotation: 45 } },
+                            y: { stacked: true, beginAtZero: true }
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // 2. Render Prevention Strategies Chart
             const sortedPreventions = Object.keys(prevCounts)
@@ -1405,21 +1460,24 @@
                 .sort((a,b) => b.count - a.count).slice(0, 10);
 
             if(charts.prevention) charts.prevention.destroy();
-            charts.prevention = new Chart(document.getElementById('preventionChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: sortedPreventions.map(s => s.reason),
-                    datasets: [{ label: 'Times Saved', data: sortedPreventions.map(s => s.count), backgroundColor: '#10b981', borderRadius: 4 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { ticks: { maxRotation: 45, minRotation: 45 } },
-                        y: { beginAtZero: true }
+            const prevCtx = document.getElementById('preventionChart')?.getContext('2d');
+            if (prevCtx) {
+                charts.prevention = new Chart(prevCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedPreventions.map(s => s.reason),
+                        datasets: [{ label: 'Times Saved', data: sortedPreventions.map(s => s.count), backgroundColor: '#10b981', borderRadius: 4 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { ticks: { maxRotation: 45, minRotation: 45 } },
+                            y: { beginAtZero: true }
+                        }
                     }
-                }
-            });
+                });
+            }
 
             // 3. Render Channels
             const sortedChannels = Object.keys(channelStats).map(ch => {
@@ -1430,32 +1488,37 @@
             }).sort((a,b) => b.total - a.total);
 
             const cBody = document.getElementById('channelTableBody');
-            cBody.innerHTML = '';
-            sortedChannels.forEach(c => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50';
-                tr.innerHTML = `
-                    <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${c.channel}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-center">${c.total}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-center text-green-600 font-medium">${c.saved}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-right font-bold">${c.rate.toFixed(1)}%</td>
-                `;
-                cBody.appendChild(tr);
-            });
+            if (cBody) {
+                cBody.innerHTML = '';
+                sortedChannels.forEach(c => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${c.channel}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-center">${c.total}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-center text-green-600 font-medium">${c.saved}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-right font-bold">${c.rate.toFixed(1)}%</td>
+                    `;
+                    cBody.appendChild(tr);
+                });
+            }
 
             if(charts.channel) charts.channel.destroy();
-            charts.channel = new Chart(document.getElementById('channelChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: sortedChannels.map(c => c.channel),
-                    datasets: [{ label: 'Retention Rate %', data: sortedChannels.map(c => c.rate), backgroundColor: '#3b82f6', borderRadius: 4 }]
-                },
-                options: {
-                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
-                }
-            });
+            const chanCtx = document.getElementById('channelChart')?.getContext('2d');
+            if (chanCtx) {
+                charts.channel = new Chart(chanCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedChannels.map(c => c.channel),
+                        datasets: [{ label: 'Retention Rate %', data: sortedChannels.map(c => c.rate), backgroundColor: '#3b82f6', borderRadius: 4 }]
+                    },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { beginAtZero: true, max: 100, ticks: { callback: v => v + '%' } } }
+                    }
+                });
+            }
         }
 
         // --- TAB 3.5: Request Types Render ---
@@ -1490,84 +1553,104 @@
             }).sort((a,b) => b.total - a.total);
 
             const tBody = document.getElementById('typesTableBody');
-            tBody.innerHTML = '';
-            sortedTypes.forEach(t => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-gray-50';
-                tr.innerHTML = `
-                    <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${t.type}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-center">${t.total}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-center text-green-600 font-medium">${t.saved}</td>
-                    <td class="py-3 px-5 border-b border-gray-100 text-right font-bold">${t.rate.toFixed(1)}%</td>
-                `;
-                tBody.appendChild(tr);
-            });
+            if (tBody) {
+                tBody.innerHTML = '';
+                sortedTypes.forEach(t => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-gray-50';
+                    tr.innerHTML = `
+                        <td class="py-3 px-5 border-b border-gray-100 font-medium text-gray-800">${t.type}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-center">${t.total}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-center text-green-600 font-medium">${t.saved}</td>
+                        <td class="py-3 px-5 border-b border-gray-100 text-right font-bold">${t.rate.toFixed(1)}%</td>
+                    `;
+                    tBody.appendChild(tr);
+                });
+            }
 
             if(charts.requestTypes) charts.requestTypes.destroy();
-            charts.requestTypes = new Chart(document.getElementById('typesChart').getContext('2d'), {
-                type: 'bar',
-                data: {
-                    labels: sortedTypes.map(t => t.type),
-                    datasets: [{ label: 'Total Volume', data: sortedTypes.map(t => t.total), backgroundColor: '#8b5cf6', borderRadius: 4 }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 45, minRotation: 45 } } }
-                }
-            });
+            const rtCtx = document.getElementById('typesChart')?.getContext('2d');
+            if (rtCtx) {
+                charts.requestTypes = new Chart(rtCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedTypes.map(t => t.type),
+                        datasets: [{ label: 'Total Volume', data: sortedTypes.map(t => t.total), backgroundColor: '#8b5cf6', borderRadius: 4 }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { y: { beginAtZero: true }, x: { ticks: { maxRotation: 45, minRotation: 45 } } }
+                    }
+                });
+            }
 
             // 2. Render Agent Breakdown Table
             const atBody = document.getElementById('agentTypeTableBody');
-            atBody.innerHTML = '';
-            
-            sortedTypes.forEach(typeObj => {
-                const rt = typeObj.type;
-                const agentsForType = Object.keys(agentTypeStats[rt]).map(ag => {
-                    const stats = agentTypeStats[rt][ag];
-                    const resolved = stats.total - stats.pending;
-                    const rate = resolved > 0 ? (stats.saved / resolved) * 100 : 0;
-                    return { agent: ag, team: getAgentTeam(ag), ...stats, resolved, rate };
-                }).sort((a,b) => b.rate !== a.rate ? b.rate - a.rate : b.resolved - a.resolved);
+            if (atBody) {
+                atBody.innerHTML = '';
+                
+                sortedTypes.forEach(typeObj => {
+                    const rt = typeObj.type;
+                    const agentsForType = Object.keys(agentTypeStats[rt]).map(ag => {
+                        const stats = agentTypeStats[rt][ag];
+                        const resolved = stats.total - stats.pending;
+                        const rate = resolved > 0 ? (stats.saved / resolved) * 100 : 0;
+                        return { agent: ag, team: getAgentTeam(ag), ...stats, resolved, rate };
+                    }).sort((a,b) => b.rate !== a.rate ? b.rate - a.rate : b.resolved - a.resolved);
 
-                // Section Header for Request Type
-                const headerTr = document.createElement('tr');
-                headerTr.className = "bg-gray-100/80";
-                headerTr.innerHTML = `<td colspan="5" class="py-2.5 px-5 text-xs font-bold text-gray-700 uppercase tracking-wider border-y border-gray-200">🔹 ${rt} Breakdown</td>`;
-                atBody.appendChild(headerTr);
+                    // Section Header for Request Type
+                    const headerTr = document.createElement('tr');
+                    headerTr.className = "bg-gray-100/80";
+                    headerTr.innerHTML = `<td colspan="5" class="py-2.5 px-5 text-xs font-bold text-gray-700 uppercase tracking-wider border-y border-gray-200">🔹 ${rt} Breakdown</td>`;
+                    atBody.appendChild(headerTr);
 
-                agentsForType.forEach(agObj => {
-                    const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-blue-50 transition-colors';
-                    tr.innerHTML = `
-                        <td class="py-3 px-5 border-b border-gray-50 pl-8 font-medium text-gray-800">
-                            <div class="flex items-center">${formatAgentName(agObj.agent)} ${getTeamBadge(agObj.team)}</div>
-                            <div class="text-[10px] text-gray-400 mt-0.5">${agObj.agent}</div>
-                        </td>
-                        <td class="py-3 px-5 border-b border-gray-50 text-center">${agObj.total}</td>
-                        <td class="py-3 px-5 border-b border-gray-50 text-center text-green-600 font-medium">${agObj.saved}</td>
-                        <td class="py-3 px-5 border-b border-gray-50 text-center text-yellow-600 font-medium">${agObj.pending}</td>
-                        <td class="py-3 px-5 border-b border-gray-50 font-bold text-right">
-                            ${agObj.rate.toFixed(1)}%
-                        </td>
-                    `;
-                    atBody.appendChild(tr);
+                    agentsForType.forEach(agObj => {
+                        const tr = document.createElement('tr');
+                        tr.className = 'hover:bg-blue-50 transition-colors';
+                        tr.innerHTML = `
+                            <td class="py-3 px-5 border-b border-gray-50 pl-8 font-medium text-gray-800">
+                                <div class="flex items-center">${formatAgentName(agObj.agent)} ${getTeamBadge(agObj.team)}</div>
+                                <div class="text-[10px] text-gray-400 mt-0.5">${agObj.agent}</div>
+                            </td>
+                            <td class="py-3 px-5 border-b border-gray-50 text-center">${agObj.total}</td>
+                            <td class="py-3 px-5 border-b border-gray-50 text-center text-green-600 font-medium">${agObj.saved}</td>
+                            <td class="py-3 px-5 border-b border-gray-50 text-center text-yellow-600 font-medium">${agObj.pending}</td>
+                            <td class="py-3 px-5 border-b border-gray-50 font-bold text-right">
+                                ${agObj.rate.toFixed(1)}%
+                            </td>
+                        `;
+                        atBody.appendChild(tr);
+                    });
                 });
-            });
+            }
         }
 
         // --- TAB 4: Data Table Render ---
         function renderDataTable(data) {
             const tbody = document.getElementById('rawDataTableBody');
+            if (!tbody) return; // FIX: Prevents "Cannot set properties of null" error
             tbody.innerHTML = '';
             
-            const filterVal = document.getElementById('dataManagerStatusFilter').value;
+            const filterVal = document.getElementById('dataManagerStatusFilter')?.value || 'all';
+            const searchVal = document.getElementById('dataManagerSearch')?.value.trim().toLowerCase() || '';
+
             let filteredData = data;
             
+            // Apply Status Filter
             if (filterVal === 'true') filteredData = filteredData.filter(t => t._isSaved && !t._isPending);
             else if (filterVal === 'false') filteredData = filteredData.filter(t => !t._isSaved && !t._isPending);
             else if (filterVal === 'pending') filteredData = filteredData.filter(t => t._isPending);
             
+            // Apply Search Filter (Order ID or Ticket ID)
+            if (searchVal) {
+                filteredData = filteredData.filter(t => {
+                    const orderId = String(t['Order ID'] || '').toLowerCase();
+                    const ticketId = String(t['Ticket ID'] || '').toLowerCase();
+                    return orderId.includes(searchVal) || ticketId.includes(searchVal);
+                });
+            }
+
             const totalPages = Math.ceil(filteredData.length / dataManagerRowsPerPage) || 1;
             if (dataManagerCurrentPage > totalPages) dataManagerCurrentPage = totalPages;
             if (dataManagerCurrentPage < 1) dataManagerCurrentPage = 1;
@@ -1591,7 +1674,6 @@
                 
                 const sourceFileName = row._batchName ? row._batchName : 'Manual Entry';
                 
-                // Show prevention reason if it exists, otherwise cancellation reason
                 let displayReason = row._cleanReason;
                 if (row._isSaved && row._preventionReason) {
                     displayReason = `<span class="text-green-600 font-medium">Saved via:</span> ${row._preventionReason}`;
@@ -1599,7 +1681,10 @@
 
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
-                    <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">${row['Ticket ID']}</td>
+                    <td class="py-2 px-4 border-b border-gray-100 font-mono text-[10px] text-gray-500">
+                        <div class="font-bold text-gray-800" title="Ticket ID">TKT: ${row['Ticket ID']}</div>
+                        <div class="text-gray-400 mt-0.5" title="Order ID">ORD: ${row['Order ID'] || '-'}</div>
+                    </td>
                     <td class="py-2 px-4 border-b border-gray-100 truncate max-w-[150px]" title="${row['Submitted By']}">
                         <div class="flex items-center">${formatAgentName(row['Submitted By'])} ${teamBadge}</div>
                     </td>
@@ -1643,6 +1728,7 @@
 
             const batchArray = Object.values(batchesMap).sort((a, b) => new Date(b.date) - new Date(a.date));
             const tbody = document.getElementById('uploadsTableBody');
+            if (!tbody) return; // Prevent Null Error
             tbody.innerHTML = '';
 
             if(batchArray.length === 0) {
