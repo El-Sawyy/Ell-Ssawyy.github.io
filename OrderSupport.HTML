@@ -52,13 +52,19 @@
                 <button onclick="switchTab('agents')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agents">Agent Performance</button>
                 <button onclick="switchTab('insights')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="insights">Insights & Channels</button>
                 <button onclick="switchTab('types')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="types">Request Types</button>
-                <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data">Data Manager</button>
-                <button onclick="switchTab('uploads')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="uploads">Uploads</button>
+                <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data" style="display: none;">Data Manager</button>
+                <button onclick="switchTab('uploads')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="uploads" style="display: none;">Uploads</button>
             </div>
             
             <div class="flex items-center gap-3">
                 <span class="text-xs font-medium bg-gray-100 text-gray-600 px-2 py-1 rounded-md" id="recordCountBadge">0 Records</span>
-                <button onclick="openAddRecordModal()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1">
+                
+                <!-- Admin Lock Toggle -->
+                <button onclick="toggleAdmin()" id="adminToggleBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-2 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1" title="Admin Access">
+                    <i class="ph ph-lock text-lg" id="adminIcon"></i>
+                </button>
+
+                <button onclick="openAddRecordModal()" id="addDataBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1" style="display: none;">
                     <i class="ph ph-plus"></i> Add Data
                 </button>
             </div>
@@ -74,11 +80,20 @@
             <!-- Upload Section -->
             <div class="p-4 border-b border-gray-100 bg-gray-50/50">
                 <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1"><i class="ph ph-database"></i> Add to Database</h2>
-                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors bg-white" onclick="document.getElementById('csvFileInput').click()">
+                
+                <!-- Unlocked Upload Zone -->
+                <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors bg-white" onclick="document.getElementById('csvFileInput').click()" style="display: none;">
                     <i class="ph ph-cloud-arrow-up text-2xl text-blue-500 mb-1"></i>
                     <p class="text-xs text-gray-600 font-medium">Upload CSV or XLSX</p>
                     <p class="text-[10px] text-gray-400 mt-1">Manual Duplicate Validation</p>
                     <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" class="hidden">
+                </div>
+
+                <!-- Locked Upload Zone -->
+                <div id="lockedUploadZone" class="border-2 border-dashed border-gray-200 rounded-lg p-4 text-center bg-gray-50 flex flex-col items-center justify-center cursor-not-allowed">
+                    <i class="ph ph-lock text-2xl text-gray-400 mb-1"></i>
+                    <p class="text-xs text-gray-500 font-medium">Upload Locked</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Admin access required</p>
                 </div>
             </div>
 
@@ -622,6 +637,10 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Admin Security
+        const ADMIN_PASS = '22442244';
+        let isAdmin = sessionStorage.getItem('retentionAdmin') === 'true';
+
         // Team Definitions
         const TEAM_ORDER_SUPPORT = [
             'mohamed.kheer@tempo.fit',
@@ -678,6 +697,7 @@
         // --- Initialization ---
         document.addEventListener('DOMContentLoaded', async () => {
             setupUIControls();
+            applyAdminUI(); // Secure the interface on load
             
             if (firebaseConfig) {
                 app = initializeApp(firebaseConfig);
@@ -726,6 +746,29 @@
 
         // --- UI & Utility Hooks ---
         function setupUIControls() {
+            // Admin Toggle Handler
+            window.toggleAdmin = function() {
+                if (isAdmin) {
+                    // Lock it
+                    isAdmin = false;
+                    sessionStorage.removeItem('retentionAdmin');
+                    if (currentActiveTab === 'data' || currentActiveTab === 'uploads') {
+                        window.switchTab('overview');
+                    }
+                    applyAdminUI();
+                } else {
+                    // Unlock it
+                    const pass = prompt('Enter Admin Password to unlock data management:');
+                    if (pass === ADMIN_PASS) {
+                        isAdmin = true;
+                        sessionStorage.setItem('retentionAdmin', 'true');
+                        applyAdminUI();
+                    } else if (pass !== null) {
+                        alert('Incorrect password.');
+                    }
+                }
+            };
+
             window.switchTab = function(tabId) {
                 currentActiveTab = tabId;
                 document.querySelectorAll('#navTabs button').forEach(btn => {
@@ -764,10 +807,10 @@
                 ['dragleave', 'dragend'].forEach(type => dropZone.addEventListener(type, () => dropZone.classList.remove('drag-active')));
                 dropZone.addEventListener('drop', e => {
                     e.preventDefault(); dropZone.classList.remove('drag-active');
-                    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+                    if (isAdmin && e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
                 });
                 fileInput.addEventListener('change', e => {
-                    if (e.target.files.length) handleFile(e.target.files[0]);
+                    if (isAdmin && e.target.files.length) handleFile(e.target.files[0]);
                     fileInput.value = ''; 
                 });
             }
@@ -800,6 +843,7 @@
             };
 
             window.openAddRecordModal = function() {
+                if (!isAdmin) return;
                 document.getElementById('recordForm')?.reset();
                 if (document.getElementById('modalTitle')) document.getElementById('modalTitle').textContent = 'Add Database Record';
                 if (document.getElementById('formTicketId')) document.getElementById('formTicketId').disabled = false;
@@ -856,6 +900,35 @@
             };
         }
 
+        // Apply Admin UI Security Constraints
+        function applyAdminUI() {
+            const dataTabBtn = document.querySelector('[data-tab="data"]');
+            const uploadsTabBtn = document.querySelector('[data-tab="uploads"]');
+            const addDataBtn = document.getElementById('addDataBtn');
+            const dropZone = document.getElementById('dropZone');
+            const lockedUploadZone = document.getElementById('lockedUploadZone');
+            const adminIcon = document.getElementById('adminIcon');
+            const btnUploadStart = document.getElementById('btnUploadStart');
+
+            if (isAdmin) {
+                if(dataTabBtn) dataTabBtn.style.display = 'block';
+                if(uploadsTabBtn) uploadsTabBtn.style.display = 'block';
+                if(addDataBtn) addDataBtn.style.display = 'flex';
+                if(dropZone) dropZone.style.display = 'block';
+                if(lockedUploadZone) lockedUploadZone.style.display = 'none';
+                if(adminIcon) adminIcon.className = 'ph ph-lock-open text-lg text-green-600';
+                if(btnUploadStart) btnUploadStart.style.display = 'flex';
+            } else {
+                if(dataTabBtn) dataTabBtn.style.display = 'none';
+                if(uploadsTabBtn) uploadsTabBtn.style.display = 'none';
+                if(addDataBtn) addDataBtn.style.display = 'none';
+                if(dropZone) dropZone.style.display = 'none';
+                if(lockedUploadZone) lockedUploadZone.style.display = 'flex';
+                if(adminIcon) adminIcon.className = 'ph ph-lock text-lg';
+                if(btnUploadStart) btnUploadStart.style.display = 'none';
+            }
+        }
+
         function showEmptyState(title, desc, iconClass) {
             document.getElementById('emptyState')?.classList.remove('hidden');
             document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.add('hidden'));
@@ -875,7 +948,11 @@
                      btn.className = "bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors w-full mt-4 flex justify-center items-center gap-2";
                      btn.innerHTML = `<i class="ph ph-cloud-arrow-up text-xl"></i> Upload Data to Start`;
                      btn.onclick = () => document.getElementById('csvFileInput').click();
+                     // Only show if Admin
+                     if (!isAdmin) btn.style.display = 'none';
                      document.getElementById('emptyStateBox')?.appendChild(btn);
+                 } else {
+                     document.getElementById('btnUploadStart').style.display = isAdmin ? 'flex' : 'none';
                  }
             } else {
                 const btn = document.getElementById('btnUploadStart');
@@ -901,6 +978,7 @@
 
         // --- File Upload & Firebase Batch Sync with Conflict Resolution ---
         function handleFile(file) {
+            if (!isAdmin) return;
             const fileName = file.name.toLowerCase();
             if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
                 alert('Please upload a valid CSV or Excel file.');
@@ -923,7 +1001,7 @@
         }
 
         function processUpload(dataArray, originalFileName) {
-            if (!user) { alert("Not authenticated to database yet. Please wait."); return; }
+            if (!user || !isAdmin) return;
             showEmptyState("Analyzing Upload...", "Checking for duplicates against live data.", "ph-spinner animate-spin text-blue-500");
 
             const batchId = 'BATCH_' + Date.now();
@@ -1159,6 +1237,7 @@
 
         // --- Manual Database Writes ---
         window.editRecord = function(ticketId) {
+            if (!isAdmin) return;
             const record = globalDataMap.get(ticketId);
             if(!record) return;
             
@@ -1201,7 +1280,7 @@
         };
 
         window.saveRecord = async function() {
-            if (!user) return;
+            if (!user || !isAdmin) return;
             
             let tId = document.getElementById('formTicketId')?.value.trim();
             if(!tId && !document.getElementById('formTicketId')?.disabled) {
@@ -1265,7 +1344,7 @@
         };
 
         window.deleteRecord = async function(ticketId) {
-            if (!user) return;
+            if (!user || !isAdmin) return;
             if(confirm('Delete this record permanently from the database? Everyone will lose access to it.')) {
                 try {
                     const safeTId = ticketId.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1276,7 +1355,7 @@
         };
 
         window.deleteBatch = async function(batchId) {
-            if (!user) return;
+            if (!user || !isAdmin) return;
             if(confirm('Are you sure you want to completely delete all tickets that were last updated by this specific file upload? This cannot be undone.')) {
                 showEmptyState("Removing Uploaded File...", "Deleting associated records from the database.", "ph-spinner animate-spin text-red-500");
                 try {
@@ -1303,7 +1382,7 @@
         };
 
         window.clearAllData = async function() {
-            if (!user) return;
+            if (!user || !isAdmin) return;
             if(confirm('DANGER: This will PERMANENTLY erase all data in the database for the entire team. Are you completely sure?')) {
                 try {
                     showEmptyState("Erasing Database...", "Cleaning up all team records.", "ph-spinner animate-spin text-red-500");
@@ -1833,7 +1912,7 @@
         // --- TAB 4: Data Table Render ---
         function renderDataTable(data) {
             const tbody = document.getElementById('rawDataTableBody');
-            if (!tbody) return; // FIX: Prevents "Cannot set properties of null" error
+            if (!tbody) return; 
             tbody.innerHTML = '';
             
             const filterVal = document.getElementById('dataManagerStatusFilter')?.value || 'all';
@@ -1882,6 +1961,12 @@
                 if (row._isSaved && row._preventionReason) {
                     displayReason = `<span class="text-green-600 font-medium">Saved via:</span> ${row._preventionReason}`;
                 }
+                
+                // Show actions only if Admin
+                const actionButtons = isAdmin ? `
+                    <button onclick="editRecord('${row['Ticket ID']}')" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit Record"><i class="ph ph-pencil-simple text-base"></i></button>
+                    <button onclick="deleteRecord('${row['Ticket ID']}')" class="text-red-400 hover:text-red-600" title="Delete Record"><i class="ph ph-trash text-base"></i></button>
+                ` : `<span class="text-gray-300 italic text-[10px]">Locked</span>`;
 
                 tr.innerHTML = `
                     <td class="py-2 px-4 border-b border-gray-100 whitespace-nowrap">${dStr}</td>
@@ -1898,8 +1983,7 @@
                     <td class="py-2 px-4 border-b border-gray-100">${row['Status'] || ''}</td>
                     <td class="py-2 px-4 border-b border-gray-100">${savedBadge}</td>
                     <td class="py-2 px-4 border-b border-gray-100 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onclick="editRecord('${row['Ticket ID']}')" class="text-blue-500 hover:text-blue-700 mr-3" title="Edit Record"><i class="ph ph-pencil-simple text-base"></i></button>
-                        <button onclick="deleteRecord('${row['Ticket ID']}')" class="text-red-400 hover:text-red-600" title="Delete Record"><i class="ph ph-trash text-base"></i></button>
+                        ${actionButtons}
                     </td>
                 `;
                 tbody.appendChild(tr);
