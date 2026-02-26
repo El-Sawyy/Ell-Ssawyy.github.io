@@ -77,7 +77,7 @@
                 <div id="dropZone" class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors bg-white" onclick="document.getElementById('csvFileInput').click()">
                     <i class="ph ph-cloud-arrow-up text-2xl text-blue-500 mb-1"></i>
                     <p class="text-xs text-gray-600 font-medium">Upload CSV or XLSX</p>
-                    <p class="text-[10px] text-gray-400 mt-1">Duplicates overwritten by Ticket ID</p>
+                    <p class="text-[10px] text-gray-400 mt-1">Manual Duplicate Validation</p>
                     <input type="file" id="csvFileInput" accept=".csv, .xlsx, .xls" class="hidden">
                 </div>
             </div>
@@ -563,6 +563,59 @@
         </div>
     </div>
 
+    <!-- Conflict Resolution Modal -->
+    <div id="conflictModal" class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-[60] hidden flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden transform transition-all modal-enter" id="conflictModalContent">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-yellow-50 text-yellow-800">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <i class="ph ph-warning-circle text-2xl text-yellow-600"></i> Data Conflict Detected (<span id="conflictProgress">1/1</span>)
+                </h3>
+                <span class="text-xs font-bold px-3 py-1 bg-yellow-200 rounded-full uppercase tracking-wider" id="conflictTypeBadge">Duplicate ID</span>
+            </div>
+            
+            <div class="p-6 bg-gray-50 flex gap-6">
+                <!-- Existing Record -->
+                <div class="flex-1 bg-white p-5 rounded-xl border border-gray-200 shadow-sm opacity-80">
+                    <h4 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">Currently in Database</h4>
+                    <div id="conflictExistingContent" class="space-y-3 text-sm text-gray-700">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+                
+                <!-- Spacer/Icon -->
+                <div class="flex flex-col justify-center items-center">
+                    <div class="w-10 h-10 bg-blue-100 text-blue-500 rounded-full flex items-center justify-center shadow-inner">
+                        <i class="ph ph-arrows-left-right text-xl"></i>
+                    </div>
+                </div>
+
+                <!-- Incoming Record -->
+                <div class="flex-1 bg-white p-5 rounded-xl border-2 border-blue-300 shadow-[0_0_15px_rgba(59,130,246,0.15)] relative">
+                    <div class="absolute -top-3 right-4 bg-blue-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">New Upload</div>
+                    <h4 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-4 border-b border-blue-50 pb-2">Incoming Record</h4>
+                    <div id="conflictIncomingContent" class="space-y-3 text-sm text-gray-800">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <button onclick="abortUpload()" class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded transition-colors">Cancel Entire Upload</button>
+                    <label class="flex items-center gap-2 cursor-pointer ml-4 border-l border-gray-200 pl-4 text-sm text-gray-600">
+                        <input type="checkbox" id="conflictApplyAll" class="w-4 h-4 text-blue-600 rounded cursor-pointer border-gray-300">
+                        Apply choice to all remaining conflicts
+                    </label>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="resolveConflict('keep_existing')" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" title="Ignore the uploaded row">Keep Existing</button>
+                    <button onclick="resolveConflict('keep_both')" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors" title="Generate a new unique Ticket ID for the uploaded row">Keep Both</button>
+                    <button onclick="resolveConflict('update')" class="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors shadow-sm" title="Overwrite the existing database row">Update with New</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase Realtime Logic -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -599,6 +652,11 @@
         let currentActiveTab = 'overview';
         let selectedAgentForSnapshot = null;
         let currentAgentSpecificTickets = []; 
+
+        // Upload Conflict State
+        let uploadConflicts = [];
+        let uploadReady = [];
+        let currentConflictIdx = 0;
 
         // Pagination State
         let dataManagerCurrentPage = 1;
@@ -841,7 +899,7 @@
             if(badge) badge.textContent = `${count} Records`;
         }
 
-        // --- File Upload & Firebase Batch Sync ---
+        // --- File Upload & Firebase Batch Sync with Conflict Resolution ---
         function handleFile(file) {
             const fileName = file.name.toLowerCase();
             if (!fileName.endsWith('.csv') && !fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
@@ -850,72 +908,78 @@
             }
 
             if (fileName.endsWith('.csv')) {
-                Papa.parse(file, { header: true, skipEmptyLines: true, complete: results => syncToDatabase(results.data, file.name), error: err => alert('CSV Error: ' + err.message) });
+                Papa.parse(file, { header: true, skipEmptyLines: true, complete: results => processUpload(results.data, file.name), error: err => alert('CSV Error: ' + err.message) });
             } else {
                 const reader = new FileReader();
                 reader.onload = e => {
                     try {
                         const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
                         const data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {raw: false});
-                        syncToDatabase(data, file.name);
+                        processUpload(data, file.name);
                     } catch (err) { alert('Excel Error: ' + err.message); }
                 };
                 reader.readAsArrayBuffer(file);
             }
         }
 
-        async function syncToDatabase(dataArray, originalFileName) {
+        function processUpload(dataArray, originalFileName) {
             if (!user) { alert("Not authenticated to database yet. Please wait."); return; }
-            
-            showEmptyState("Syncing to Cloud Database...", "Please wait while we merge your data securely. Duplicates are being updated.", "ph-spinner animate-spin text-blue-500");
+            showEmptyState("Analyzing Upload...", "Checking for duplicates against live data.", "ph-spinner animate-spin text-blue-500");
 
-            const dedupedData = new Map();
             const batchId = 'BATCH_' + Date.now();
             const batchDate = new Date().toISOString();
             
-            dataArray.forEach(row => {
-                if(!row['Submitted By'] || row['Submitted By'].trim() === '') return;
+            // Build Map for Order IDs mapping to their existing Ticket IDs for conflict checks
+            const existingOrderMap = new Map();
+            globalDataMap.forEach(row => {
+                if(row['Order ID'] && row['Order ID'].trim() !== '') {
+                    existingOrderMap.set(row['Order ID'].trim(), row);
+                }
+            });
 
-                let tId = row['Ticket ID'] || row['ticket_id'] || row['Freshchat Conversation ID'];
+            // Deduplicate incoming array by Ticket ID initially
+            const incomingMap = new Map();
+            dataArray.forEach(rawRow => {
+                if(!rawRow['Submitted By'] || rawRow['Submitted By'].trim() === '') return;
+
+                let tId = rawRow['Ticket ID'] || rawRow['ticket_id'] || rawRow['Freshchat Conversation ID'];
                 if (!tId || String(tId).trim() === '') { tId = 'TKT-' + Math.random().toString(36).substr(2, 9).toUpperCase(); }
                 tId = String(tId).trim();
 
-                const pStr = String(row['New Request Prevented'] || '').trim().toLowerCase();
+                const pStr = String(rawRow['New Request Prevented'] || '').trim().toLowerCase();
                 const isPending = (pStr === 'pending');
                 const isSaved = (pStr === 'true' || pStr === 'yes' || pStr === '1');
 
-                let parsedDate = new Date(row['Created date'] || new Date());
+                let parsedDate = new Date(rawRow['Created date'] || new Date());
                 if (isNaN(parsedDate.getTime())) parsedDate = new Date();
                 
-                let cleanReason = (row['Cancellation & Return Reason'] || 'Unspecified').trim();
+                let cleanReason = (rawRow['Cancellation & Return Reason'] || 'Unspecified').trim();
                 if(cleanReason === '') cleanReason = 'Unspecified';
 
-                const orderId = row['Order ID'] || row['order_id'] || '';
-                const fcId = row['Freshchat Conversation ID'] || row['freshchat_conversation_id'] || '';
+                const orderId = String(rawRow['Order ID'] || rawRow['order_id'] || '').trim();
+                const fcId = String(rawRow['Freshchat Conversation ID'] || rawRow['freshchat_conversation_id'] || '').trim();
                 
-                // New Fields for Insights Tab & Types Tab
-                const channel = (row['Order Request Channel'] || row['Source'] || 'Unknown').trim();
-                const prevReason = (row['New Prevention Reason'] || '').trim();
+                const channel = String(rawRow['Order Request Channel'] || rawRow['Source'] || 'Unknown').trim();
+                const prevReason = String(rawRow['New Prevention Reason'] || '').trim();
 
-                let reqTypeRaw = (row['Order Request Type'] || 'Unknown').trim();
+                let reqTypeRaw = String(rawRow['Order Request Type'] || 'Unknown').trim();
                 let lowerReqType = reqTypeRaw.toLowerCase();
-                // Map the specific types to a single Membership Cancellation grouping
                 if (['membership cancellation', 'mnca', 'account deletion', 'byod - membership cancellation'].includes(lowerReqType)) {
                     reqTypeRaw = 'Membership Cancellation';
                 }
 
-                dedupedData.set(tId, {
+                incomingMap.set(tId, {
                     'Ticket ID': tId,
-                    'Submitted By': row['Submitted By'].trim(),
+                    'Submitted By': rawRow['Submitted By'].trim(),
                     'Created date': parsedDate.toISOString(),
-                    'Order ID': String(orderId).trim(),
-                    'Freshchat Conversation ID': String(fcId).trim(),
+                    'Order ID': orderId,
+                    'Freshchat Conversation ID': fcId,
                     'Cancellation & Return Reason': cleanReason,
                     'New Prevention Reason': prevReason,
                     'Order Request Channel': channel,
                     'Order Request Type': reqTypeRaw,
-                    'Status': row['Status'] || '',
-                    'New Request Prevented': row['New Request Prevented'] || '',
+                    'Status': rawRow['Status'] || '',
+                    'New Request Prevented': rawRow['New Request Prevented'] || '',
                     '_isSaved': isSaved,
                     '_isPending': isPending,
                     '_cleanReason': cleanReason,
@@ -929,17 +993,156 @@
                 });
             });
 
+            uploadReady = [];
+            uploadConflicts = [];
+            currentConflictIdx = 0;
+
+            for (const [tId, inRow] of incomingMap.entries()) {
+                let hasConflict = false;
+                let conflictObj = { incoming: inRow, type: null, existing: null };
+
+                if (globalDataMap.has(tId)) {
+                    hasConflict = true;
+                    conflictObj.type = 'Ticket ID';
+                    conflictObj.existing = globalDataMap.get(tId);
+                } else if (inRow['Order ID'] && existingOrderMap.has(inRow['Order ID'])) {
+                    hasConflict = true;
+                    conflictObj.type = 'Order ID';
+                    conflictObj.existing = existingOrderMap.get(inRow['Order ID']);
+                }
+
+                if (hasConflict) uploadConflicts.push(conflictObj);
+                else uploadReady.push(inRow);
+            }
+
+            if (uploadConflicts.length > 0) {
+                // Remove checkbox setting if it was set previously
+                const cb = document.getElementById('conflictApplyAll');
+                if (cb) cb.checked = false;
+                showConflictModal();
+            } else {
+                finalizeUploadBatch();
+            }
+        }
+
+        function showConflictModal() {
+            const conflict = uploadConflicts[currentConflictIdx];
+            document.getElementById('conflictProgress').textContent = `${currentConflictIdx + 1} of ${uploadConflicts.length}`;
+            document.getElementById('conflictTypeBadge').textContent = `Duplicate ${conflict.type}`;
+            
+            const formatRow = (row) => {
+                let savedHtml = row._isPending ? '<span class="text-yellow-600 font-bold">Pending</span>' : (row._isSaved ? '<span class="text-green-600 font-bold">Yes (Saved)</span>' : '<span class="text-gray-600 font-bold">No (Unsaved)</span>');
+                return `
+                <div class="grid grid-cols-[100px_1fr] gap-x-2 gap-y-3">
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Ticket ID:</span> <span class="font-mono font-medium">${row['Ticket ID']}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Order ID:</span> <span class="font-mono">${row['Order ID'] || '-'}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Date:</span> <span>${new Date(row._timestamp).toLocaleString()}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Agent:</span> <span>${row['Submitted By']}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Status:</span> <span>${row['Status']}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-center">Prevented:</span> <span>${savedHtml}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-start mt-0.5">Reason:</span> <span class="leading-snug">${row._cleanReason}</span>
+                    <span class="text-gray-500 text-xs font-semibold uppercase self-start mt-0.5">Prevention:</span> <span class="leading-snug text-green-700">${row._preventionReason || '-'}</span>
+                </div>
+            `};
+
+            document.getElementById('conflictExistingContent').innerHTML = formatRow(conflict.existing);
+            document.getElementById('conflictIncomingContent').innerHTML = formatRow(conflict.incoming);
+
+            document.getElementById('conflictModal').classList.remove('hidden');
+            setTimeout(() => { document.getElementById('conflictModalContent').classList.add('modal-enter-active'); }, 10);
+        }
+
+        window.resolveConflict = function(decision) {
+            const applyToAll = document.getElementById('conflictApplyAll').checked;
+
+            if (applyToAll) {
+                while (currentConflictIdx < uploadConflicts.length) {
+                    processConflict(uploadConflicts[currentConflictIdx], decision);
+                    currentConflictIdx++;
+                }
+            } else {
+                processConflict(uploadConflicts[currentConflictIdx], decision);
+                currentConflictIdx++;
+            }
+
+            if (currentConflictIdx < uploadConflicts.length) {
+                showConflictModal();
+            } else {
+                // Done with conflicts
+                document.getElementById('conflictModalContent').classList.remove('modal-enter-active');
+                setTimeout(() => { 
+                    document.getElementById('conflictModal').classList.add('hidden'); 
+                    finalizeUploadBatch();
+                }, 200);
+            }
+        };
+
+        function processConflict(conflict, decision) {
+            const inRow = {...conflict.incoming}; 
+            const exRow = conflict.existing;
+
+            if (decision === 'keep_existing') {
+                // Discard incoming, do nothing
+            } else if (decision === 'keep_both') {
+                // Modify Ticket ID to prevent overwrite
+                if (conflict.type === 'Ticket ID' || inRow['Ticket ID'] === exRow['Ticket ID']) {
+                    inRow['Ticket ID'] = inRow['Ticket ID'] + '-DUP-' + Math.floor(Math.random()*10000);
+                }
+                uploadReady.push(inRow);
+            } else if (decision === 'update') {
+                // Replace logic
+                if (conflict.type === 'Order ID' && inRow['Ticket ID'] !== exRow['Ticket ID']) {
+                    // Mark old row for deletion during batch commit
+                    inRow._deleteOldId = exRow['Ticket ID'];
+                } else {
+                    // Force overwrite existing Ticket ID document
+                    inRow['Ticket ID'] = exRow['Ticket ID']; 
+                }
+                uploadReady.push(inRow);
+            }
+        }
+
+        window.abortUpload = function() {
+            uploadReady = [];
+            uploadConflicts = [];
+            document.getElementById('conflictModalContent').classList.remove('modal-enter-active');
+            setTimeout(() => { 
+                document.getElementById('conflictModal').classList.add('hidden'); 
+                updateUIState();
+            }, 200);
+        }
+
+        async function finalizeUploadBatch() {
+            if (uploadReady.length === 0) {
+                updateUIState();
+                return; // Nothing to upload
+            }
+
+            showEmptyState("Syncing to Cloud Database...", `Uploading ${uploadReady.length} records to database.`, "ph-spinner animate-spin text-blue-500");
             const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'retention_records');
             let firestoreBatch = writeBatch(db);
             let count = 0;
 
             try {
-                for (const [tId, rowData] of dedupedData.entries()) {
-                    const safeTId = tId.replace(/[^a-zA-Z0-9_-]/g, '_'); 
+                for (const rowData of uploadReady) {
+                    // If we resolved an Order ID conflict by updating, delete the old mismatched Ticket ID
+                    if (rowData._deleteOldId) {
+                        const safeOldId = rowData._deleteOldId.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        firestoreBatch.delete(doc(collectionRef, safeOldId));
+                        count++;
+                    }
+                    
+                    const safeTId = rowData['Ticket ID'].replace(/[^a-zA-Z0-9_-]/g, '_'); 
                     const docRef = doc(collectionRef, safeTId);
-                    firestoreBatch.set(docRef, rowData); 
+                    
+                    // Clean up temp field before sending to Firebase
+                    const finalRowData = {...rowData};
+                    delete finalRowData._deleteOldId;
+
+                    firestoreBatch.set(docRef, finalRowData); 
                     count++;
-                    if (count === 490) { 
+
+                    if (count >= 490) { 
                         await firestoreBatch.commit();
                         firestoreBatch = writeBatch(db);
                         count = 0;
@@ -949,6 +1152,7 @@
             } catch (err) {
                 console.error("Batch Sync Error:", err);
                 alert("An error occurred while saving to the database. Check console.");
+            } finally {
                 updateUIState();
             }
         }
