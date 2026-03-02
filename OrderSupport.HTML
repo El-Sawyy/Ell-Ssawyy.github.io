@@ -130,6 +130,12 @@
                     <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1"><i class="ph ph-funnel"></i> Exclude Reasons</h2>
                     <button id="selectAllBtn" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded">Toggle All</button>
                 </div>
+                <div class="px-4 pb-2 bg-white border-b border-gray-50">
+                    <div class="relative">
+                        <i class="ph ph-magnifying-glass absolute left-2 top-1.5 text-gray-400 text-xs"></i>
+                        <input type="text" id="reasonSearchInput" placeholder="Search reasons..." class="w-full text-xs border border-gray-300 rounded pl-6 pr-2 py-1 outline-none focus:border-blue-500 transition-colors">
+                    </div>
+                </div>
                 <div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4" id="reasonFilterContainer">
                     <p class="text-xs text-gray-400 italic mt-2 text-center">No data loaded yet.</p>
                 </div>
@@ -822,6 +828,16 @@
             document.getElementById('endDateFilter')?.addEventListener('change', refreshDashboard);
             document.getElementById('teamFilter')?.addEventListener('change', refreshDashboard);
             
+            // Search Input for Reasons Filter
+            document.getElementById('reasonSearchInput')?.addEventListener('input', (e) => {
+                const term = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('.reason-item');
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(term) ? 'flex' : 'none';
+                });
+            });
+
             document.getElementById('dataManagerStatusFilter')?.addEventListener('change', () => {
                 dataManagerCurrentPage = 1;
                 renderDataTable(getFilteredData());
@@ -1475,7 +1491,7 @@
                 const id = `chk_${Math.random().toString(36).substr(2, 9)}`;
                 const isChecked = !excludedReasons.has(reason);
                 const div = document.createElement('div');
-                div.className = 'flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded px-1';
+                div.className = 'reason-item flex items-start gap-2 py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50 rounded px-1';
                 div.innerHTML = `
                     <input type="checkbox" id="${id}" value="${reason.replace(/"/g, '&quot;')}" class="mt-0.5 w-3.5 h-3.5 text-blue-600 rounded cursor-pointer" ${isChecked ? 'checked' : ''}>
                     <label for="${id}" class="text-xs text-gray-700 cursor-pointer flex-1 truncate select-none" title="${reason}">${reason}</label>
@@ -1488,11 +1504,24 @@
                 container.appendChild(div);
             });
 
+            // Maintain search filter if active
+            const searchTerm = document.getElementById('reasonSearchInput')?.value.toLowerCase() || '';
+            if (searchTerm) {
+                const items = document.querySelectorAll('.reason-item');
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(searchTerm) ? 'flex' : 'none';
+                });
+            }
+
             const selectAllBtn = document.getElementById('selectAllBtn');
             if (selectAllBtn) {
                 selectAllBtn.onclick = () => {
-                    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
-                    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                    const visibleItems = Array.from(document.querySelectorAll('.reason-item')).filter(item => item.style.display !== 'none');
+                    const checkboxes = visibleItems.map(item => item.querySelector('input[type="checkbox"]'));
+                    if (checkboxes.length === 0) return;
+
+                    const allChecked = checkboxes.every(cb => cb.checked);
                     checkboxes.forEach(cb => {
                         cb.checked = !allChecked;
                         if(cb.checked) excludedReasons.delete(cb.value); else excludedReasons.add(cb.value);
