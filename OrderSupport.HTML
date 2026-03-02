@@ -430,6 +430,9 @@
                                 <option value="false">Unsaved (No)</option>
                                 <option value="pending">Pending</option>
                             </select>
+                            <button onclick="exportData()" class="text-xs text-green-600 hover:text-green-800 border border-green-200 hover:bg-green-50 px-3 py-1.5 rounded transition-colors flex items-center gap-1">
+                                <i class="ph ph-download-simple"></i> Export
+                            </button>
                             <button onclick="clearAllData()" class="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:bg-red-50 px-3 py-1.5 rounded transition-colors flex items-center gap-1">
                                 <i class="ph ph-trash"></i> Wipe Database
                             </button>
@@ -840,6 +843,56 @@
             window.changeDataManagerPage = function(delta) {
                 dataManagerCurrentPage += delta;
                 renderDataTable(getFilteredData());
+            };
+
+            window.exportData = function() {
+                const baseData = getFilteredData();
+                const filterVal = document.getElementById('dataManagerStatusFilter')?.value || 'all';
+                const searchVal = document.getElementById('dataManagerSearch')?.value.trim().toLowerCase() || '';
+
+                let filteredData = baseData;
+                
+                // Apply Status Filter
+                if (filterVal === 'true') filteredData = filteredData.filter(t => t._isSaved && !t._isPending);
+                else if (filterVal === 'false') filteredData = filteredData.filter(t => !t._isSaved && !t._isPending);
+                else if (filterVal === 'pending') filteredData = filteredData.filter(t => t._isPending);
+                
+                // Apply Search Filter
+                if (searchVal) {
+                    filteredData = filteredData.filter(t => {
+                        const orderId = String(t['Order ID'] || '').toLowerCase();
+                        const ticketId = String(t['Ticket ID'] || '').toLowerCase();
+                        return orderId.includes(searchVal) || ticketId.includes(searchVal);
+                    });
+                }
+
+                if (filteredData.length === 0) {
+                    alert('No data to export based on current filters.');
+                    return;
+                }
+
+                // Map exactly what needs to be downloaded
+                const exportArray = filteredData.map(row => ({
+                    'Created date': new Date(row._timestamp).toLocaleString([], {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}),
+                    'Ticket ID': row['Ticket ID'],
+                    'Submitted By': row['Submitted By'],
+                    'Order ID': row['Order ID'] || '',
+                    'Freshchat Conversation ID': row['Freshchat Conversation ID'] || '',
+                    'Order Request Channel': row._channel || '',
+                    'Order Request Type': row._requestType || '',
+                    'Cancellation & Return Reason': row._cleanReason,
+                    'New Prevention Reason': row._preventionReason || '',
+                    'Status': row['Status'],
+                    'New Request Prevented': row['New Request Prevented']
+                }));
+
+                // Use SheetJS to create Excel File
+                const worksheet = XLSX.utils.json_to_sheet(exportArray);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Data");
+                
+                const dateStr = new Date().toISOString().split('T')[0];
+                XLSX.writeFile(workbook, `Retention_Export_${dateStr}.xlsx`);
             };
 
             window.openAddRecordModal = function() {
