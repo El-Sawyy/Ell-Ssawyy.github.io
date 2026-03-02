@@ -1158,8 +1158,31 @@
                     conflictObj.existing = existingOrderMap.get(inRow['Order ID']);
                 }
 
-                if (hasConflict) uploadConflicts.push(conflictObj);
-                else uploadReady.push(inRow);
+                if (hasConflict) {
+                    const exRow = conflictObj.existing;
+                    // Ignore perfectly identical matches
+                    const isIdentical = (
+                        inRow['Ticket ID'] === (exRow['Ticket ID'] || '') &&
+                        inRow['Order ID'] === (exRow['Order ID'] || '') &&
+                        inRow['Submitted By'] === (exRow['Submitted By'] || '') &&
+                        inRow['Status'] === (exRow['Status'] || '') &&
+                        inRow['_cleanReason'] === (exRow['_cleanReason'] || '') &&
+                        inRow['_preventionReason'] === (exRow['_preventionReason'] || '') &&
+                        inRow['_channel'] === (exRow['_channel'] || '') &&
+                        inRow['_requestType'] === (exRow['_requestType'] || '') &&
+                        inRow['_isSaved'] === exRow['_isSaved'] &&
+                        inRow['_isPending'] === exRow['_isPending'] &&
+                        inRow['_timestamp'] === exRow['_timestamp']
+                    );
+
+                    if (isIdentical) {
+                        continue; // Skip perfectly identical duplicates without showing the modal
+                    } else {
+                        uploadConflicts.push(conflictObj); // Only show the modal for data that actually changed
+                    }
+                } else {
+                    uploadReady.push(inRow);
+                }
             }
 
             if (uploadConflicts.length > 0) {
