@@ -1177,12 +1177,18 @@
                     const inDate = new Date(inRow['_timestamp']).toISOString().split('T')[0];
                     const exDate = new Date(exRow['_timestamp']).toISOString().split('T')[0];
 
+                    // Normalize Status to treat Closed and Resolved as the same
+                    const inStatusRaw = (inRow['Status'] || '').trim().toLowerCase();
+                    const exStatusRaw = (exRow['Status'] || '').trim().toLowerCase();
+                    const inStatus = (inStatusRaw === 'closed' || inStatusRaw === 'resolved') ? 'resolved/closed' : inStatusRaw;
+                    const exStatus = (exStatusRaw === 'closed' || exStatusRaw === 'resolved') ? 'resolved/closed' : exStatusRaw;
+
                     // Ignore perfectly identical matches (now comparing only the date portion)
                     const isIdentical = (
                         inRow['Ticket ID'] === (exRow['Ticket ID'] || '') &&
                         inRow['Order ID'] === (exRow['Order ID'] || '') &&
                         inRow['Submitted By'] === (exRow['Submitted By'] || '') &&
-                        inRow['Status'] === (exRow['Status'] || '') &&
+                        inStatus === exStatus &&
                         inRow['_cleanReason'] === (exRow['_cleanReason'] || '') &&
                         inRow['_preventionReason'] === (exRow['_preventionReason'] || '') &&
                         inRow['_channel'] === (exRow['_channel'] || '') &&
