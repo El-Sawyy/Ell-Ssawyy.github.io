@@ -74,8 +74,8 @@
     <!-- Main Content Layout -->
     <main class="flex-1 flex overflow-hidden max-w-[1600px] w-full mx-auto">
         
-        <!-- Sidebar: Global Controls -->
-        <aside class="w-72 bg-white border-r border-gray-200 flex flex-col z-10 overflow-hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)] shrink-0">
+        <!-- Sidebar: Global Controls (Now perfectly scrollable) -->
+        <aside class="w-72 bg-white border-r border-gray-200 flex flex-col z-10 overflow-y-auto custom-scrollbar shadow-[4px_0_24px_rgba(0,0,0,0.02)] shrink-0">
             
             <!-- Upload Section -->
             <div class="p-4 border-b border-gray-100 bg-gray-50/50 shrink-0">
@@ -136,7 +136,7 @@
             </div>
 
             <!-- Reason Filters -->
-            <div class="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div class="flex-1 flex flex-col shrink-0">
                 <div class="p-4 pb-2 flex justify-between items-center bg-white shrink-0">
                     <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1"><i class="ph ph-funnel"></i> Exclude Reasons</h2>
                     <button id="selectAllBtn" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded">Toggle All</button>
@@ -147,7 +147,7 @@
                         <input type="text" id="reasonSearchInput" placeholder="Search reasons..." class="w-full text-xs border border-gray-300 rounded pl-6 pr-2 py-1 outline-none focus:border-blue-500 transition-colors">
                     </div>
                 </div>
-                <div class="flex-1 overflow-y-auto custom-scrollbar px-4 pb-4" id="reasonFilterContainer">
+                <div class="flex-1 px-4 pb-4 pt-2" id="reasonFilterContainer">
                     <p class="text-xs text-gray-400 italic mt-2 text-center">No data loaded yet.</p>
                 </div>
             </div>
