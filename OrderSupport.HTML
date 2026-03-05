@@ -97,15 +97,26 @@
                 </div>
             </div>
 
-            <!-- Team Filter -->
+            <!-- Team Filter (Multi-Select) -->
             <div class="p-4 border-b border-gray-100">
-                <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1"><i class="ph ph-users-three"></i> Team Filter</h2>
-                <select id="teamFilter" class="w-full text-xs border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white cursor-pointer">
-                    <option value="all">All Teams (Overall)</option>
-                    <option value="order_support">Order Support</option>
-                    <option value="mentors">Mentors</option>
-                    <option value="mx">MX</option>
-                </select>
+                <div class="flex justify-between items-center mb-3">
+                    <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1"><i class="ph ph-users-three"></i> Teams</h2>
+                    <button onclick="toggleAllTeams()" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded transition-colors">Toggle All</button>
+                </div>
+                <div class="flex flex-col gap-2 pl-1">
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" value="Order Support" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
+                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Order Support</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" value="Mentors" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
+                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Mentors</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" value="MX" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
+                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">MX</span>
+                    </label>
+                </div>
             </div>
 
             <!-- Date Filter -->
@@ -826,7 +837,18 @@
 
             document.getElementById('startDateFilter')?.addEventListener('change', refreshDashboard);
             document.getElementById('endDateFilter')?.addEventListener('change', refreshDashboard);
-            document.getElementById('teamFilter')?.addEventListener('change', refreshDashboard);
+            
+            // Multi-Select Team Filter Event Listeners
+            document.querySelectorAll('.team-filter-cb').forEach(cb => {
+                cb.addEventListener('change', refreshDashboard);
+            });
+
+            window.toggleAllTeams = function() {
+                const checkboxes = document.querySelectorAll('.team-filter-cb');
+                const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+                checkboxes.forEach(cb => cb.checked = !allChecked);
+                refreshDashboard();
+            };
             
             // Search Input for Reasons Filter
             document.getElementById('reasonSearchInput')?.addEventListener('input', (e) => {
@@ -1580,7 +1602,7 @@
         function getFilteredData() {
             const startDateStr = document.getElementById('startDateFilter')?.value;
             const endDateStr = document.getElementById('endDateFilter')?.value;
-            const teamFilter = document.getElementById('teamFilter')?.value || 'all';
+            const selectedTeams = Array.from(document.querySelectorAll('.team-filter-cb:checked')).map(cb => cb.value);
 
             let start = startDateStr ? new Date(startDateStr) : null;
             let end = endDateStr ? new Date(endDateStr) : null;
@@ -1595,13 +1617,9 @@
                 // Reason Exclusions
                 if (excludedReasons.has(row._cleanReason)) return;
 
-                // Team Filter
-                if (teamFilter !== 'all') {
-                    const agentTeam = getAgentTeam(row['Submitted By']);
-                    if (teamFilter === 'order_support' && agentTeam !== 'Order Support') return;
-                    if (teamFilter === 'mentors' && agentTeam !== 'Mentors') return;
-                    if (teamFilter === 'mx' && agentTeam !== 'MX') return;
-                }
+                // Multi-Select Team Filter
+                const agentTeam = getAgentTeam(row['Submitted By']);
+                if (!selectedTeams.includes(agentTeam)) return;
 
                 result.push(row);
             });
