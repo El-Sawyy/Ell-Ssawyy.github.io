@@ -694,7 +694,8 @@
 
         // Upload Conflict State
         let uploadConflicts = [];
-        let uploadReady = [];
+        let uploadReadyMap = new Map(); // Replaces array to handle intra-file replacements safely
+        let currentBatchOrderMap = new Map(); // Tracks Order IDs within the current upload batch
         let currentConflictIdx = 0;
 
         // Pagination State
@@ -1098,7 +1099,7 @@
             const batchId = 'BATCH_' + Date.now();
             const batchDate = new Date().toISOString();
             
-            // Build Map for Order IDs mapping to their existing Ticket IDs for conflict checks
+            // Build Map for Order IDs mapping to their existing Ticket IDs for DB conflict checks
             const existingOrderMap = new Map();
             globalDataMap.forEach(row => {
                 if(row['Order ID'] && row['Order ID'].trim() !== '') {
@@ -1106,8 +1107,11 @@
                 }
             });
 
-            // Deduplicate incoming array by Ticket ID initially
-            const incomingMap = new Map();
+            uploadReadyMap.clear();
+            currentBatchOrderMap.clear();
+            uploadConflicts = [];
+            currentConflictIdx = 0;
+
             dataArray.forEach(rawRow => {
                 if(!rawRow['Submitted By'] || rawRow['Submitted By'].trim() === '') return;
 
@@ -1127,7 +1131,6 @@
                 let rawPrevention = rawRow['Prevention Status At'] || rawRow['prevention_status_at'] || '';
                 if (rawPrevention) {
                     let prevDate = new Date(rawPrevention);
-                    // If prevention date exists AND is strictly greater than created date, use it as effective date
                     if (!isNaN(prevDate.getTime()) && prevDate > parsedDate) {
                         parsedDate = prevDate;
                     }
@@ -1148,11 +1151,11 @@
                     reqTypeRaw = 'Membership Cancellation';
                 }
 
-                incomingMap.set(tId, {
+                const inRow = {
                     'Ticket ID': tId,
                     'Submitted By': rawRow['Submitted By'].trim(),
-                    'Created date': rawCreated, // Store original raw string
-                    'Prevention Status At': rawPrevention, // Store original raw string
+                    'Created date': rawCreated, 
+                    'Prevention Status At': rawPrevention, 
                     'Order ID': orderId,
                     'Freshchat Conversation ID': fcId,
                     'Cancellation & Return Reason': cleanReason,
@@ -1167,45 +1170,47 @@
                     '_preventionReason': prevReason,
                     '_channel': channel,
                     '_requestType': reqTypeRaw,
-                    '_timestamp': parsedDate.getTime(), // The computed Effective Reporting Date
+                    '_timestamp': parsedDate.getTime(), 
                     '_batchId': batchId,
                     '_batchName': originalFileName,
                     '_batchDate': batchDate
-                });
-            });
+                };
 
-            uploadReady = [];
-            uploadConflicts = [];
-            currentConflictIdx = 0;
-
-            for (const [tId, inRow] of incomingMap.entries()) {
                 let hasConflict = false;
                 let conflictObj = { incoming: inRow, type: null, existing: null };
 
+                // 1. Check against LIVE database
                 if (globalDataMap.has(tId)) {
                     hasConflict = true;
                     conflictObj.type = 'Ticket ID';
                     conflictObj.existing = globalDataMap.get(tId);
-                } else if (inRow['Order ID'] && existingOrderMap.has(inRow['Order ID'])) {
+                } else if (orderId && existingOrderMap.has(orderId)) {
                     hasConflict = true;
                     conflictObj.type = 'Order ID';
-                    conflictObj.existing = existingOrderMap.get(inRow['Order ID']);
+                    conflictObj.existing = existingOrderMap.get(orderId);
+                }
+                // 2. Check against THIS SAME UPLOAD BATCH (INTRA-FILE DUPLICATES)
+                else if (uploadReadyMap.has(tId)) {
+                    hasConflict = true;
+                    conflictObj.type = 'Ticket ID (Same File)';
+                    conflictObj.existing = uploadReadyMap.get(tId);
+                } else if (orderId && currentBatchOrderMap.has(orderId)) {
+                    hasConflict = true;
+                    conflictObj.type = 'Order ID (Same File)';
+                    conflictObj.existing = currentBatchOrderMap.get(orderId);
                 }
 
                 if (hasConflict) {
                     const exRow = conflictObj.existing;
                     
-                    // Normalize dates to ignore exact time differences
                     const inDate = new Date(inRow['_timestamp']).toISOString().split('T')[0];
                     const exDate = new Date(exRow['_timestamp']).toISOString().split('T')[0];
 
-                    // Normalize Status to treat Closed and Resolved as the same
                     const inStatusRaw = (inRow['Status'] || '').trim().toLowerCase();
                     const exStatusRaw = (exRow['Status'] || '').trim().toLowerCase();
                     const inStatus = (inStatusRaw === 'closed' || inStatusRaw === 'resolved') ? 'resolved/closed' : inStatusRaw;
                     const exStatus = (exStatusRaw === 'closed' || exStatusRaw === 'resolved') ? 'resolved/closed' : exStatusRaw;
 
-                    // Ignore perfectly identical matches (now comparing only the date portion)
                     const isIdentical = (
                         inRow['Ticket ID'] === (exRow['Ticket ID'] || '') &&
                         inRow['Order ID'] === (exRow['Order ID'] || '') &&
@@ -1221,17 +1226,17 @@
                     );
 
                     if (isIdentical) {
-                        continue; // Skip perfectly identical duplicates without showing the modal
+                        return; // Skip perfectly identical duplicates (even within same file)
                     } else {
-                        uploadConflicts.push(conflictObj); // Only show the modal for data that actually changed
+                        uploadConflicts.push(conflictObj); 
                     }
                 } else {
-                    uploadReady.push(inRow);
+                    uploadReadyMap.set(tId, inRow);
+                    if (orderId) currentBatchOrderMap.set(orderId, inRow);
                 }
-            }
+            });
 
             if (uploadConflicts.length > 0) {
-                // Remove checkbox setting if it was set previously
                 const cb = document.getElementById('conflictApplyAll');
                 if (cb) cb.checked = false;
                 showConflictModal();
@@ -1300,25 +1305,33 @@
                 // Discard incoming, do nothing
             } else if (decision === 'keep_both') {
                 // Modify Ticket ID to prevent overwrite
-                if (conflict.type === 'Ticket ID' || inRow['Ticket ID'] === exRow['Ticket ID']) {
+                if (conflict.type.includes('Ticket ID') || inRow['Ticket ID'] === exRow['Ticket ID']) {
                     inRow['Ticket ID'] = inRow['Ticket ID'] + '-DUP-' + Math.floor(Math.random()*10000);
                 }
-                uploadReady.push(inRow);
+                uploadReadyMap.set(inRow['Ticket ID'], inRow);
+                if (inRow['Order ID']) currentBatchOrderMap.set(inRow['Order ID'], inRow);
             } else if (decision === 'update') {
                 // Replace logic
-                if (conflict.type === 'Order ID' && inRow['Ticket ID'] !== exRow['Ticket ID']) {
-                    // Mark old row for deletion during batch commit
-                    inRow._deleteOldId = exRow['Ticket ID'];
+                if (conflict.type.includes('Order ID') && inRow['Ticket ID'] !== exRow['Ticket ID']) {
+                    if (conflict.type.includes('Same File')) {
+                        // Remove old duplicate from the current pending upload
+                        uploadReadyMap.delete(exRow['Ticket ID']);
+                    } else {
+                        // Mark old row for deletion during DB batch commit
+                        inRow._deleteOldId = exRow['Ticket ID'];
+                    }
                 } else {
                     // Force overwrite existing Ticket ID document
                     inRow['Ticket ID'] = exRow['Ticket ID']; 
                 }
-                uploadReady.push(inRow);
+                uploadReadyMap.set(inRow['Ticket ID'], inRow);
+                if (inRow['Order ID']) currentBatchOrderMap.set(inRow['Order ID'], inRow);
             }
         }
 
         window.abortUpload = function() {
-            uploadReady = [];
+            uploadReadyMap.clear();
+            currentBatchOrderMap.clear();
             uploadConflicts = [];
             document.getElementById('conflictModalContent').classList.remove('modal-enter-active');
             setTimeout(() => { 
@@ -1328,18 +1341,18 @@
         }
 
         async function finalizeUploadBatch() {
-            if (uploadReady.length === 0) {
+            if (uploadReadyMap.size === 0) {
                 updateUIState();
                 return; // Nothing to upload
             }
 
-            showEmptyState("Syncing to Cloud Database...", `Uploading ${uploadReady.length} records to database.`, "ph-spinner animate-spin text-blue-500");
+            showEmptyState("Syncing to Cloud Database...", `Uploading ${uploadReadyMap.size} records to database.`, "ph-spinner animate-spin text-blue-500");
             const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'retention_records');
             let firestoreBatch = writeBatch(db);
             let count = 0;
 
             try {
-                for (const rowData of uploadReady) {
+                for (const rowData of uploadReadyMap.values()) {
                     // If we resolved an Order ID conflict by updating, delete the old mismatched Ticket ID
                     if (rowData._deleteOldId) {
                         const safeOldId = rowData._deleteOldId.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -1368,6 +1381,8 @@
                 console.error("Batch Sync Error:", err);
                 alert("An error occurred while saving to the database. Check console.");
             } finally {
+                uploadReadyMap.clear();
+                currentBatchOrderMap.clear();
                 updateUIState();
             }
         }
