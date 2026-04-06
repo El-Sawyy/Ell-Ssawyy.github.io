@@ -2686,22 +2686,42 @@
         }
 
         // The main initialization function for the entire application.
-        let isFirstAuthEvent = true;
+        let isInitialized = false;
 
         async function initializeApp() {
+            // 1. Listen for future auth changes (e.g., manual login, logout, tab switching)
             db.auth.onAuthStateChange(async (event, session) => {
-                const initial = isFirstAuthEvent;
-                isFirstAuthEvent = false;
+                // Ignore background events until the explicit initial load is completely finished
+                if (!isInitialized) return; 
 
-                if (session) {
-                    await setupLoggedInState(session, initial);
+                if (event === 'SIGNED_IN') {
+                    await setupLoggedInState(session, false);
+                } else if (event === 'SIGNED_OUT') {
+                    setupLoggedOutState();
+                }
+            });
+
+            // 2. Explicitly handle the initial page load to prevent getting stuck on the loader
+            try {
+                const { data: { session }, error } = await db.auth.getSession();
+
+                if (error) {
+                    console.error("Error getting session on startup:", error.message);
+                    setupLoggedOutState();
+                } else if (session) {
+                    await setupLoggedInState(session, true); // true = initial load
                 } else {
                     setupLoggedOutState();
                 }
-
+            } catch (err) {
+                console.error("Initialization error:", err);
+                setupLoggedOutState();
+            } finally {
+                // 3. Mark as initialized and reveal the app
+                isInitialized = true;
                 document.getElementById('app-loader').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
-            });
+            }
         }
 
         // Start the application.
