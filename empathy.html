@@ -616,10 +616,12 @@
             }
             
             // NOTE: The Canvas environment automatically securely injects the API key at runtime.
-            // If you export this code to run locally, it will use your provided key.
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-            const apiKey = isLocal ? "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM" : "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+            // If you export this code to run on your own site, it will use your provided key.
+            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM"; // required for Canvas
+            const isCanvasEnv = window.location.hostname.includes('google') || window.location.hostname.includes('usercontent');
+            const activeApiKey = isCanvasEnv ? apiKey : "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
+            const modelName = isCanvasEnv ? "gemini-2.5-flash-preview-09-2025" : "gemini-2.5-flash";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${activeApiKey}`;
 
             let retries = 5;
             let delay = 1000;
@@ -745,9 +747,10 @@
                 }
             };
 
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
-            const apiKey = isLocal ? "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM" : "";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM"; // required for Canvas
+            const isCanvasEnv = window.location.hostname.includes('google') || window.location.hostname.includes('usercontent');
+            const activeApiKey = isCanvasEnv ? apiKey : "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeApiKey}`;
 
             let retries = 5;
             let delay = 1000;
