@@ -618,7 +618,7 @@
             // NOTE: This key is for demonstration purposes. In a real application,
             // this should be handled securely on a server.
             const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
@@ -730,7 +730,7 @@
             const prompt = `Say in a ${foundEmotion} tone: ${text}`;
             
             const payload = {
-                model: "gemini-2.5-flash-preview-tts",
+                model: "gemini-3-flash-preview-tts",
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseModalities: ["AUDIO"],
@@ -738,7 +738,7 @@
             };
 
             const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
                 const response = await fetch(apiUrl, {
