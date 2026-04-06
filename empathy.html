@@ -615,59 +615,53 @@
                 };
             }
             
-            // Hardcoded user-provided API key - bypassed the proxy check for custom environments.
+            // NOTE: This key is for demonstration purposes. In a real application,
+            // this should be handled securely on a server.
             const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${apiKey}`;
 
-            let retries = 5;
-            let delay = 1000;
-            let resultData = null;
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`API request failed with status ${response.status}`);
-                    }
-                    
-                    const result = await response.json();
-
-                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-                        const rawJson = result.candidates[0].content.parts[0].text;
-                        try {
-                            resultData = JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
-                            break; // Success, exit retry loop
-                        } catch (parseError) {
-                            console.error("JSON Parsing Error:", parseError);
-                            break; // Parsing error, retrying won't fix bad JSON
-                        }
-                    } else {
-                         // Likely blocked by safety settings or bad prompt
-                         console.error("Invalid API response structure:", result);
-                         break;
-                    }
-                } catch (error) {
-                    if (i === retries - 1) {
-                        console.error("AI Call failed after maximum retries:", error);
-                    } else {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2; // Exponential backoff: 1s, 2s, 4s, 8s, 16s
-                    }
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error("API Error Response:", errorBody);
+                    throw new Error(`API request failed with status ${response.status}`);
                 }
+                
+                const result = await response.json();
+
+                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    const rawJson = result.candidates[0].content.parts[0].text;
+                    // Robust JSON parsing
+                    try {
+                        return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
+                    } catch (parseError) {
+                        console.error("Failed to parse JSON from AI response:", parseError);
+                        console.error("Raw AI response:", rawJson);
+                        return null;
+                    }
+                } else {
+                     console.error("Invalid API response structure:", result);
+                     if (result.promptFeedback) {
+                         console.error("Prompt Feedback:", result.promptFeedback);
+                     }
+                    return null;
+                }
+            } catch (error) {
+                console.error("Error with AI call:", error);
+                return null;
+            } finally {
+                if(loadingIndicator) loadingIndicator.classList.add('hidden');
+                if (modalLoading) modalLoading.classList.add('hidden');
+                if (empathyHelpLoading) empathyHelpLoading.classList.add('hidden');
+                if (emailCraftLoading) emailCraftLoading.classList.add('hidden');
+                if (rephraseToolLoading) rephraseToolLoading.classList.add('hidden');
             }
-
-            if(loadingIndicator) loadingIndicator.classList.add('hidden');
-            if (modalLoading) modalLoading.classList.add('hidden');
-            if (empathyHelpLoading) empathyHelpLoading.classList.add('hidden');
-            if (emailCraftLoading) emailCraftLoading.classList.add('hidden');
-            if (rephraseToolLoading) rephraseToolLoading.classList.add('hidden');
-
-            return resultData;
         }
 
         // --- TTS Functions ---
@@ -743,56 +737,45 @@
                 }
             };
 
-            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM"; // Hardcoded as requested
+            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview-tts:generateContent?key=${apiKey}`;
 
-            let retries = 5;
-            let delay = 1000;
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
 
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                
+                const result = await response.json();
+                const part = result?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
 
-                    if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
                     
-                    const result = await response.json();
-                    const part = result?.candidates?.[0]?.content?.parts?.[0];
-                    const audioData = part?.inlineData?.data;
-                    const mimeType = part?.inlineData?.mimeType;
-
-                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                        const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                        if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
-                        
-                        const sampleRate = parseInt(sampleRateMatch[1], 10);
-                        const pcmDataBuffer = base64ToArrayBuffer(audioData);
-                        const pcm16 = new Int16Array(pcmDataBuffer);
-                        const wavBlob = pcmToWav(pcm16, sampleRate);
-                        const audioUrl = URL.createObjectURL(wavBlob);
-                        new Audio(audioUrl).play();
-                        break; // Success, exit retry loop
-                    } else {
-                        console.error("Audio data not found in response", result);
-                        break;
-                    }
-
-                } catch (error) {
-                    if (i === retries - 1) {
-                        console.error("Error generating or playing audio after retries:", error);
-                    } else {
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        delay *= 2;
-                    }
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmDataBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    new Audio(audioUrl).play();
+                } else {
+                    console.error("Audio data not found in response", result);
                 }
+
+            } catch (error) {
+                console.error("Error generating or playing audio:", error);
+            } finally {
+                audioLoader.classList.add('hidden');
+                audioBtn.classList.remove('hidden');
             }
-            
-            audioLoader.classList.add('hidden');
-            audioBtn.classList.remove('hidden');
         }
+
 
         function saveSessionState() {
             if (!currentScenario) return;
@@ -881,12 +864,14 @@
             if (savedStateJSON) {
                 try {
                     const savedState = JSON.parse(savedStateJSON);
+                    // **** START FIX ****
                     // Add validation to ensure the loaded state is usable
                     if (!savedState || !savedState.currentScenario || !savedState.currentScenario.dialogue_tree) {
                         console.error("Incomplete session state found in sessionStorage.", savedState);
                         clearSessionState();
                         return false;
                     }
+                    // **** END FIX ****
 
                     currentScenario = savedState.currentScenario;
                     currentStep = savedState.currentStep;
@@ -2630,7 +2615,7 @@
         // **** START FIX: Re-architected Authentication Flow ****
 
         // This function sets up the UI for a logged-in user.
-        async function setupLoggedInState(session, isInitialLoad) {
+        async function setupLoggedInState(session) {
             userId = session.user.id;
 
             const { data: userData, error: profileError } = await db.from('users')
@@ -2652,16 +2637,12 @@
             loggedInHeader.querySelector('#welcome-message').textContent = `Welcome, ${session.user.email}`;
             document.getElementById('admin-dashboard-btn').classList.toggle('hidden', !isAdmin);
             
-            if (isInitialLoad) {
-                // Try restoring session state first, then view state
-                const loadedSession = loadSessionState();
-                if (!loadedSession) {
-                    const loadedView = loadLastViewState();
-                    if (!loadedView) {
-                        showView('mainMenu');
-                    }
+            // On initial load, try to restore the last view. Otherwise, go to main menu.
+            if (!authReady) { // Only check for session state on the very first load
+                if (!loadSessionState() && !loadLastViewState()) {
+                    showView('mainMenu');
                 }
-            } else {
+            } else { // For subsequent logins (not page refresh), always clear state.
                  clearAllState();
                  showView('mainMenu');
             }
@@ -2681,22 +2662,35 @@
         }
 
         // The main initialization function for the entire application.
-        let isFirstAuthEvent = true;
-
         async function initializeApp() {
-            db.auth.onAuthStateChange(async (event, session) => {
-                const initial = isFirstAuthEvent;
-                isFirstAuthEvent = false;
-
-                if (session) {
-                    await setupLoggedInState(session, initial);
-                } else {
+            // First, set up a listener for any subsequent auth changes (like manual login/logout).
+            db.auth.onAuthStateChange((event, session) => {
+                // We only care about SIGNED_IN and SIGNED_OUT events here, 
+                // as the initial state is handled below explicitly.
+                if (event === 'SIGNED_IN') {
+                    setupLoggedInState(session);
+                } else if (event === 'SIGNED_OUT') {
                     setupLoggedOutState();
                 }
-
-                document.getElementById('app-loader').classList.add('hidden');
-                document.getElementById('app-content').classList.remove('hidden');
             });
+
+            // Now, explicitly get the current session to handle the initial page load.
+            // This is the key fix that prevents the race condition.
+            const { data: { session }, error } = await db.auth.getSession();
+
+            if (error) {
+                console.error("Error getting session on startup:", error.message);
+                setupLoggedOutState();
+            } else if (session) {
+                await setupLoggedInState(session);
+            } else {
+                setupLoggedOutState();
+            }
+            
+            // Finally, hide the main loader and show the app content.
+            document.getElementById('app-loader').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            authReady = true;
         }
 
         // Start the application.
