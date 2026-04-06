@@ -615,53 +615,61 @@
                 };
             }
             
-            // NOTE: This key is for demonstration purposes. In a real application,
-            // this should be handled securely on a server.
-            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
+            // NOTE: The Canvas environment automatically securely injects the API key at runtime.
+            // If you export this code to run locally, it will use your provided key.
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+            const apiKey = isLocal ? "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM" : "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            let retries = 5;
+            let delay = 1000;
+            let resultData = null;
 
-                if (!response.ok) {
-                    const errorBody = await response.text();
-                    console.error("API Error Response:", errorBody);
-                    throw new Error(`API request failed with status ${response.status}`);
-                }
-                
-                const result = await response.json();
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-                    const rawJson = result.candidates[0].content.parts[0].text;
-                    // Robust JSON parsing
-                    try {
-                        return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
-                    } catch (parseError) {
-                        console.error("Failed to parse JSON from AI response:", parseError);
-                        console.error("Raw AI response:", rawJson);
-                        return null;
+                    if (!response.ok) {
+                        throw new Error(`API request failed with status ${response.status}`);
                     }
-                } else {
-                     console.error("Invalid API response structure:", result);
-                     if (result.promptFeedback) {
-                         console.error("Prompt Feedback:", result.promptFeedback);
-                     }
-                    return null;
+                    
+                    const result = await response.json();
+
+                    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                        const rawJson = result.candidates[0].content.parts[0].text;
+                        try {
+                            resultData = JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim());
+                            break; // Success, exit retry loop
+                        } catch (parseError) {
+                            console.error("JSON Parsing Error:", parseError);
+                            break; // Parsing error, retrying won't fix bad JSON
+                        }
+                    } else {
+                         // Likely blocked by safety settings or bad prompt
+                         console.error("Invalid API response structure:", result);
+                         break;
+                    }
+                } catch (error) {
+                    if (i === retries - 1) {
+                        console.error("AI Call failed after maximum retries:", error);
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+                    }
                 }
-            } catch (error) {
-                console.error("Error with AI call:", error);
-                return null;
-            } finally {
-                if(loadingIndicator) loadingIndicator.classList.add('hidden');
-                if (modalLoading) modalLoading.classList.add('hidden');
-                if (empathyHelpLoading) empathyHelpLoading.classList.add('hidden');
-                if (emailCraftLoading) emailCraftLoading.classList.add('hidden');
-                if (rephraseToolLoading) rephraseToolLoading.classList.add('hidden');
             }
+
+            if(loadingIndicator) loadingIndicator.classList.add('hidden');
+            if (modalLoading) modalLoading.classList.add('hidden');
+            if (empathyHelpLoading) empathyHelpLoading.classList.add('hidden');
+            if (emailCraftLoading) emailCraftLoading.classList.add('hidden');
+            if (rephraseToolLoading) rephraseToolLoading.classList.add('hidden');
+
+            return resultData;
         }
 
         // --- TTS Functions ---
@@ -737,45 +745,57 @@
                 }
             };
 
-            const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+            const apiKey = isLocal ? "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM" : "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
+            let retries = 5;
+            let delay = 1000;
 
-                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-                
-                const result = await response.json();
-                const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
 
-                if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                    if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
+                    if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
                     
-                    const sampleRate = parseInt(sampleRateMatch[1], 10);
-                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
-                    const pcm16 = new Int16Array(pcmDataBuffer);
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-                    const audioUrl = URL.createObjectURL(wavBlob);
-                    new Audio(audioUrl).play();
-                } else {
-                    console.error("Audio data not found in response", result);
+                    const result = await response.json();
+                    const part = result?.candidates?.[0]?.content?.parts?.[0];
+                    const audioData = part?.inlineData?.data;
+                    const mimeType = part?.inlineData?.mimeType;
+
+                    if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                        const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                        if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
+                        
+                        const sampleRate = parseInt(sampleRateMatch[1], 10);
+                        const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                        const pcm16 = new Int16Array(pcmDataBuffer);
+                        const wavBlob = pcmToWav(pcm16, sampleRate);
+                        const audioUrl = URL.createObjectURL(wavBlob);
+                        new Audio(audioUrl).play();
+                        break; // Success, exit retry loop
+                    } else {
+                        console.error("Audio data not found in response", result);
+                        break;
+                    }
+
+                } catch (error) {
+                    if (i === retries - 1) {
+                        console.error("Error generating or playing audio after retries:", error);
+                    } else {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
                 }
-
-            } catch (error) {
-                console.error("Error generating or playing audio:", error);
-            } finally {
-                audioLoader.classList.add('hidden');
-                audioBtn.classList.remove('hidden');
             }
+            
+            audioLoader.classList.add('hidden');
+            audioBtn.classList.remove('hidden');
         }
-
 
         function saveSessionState() {
             if (!currentScenario) return;
