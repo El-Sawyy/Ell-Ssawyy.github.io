@@ -616,7 +616,7 @@
             }
             
             const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM}`;
 
             let retries = 5;
             let delay = 1000;
@@ -627,8 +627,7 @@
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 
-                            'Content-Type': 'application/json',
-                            'x-goog-api-key': apiKey
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(payload)
                     });
@@ -738,7 +737,7 @@
             const prompt = `Say in a ${foundEmotion} tone: ${text}`;
             
             const payload = {
-                model: "gemini-2.5-flash-preview-tts",
+                model: "gemini-3-flash-preview-tts",
                 contents: [{ parts: [{ text: prompt }] }],
                 generationConfig: {
                     responseModalities: ["AUDIO"],
@@ -746,7 +745,7 @@
             };
 
             const apiKey = "AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM";
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview-tts:generateContent?key=${AIzaSyBuWqwmjtVVl6opIiG7slwmA2PsaiIxCuM}`;
 
             let retries = 5;
             let delay = 1000;
@@ -756,8 +755,7 @@
                     const response = await fetch(apiUrl, {
                         method: 'POST',
                         headers: { 
-                            'Content-Type': 'application/json',
-                            'x-goog-api-key': apiKey
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(payload)
                     });
