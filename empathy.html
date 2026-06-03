@@ -563,7 +563,7 @@
             }
             
             // NOTE: The execution environment provides the API key at runtime.
-            const apiKey = "AIzaSyBoYycXr_TFmEGMVca4VyFOw_3CRl8hFuE";
+            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
             try {
@@ -683,7 +683,7 @@
                 }
             };
 
-            const apiKey = "AIzaSyBoYycXr_TFmEGMVca4VyFOw_3CRl8hFuE";
+            const apiKey = "";
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
@@ -810,14 +810,11 @@
             if (savedStateJSON) {
                 try {
                     const savedState = JSON.parse(savedStateJSON);
-                    // **** START FIX ****
-                    // Add validation to ensure the loaded state is usable
                     if (!savedState || !savedState.currentScenario || !savedState.currentScenario.dialogue_tree) {
                         console.error("Incomplete session state found in sessionStorage.", savedState);
                         clearSessionState();
                         return false;
                     }
-                    // **** END FIX ****
 
                     currentScenario = savedState.currentScenario;
                     currentStep = savedState.currentStep;
@@ -1074,7 +1071,7 @@
                 const item = document.createElement('div');
                 item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
                 // Check if score is "pending" (e.g. 0 score and interactions have null aiScore)
-                const isPending = session.interactions.some(i => i.aiScore === null);
+                const isPending = session.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review');
                 const scoreDisplay = isPending ? '<span class="text-yellow-600">Pending Review</span>' : `Score: ${session.final_empathy_score}`;
                 
                 item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">${scoreDisplay}</div></div>`;
@@ -1100,7 +1097,7 @@
             }
 
             // Check if scores are pending
-            const isPending = sessionData.interactions.some(i => i.aiScore === null);
+            const isPending = sessionData.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review');
             document.getElementById('history-detail-title').textContent = sessionData.scenario_title;
             document.getElementById('history-detail-score').innerHTML = isPending 
                 ? '<span class="text-yellow-600">Pending Review</span>' 
@@ -1219,6 +1216,11 @@
                                     coach_feedback: newFeedback,
                                     aiScore: newScore // Admin overrides or sets the score
                                 };
+                                
+                                // Remove the pending status if the admin has provided a score
+                                if (newScore !== null && newInteractions[index].aiFeedback === 'Pending Coach Review') {
+                                    newInteractions[index].aiFeedback = 'Reviewed by Coach';
+                                }
                                 
                                 // Recalculate average score for the session
                                 const validScores = newInteractions.filter(i => i.aiScore !== null).map(i => i.aiScore);
@@ -1855,7 +1857,7 @@
                 const item = document.createElement('div');
                 item.className = 'history-item bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md';
                 // Check if score is pending (e.g. 0 because nulls existed)
-                const isPending = session.interactions.some(i => i.aiScore === null);
+                const isPending = session.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review');
                 const scoreDisplay = isPending ? '<span class="text-yellow-600 font-bold">Pending Review</span>' : `Score: ${session.final_empathy_score}`;
 
                 item.innerHTML = `<div class="flex justify-between items-center"><div><h4 class="font-bold">${session.scenario_title}</h4><p class="text-sm text-gray-500">User: ${session.users ? session.users.email : session.user_id.substring(0,8)+'...'} | Completed: ${new Date(session.completed_at).toLocaleDateString()}</p></div><div class="text-lg font-bold text-blue-600">${scoreDisplay}</div></div>`;
