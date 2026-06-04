@@ -982,6 +982,7 @@
 
         async function initializeApp() {
             // FIX: Robust Auth Listener to prevent tab switch resetting. 
+            // We ignore token refreshes if the user ID hasn't changed.
             db.auth.onAuthStateChange(async (event, session) => {
                 if (event === 'SIGNED_OUT') {
                     setupLoggedOutState();
@@ -1051,23 +1052,76 @@
         /* ========================================================================
            --- 6. AI & EXTERNAL API CALLS ---
            ======================================================================== */
+        
         async function getFromAI(prompt, schema = null) {
-            const apiKey = ""; 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             if (schema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
 
             try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error(`API request failed`);
-                const result = await response.json();
-                if (result.candidates?.[0]?.content?.parts?.[0]) {
-                    const text = result.candidates[0].content.parts[0].text;
-                    try { return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim()); } 
+                // Securely use the Supabase Edge Function Proxy
+                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
+                    body: { action: 'generateContent', payload: payload }
+                });
+
+                if (error) {
+                    console.error("Edge Function Error:", error);
+                    throw new Error(error.message);
+                }
+
+                if (result && result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
+                    const rawJson = result.candidates[0].content.parts[0].text;
+                    try { return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim()); } 
                     catch { return null; }
                 }
                 return null;
             } catch (e) { console.error("AI Error:", e); return null; }
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            const dataSize = pcmData.length * 2;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            function writeString(view, offset, string) {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            }
+
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            let offset = 44;
+            for (let i = 0; i < pcmData.length; i++, offset += 2) {
+                view.setInt16(offset, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
         }
 
         async function getAudioFromAI(text, persona) {
@@ -1080,53 +1134,26 @@
             for (const emotion of emotions) { if (persona.toLowerCase().includes(emotion)) { foundEmotion = emotion; break; } }
             
             const payload = { model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: `Say in a ${foundEmotion} tone: ${text}` }] }], generationConfig: { responseModalities: ["AUDIO"] } };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=`;
-
-            function base64ToArrayBuffer(base64) {
-                const binaryString = window.atob(base64);
-                const len = binaryString.length;
-                const bytes = new Uint8Array(len);
-                for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
-                return bytes.buffer;
-            }
-
-            function pcmToWav(pcmData, sampleRate) {
-                const numChannels = 1; const bitsPerSample = 16;
-                const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-                const blockAlign = numChannels * (bitsPerSample / 8);
-                const dataSize = pcmData.length * 2;
-                const buffer = new ArrayBuffer(44 + dataSize);
-                const view = new DataView(buffer);
-
-                function writeString(view, offset, string) {
-                    for (let i = 0; i < string.length; i++) { view.setUint8(offset + i, string.charCodeAt(i)); }
-                }
-
-                writeString(view, 0, 'RIFF'); view.setUint32(4, 36 + dataSize, true);
-                writeString(view, 8, 'WAVE'); writeString(view, 12, 'fmt ');
-                view.setUint32(16, 16, true); view.setUint16(20, 1, true);
-                view.setUint16(22, numChannels, true); view.setUint32(24, sampleRate, true);
-                view.setUint32(28, byteRate, true); view.setUint16(32, blockAlign, true);
-                view.setUint16(34, bitsPerSample, true); writeString(view, 36, 'data');
-                view.setUint32(40, dataSize, true);
-
-                let offset = 44;
-                for (let i = 0; i < pcmData.length; i++, offset += 2) { view.setInt16(offset, pcmData[i], true); }
-                return new Blob([view], { type: 'audio/wav' });
-            }
 
             try {
-                const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!response.ok) throw new Error("Audio API failed");
-                const result = await response.json();
+                // Securely use the Supabase Edge Function Proxy for TTS
+                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
+                    body: { action: 'tts', payload: payload }
+                });
+
+                if (error) throw new Error(error.message);
+                
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
                 if (part?.inlineData?.data) {
                     const sampleRate = parseInt(part.inlineData.mimeType.match(/rate=(\d+)/)[1], 10);
                     const wavBlob = pcmToWav(new Int16Array(base64ToArrayBuffer(part.inlineData.data)), sampleRate);
                     new Audio(URL.createObjectURL(wavBlob)).play();
                 }
-            } catch (e) { console.error("Audio error", e); } 
-            finally { audioLoader.classList.add('hidden'); audioBtn.classList.remove('hidden'); }
+            } catch (e) { 
+                console.error("Audio error", e); 
+            } finally { 
+                audioLoader.classList.add('hidden'); audioBtn.classList.remove('hidden'); 
+            }
         }
 
         /* ========================================================================
@@ -1392,16 +1419,8 @@
             
             const backBtn = document.getElementById('back-to-history-list-btn');
             if (fromAdmin) {
-                if (backSource === 'pending') {
-                    backBtn.onclick = showAdminPendingReviews;
-                    backBtn.innerHTML = `<i class="ph ph-arrow-left mr-2 text-lg"></i> Back to Pending Reviews`;
-                } else if (backSource === 'track') {
-                    backBtn.onclick = showAdminTrackAssignments;
-                    backBtn.innerHTML = `<i class="ph ph-arrow-left mr-2 text-lg"></i> Back to Tracking`;
-                } else {
-                    backBtn.onclick = showAdminSessionList;
-                    backBtn.innerHTML = `<i class="ph ph-arrow-left mr-2 text-lg"></i> Back to Audit List`;
-                }
+                backBtn.onclick = backSource === 'pending' ? showAdminPendingReviews : showAdminTrackAssignments;
+                backBtn.innerHTML = `<i class="ph ph-arrow-left mr-2 text-lg"></i> Back to ${backSource==='pending'?'Reviews':'Tracker'}`;
             } else {
                 backBtn.onclick = showHistoryList;
                 backBtn.innerHTML = `<i class="ph ph-arrow-left mr-2 text-lg"></i> Back to History`;
@@ -1472,7 +1491,6 @@
                             const nI = [...fS.interactions];
                             nI[idx].coach_feedback = nF; nI[idx].aiScore = nS;
                             
-                            // Remove the pending status if the admin has provided a score
                             if(nS !== null && nI[idx].aiFeedback === 'Pending Coach Review') {
                                 nI[idx].aiFeedback = 'Reviewed by Coach';
                             }
@@ -1538,35 +1556,46 @@
         /* ========================================================================
            --- 10. ADMIN DASHBOARD & FEATURES ---
            ======================================================================== */
-        
         async function showAdminTrackAssignments() {
             showView('adminTrackAssignments');
             const cont = document.getElementById('admin-track-assignments-container');
             cont.innerHTML = '<div class="flex justify-center py-10"><div class="loader border-t-indigo-600"></div></div>';
             
-            const [aRes, sRes, uRes] = await Promise.all([ db.from('assigned_scenarios').select('*'), db.from('sessions').select('id, user_id, scenario_title, interactions'), db.from('users').select('id, email') ]);
-            if(aRes.error) { cont.innerHTML = '<p class="text-rose-500 font-bold">Error loading assignments.</p>'; return; }
+            // SECURITY FIX: Explicit error handling if DB blocks query due to RLS
+            const [aRes, sRes, uRes] = await Promise.all([ 
+                db.from('assigned_scenarios').select('*'), 
+                db.from('sessions').select('user_id, scenario_title, interactions'), 
+                db.from('users').select('id, email') 
+            ]);
+            
+            if(aRes.error || uRes.error) { 
+                cont.innerHTML = `<div class="saas-card py-8 px-4 text-center border-rose-200 bg-rose-50"><h3 class="text-rose-700 font-bold mb-2 text-lg">Database Blocked! (Check RLS)</h3><p class="text-sm text-rose-600 max-w-md mx-auto">Your database is blocking the Admin from seeing other users. Please ensure your Supabase RLS Policies are set to allow Admins to read all rows.</p></div>`; 
+                return; 
+            }
             
             const uMap = {}; (uRes.data||[]).forEach(u => uMap[u.id] = u.email);
             
-            currentAssignmentsData = (aRes.data||[])
-                .filter(a => a.scenario_data && a.scenario_data.author_id === userId) // Only show assignments assigned by ME
-                .map(a => {
-                    const uEmail = uMap[a.user_id] || a.user_id;
-                    const mS = (sRes.data||[]).find(s => s.user_id === a.user_id && s.scenario_title === a.scenario_data.title);
-                    
-                    let st = 'pending_response', stT = 'Pending Response', stC = 'bg-slate-100 text-slate-600 border border-slate-200';
-                    let sessionId = null;
-                    if(mS) {
-                        sessionId = mS.id; // Store the session ID to open it later
-                        if(mS.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review')) {
-                            st = 'responded'; stT = 'Pending Review'; stC = 'bg-amber-100 text-amber-800 border border-amber-200';
-                        } else {
-                            st = 'responded'; stT = 'Completed & Reviewed'; stC = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
-                        }
+            // Only show assignments created by this specific admin
+            const myAssignments = (aRes.data||[]).filter(a => a.scenario_data && a.scenario_data.author_id === userId);
+            
+            currentAssignmentsData = myAssignments.map(a => {
+                const uEmail = uMap[a.user_id] || a.user_id;
+                const mS = (sRes.data||[]).find(s => s.user_id === a.user_id && s.scenario_title === a.scenario_data.title);
+                
+                let st = 'pending_response', stT = 'Pending Response', stC = 'bg-slate-100 text-slate-600 border border-slate-200';
+                if(mS) {
+                    if(mS.interactions.some(i => i.aiScore === null || i.aiFeedback === 'Pending Coach Review')) {
+                        st = 'responded'; stT = 'Pending Review'; stC = 'bg-amber-100 text-amber-800 border border-amber-200';
+                    } else {
+                        st = 'responded'; stT = 'Completed & Reviewed'; stC = 'bg-emerald-100 text-emerald-800 border border-emerald-200';
                     }
-                    return { ...a, uEmail, st, stT, stC, sessionId };
-                }).reverse();
+                }
+                
+                // Add the session ID so we can route the click!
+                const sessionId = mS ? mS.id : null;
+                return { ...a, uEmail, st, stT, stC, sessionId };
+            }).reverse();
+            
             renderAdminTrackAssignments('all');
         }
 
@@ -1574,7 +1603,6 @@
             const cont = document.getElementById('admin-track-assignments-container');
             cont.innerHTML = '';
             
-            // UI Button states
             ['all','pending','responded'].forEach(f => {
                 const b = document.getElementById(`filter-${f}-assignments`);
                 if(b) {
@@ -1591,24 +1619,28 @@
             
             filtered.forEach(a => {
                 const d = document.createElement('div');
-                d.className = `saas-card saas-card-hover p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-3 cursor-pointer border-l-4 ${a.sessionId ? 'border-l-indigo-500' : 'border-l-slate-300'}`;
+                const isClickable = a.sessionId !== null;
+                d.className = `saas-card p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-3 ${isClickable ? 'saas-card-hover cursor-pointer border-l-4 border-l-indigo-500' : ''}`;
+                
                 d.innerHTML = `
                     <div class="flex-1">
-                        <h4 class="font-bold text-slate-900 text-lg tracking-tight">${a.scenario_data.title}</h4>
-                        <p class="text-sm font-medium text-slate-500 mt-1 flex items-center"><i class="ph ph-user mr-1.5"></i>${a.uEmail}</p>
+                        <h4 class="font-bold text-slate-900 text-lg tracking-tight mb-1">${a.scenario_data.title}</h4>
+                        <p class="text-sm font-medium text-slate-500 flex items-center"><i class="ph ph-user mr-1.5 text-slate-400"></i>Assigned to: ${a.uEmail}</p>
                     </div>
-                    <div class="flex items-center space-x-3 shrink-0">
+                    <div class="flex items-center space-x-3">
                         <span class="px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${a.stC}">${a.stT}</span>
-                        <i class="ph ph-caret-right text-slate-400 text-lg"></i>
+                        ${isClickable ? '<div class="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center shrink-0"><i class="ph ph-caret-right text-indigo-500"></i></div>' : ''}
                     </div>
                 `;
+                
                 d.onclick = () => {
-                    if (a.sessionId) {
-                        showHistoryDetail(a.sessionId, true, 'track');
+                    if (isClickable) {
+                        showHistoryDetail(a.sessionId, true, 'tracker');
                     } else {
-                        showModal('Not Responded Yet', `The user (${a.uEmail}) has not completed this assignment yet. Check back later!`, [{text: 'Got it', class: 'bg-indigo-600 hover:bg-indigo-700 text-white', action: hideModal}]);
+                        showModal('Still Pending', 'This agent has not started this scenario yet.', [{ text: 'OK', class: 'bg-indigo-600 hover:bg-indigo-700 text-white', action: hideModal }]);
                     }
                 };
+                
                 cont.appendChild(d);
             });
         }
@@ -1675,9 +1707,14 @@
                 
                 if(!d.title || !d.dialogue_tree.length) { b.innerHTML = 'Missing Info!'; setTimeout(()=> {b.innerHTML = '<i class="ph ph-paper-plane-right text-lg mr-2"></i> Save & Assign Task'; b.disabled=false;}, 2000); return; }
 
-                const { data: nS } = await db.from('scenarios').insert(d).select().single();
+                const { data: nS, error: scError } = await db.from('scenarios').insert(d).select().single();
                 if(nS) {
-                    await db.from('assigned_scenarios').insert({ user_id: uid, scenario_id: nS.id, scenario_data: nS });
+                    const { error: asError } = await db.from('assigned_scenarios').insert({ user_id: uid, scenario_id: nS.id, scenario_data: nS });
+                    if(asError) {
+                        b.innerHTML = 'DB Blocked! (Check RLS)';
+                        setTimeout(()=> {b.innerHTML = '<i class="ph ph-paper-plane-right text-lg mr-2"></i> Save & Assign Task'; b.disabled=false;}, 2500);
+                        return;
+                    }
                     b.innerHTML = '<i class="ph ph-check text-lg mr-2"></i> Success!';
                     setTimeout(()=> m.classList.add('hidden'), 1000);
                 } else {
@@ -1733,177 +1770,174 @@
         /* ========================================================================
            --- 11. EVENT LISTENERS SETUP ---
            ======================================================================== */
-        function setupEventListeners() {
-            document.querySelectorAll('[data-action], [data-nav]').forEach(btn => {
-                btn.addEventListener('click', (e) => {
-                    const action = e.currentTarget.dataset.action || e.currentTarget.dataset.nav;
-                    
-                    if(views[action]) showView(action);
-                    
-                    if(action === 'practice') startRandomScenario();
-                    else if(action === 'quick-fire') startAIQuickFireRound();
-                    else if(action === 'historyList' || action === 'history') showHistoryList();
-                    else if(action === 'assignedScenarios' || action === 'assigned') showAssignedScenarios();
-                    
-                    else if(action === 'admin-track-assignments') showAdminTrackAssignments();
-                    else if(action === 'admin-pending-reviews' || action === 'adminPendingReviews') showAdminPendingReviews();
-                    else if(action === 'admin-assign-scenarios') showAssignScenariosAdminView();
-                    else if(action === 'admin-sessions') showAdminSessionList();
-                    else if(action === 'admin-users') showAdminUserList();
-                    
-                    if(window.innerWidth < 768) document.getElementById('sidebar').classList.add('hidden');
-                });
+        document.querySelectorAll('[data-action], [data-nav]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.currentTarget.dataset.action || e.currentTarget.dataset.nav;
+                
+                if(views[action]) showView(action);
+                
+                if(action === 'practice') startRandomScenario();
+                else if(action === 'quick-fire') startAIQuickFireRound();
+                else if(action === 'historyList' || action === 'history') showHistoryList();
+                else if(action === 'assignedScenarios' || action === 'assigned') showAssignedScenarios();
+                
+                else if(action === 'admin-track-assignments') showAdminTrackAssignments();
+                else if(action === 'admin-pending-reviews' || action === 'adminPendingReviews') showAdminPendingReviews();
+                else if(action === 'admin-assign-scenarios') showAssignScenariosAdminView();
+                else if(action === 'admin-sessions') showAdminSessionList();
+                else if(action === 'admin-users') showAdminUserList();
+                
+                if(window.innerWidth < 768) document.getElementById('sidebar').classList.add('hidden');
             });
+        });
 
-            document.getElementById('mobile-menu-btn').onclick = () => {
-                const sb = document.getElementById('sidebar');
-                sb.classList.toggle('hidden');
-                if(!sb.classList.contains('hidden')) sb.classList.add('absolute', 'inset-y-0', 'left-0', 'z-50', 'shadow-2xl');
-            };
+        document.getElementById('mobile-menu-btn').onclick = () => {
+            const sb = document.getElementById('sidebar');
+            sb.classList.toggle('hidden');
+            if(!sb.classList.contains('hidden')) sb.classList.add('absolute', 'inset-y-0', 'left-0', 'z-50', 'shadow-2xl');
+        };
 
-            // Filter assignments admin
-            document.getElementById('filter-all-assignments').onclick = () => renderAdminTrackAssignments('all');
-            document.getElementById('filter-pending-assignments').onclick = () => renderAdminTrackAssignments('pending_response');
-            document.getElementById('filter-responded-assignments').onclick = () => renderAdminTrackAssignments('responded');
+        // Filter assignments admin
+        document.getElementById('filter-all-assignments').onclick = () => renderAdminTrackAssignments('all');
+        document.getElementById('filter-pending-assignments').onclick = () => renderAdminTrackAssignments('pending_response');
+        document.getElementById('filter-responded-assignments').onclick = () => renderAdminTrackAssignments('responded');
 
-            // Tools & Utilities Hooks
-            document.getElementById('draft-email-btn').onclick = async () => {
-                const ec = document.getElementById('email-draft-container');
-                const el = document.getElementById('email-draft-loading');
-                const eCont = document.getElementById('email-draft-content');
-                ec.classList.remove('hidden'); eCont.classList.add('hidden'); el.classList.remove('hidden'); el.classList.add('flex');
-                
-                const hist = sessionInteractions.map(i => `C: ${i.customerSays}\nA: ${i.userResponse}`).join('\n');
-                const res = await getFromAI(`Draft follow-up email confirming resolution. Scenario: ${currentScenario.title}. Persona: ${currentScenario.persona}. Hist:\n${hist}. JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
-                
-                el.classList.add('hidden'); el.classList.remove('flex'); eCont.classList.remove('hidden');
-                if(res) { document.getElementById('email-subject').value = res.subject; document.getElementById('email-body').value = res.body; }
-            };
-
-            document.getElementById('copy-email-btn').onclick = () => {
-                const text = `Subject: ${document.getElementById('email-subject').value}\n\n${document.getElementById('email-body').value}`;
-                navigator.clipboard.writeText(text);
-                const btn = document.getElementById('copy-email-btn'); btn.innerHTML = '<i class="ph ph-check mr-1.5 text-lg text-emerald-500"></i>Copied';
-                setTimeout(()=> btn.innerHTML = '<i class="ph ph-copy mr-1.5 text-lg"></i>Copy text', 2000);
-            };
-
-            document.getElementById('get-empathy-help-btn').onclick = async (e) => {
-                const desc = document.getElementById('situation-description').value.trim();
-                const cont = document.getElementById('empathy-response-container');
-                const load = document.getElementById('empathy-help-loading');
-                if(!desc) return;
-                
-                cont.classList.add('hidden'); load.classList.remove('hidden'); load.classList.add('flex');
-                const res = await getFromAI(`Empathy report for: "${desc}". JSON: {"key_emotion":"<str>","empathetic_phrases":["<1>","<2>"],"assurance_statement":"<str>","coach_tip":"<str>"}`, {type:"OBJECT",properties:{"key_emotion":{type:"STRING"},"empathetic_phrases":{type:"ARRAY",items:{type:"STRING"}},"assurance_statement":{type:"STRING"},"coach_tip":{type:"STRING"}},required:["key_emotion","empathetic_phrases","assurance_statement","coach_tip"]});
-                
-                load.classList.add('hidden'); load.classList.remove('flex');
-                if(res) {
-                    cont.innerHTML = `<div class="bg-purple-50 p-6 rounded-2xl border border-purple-100 shadow-inner space-y-5"><div class="flex items-center"><div class="w-10 h-10 bg-purple-200 text-purple-700 rounded-full flex items-center justify-center mr-3"><i class="ph ph-heartbeat text-xl"></i></div><span class="font-black text-xl text-purple-900 tracking-tight">${res.key_emotion}</span></div><div><p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-3">Phrases to use</p><ul class="space-y-2 text-sm font-medium text-purple-800">${res.empathetic_phrases.map(p=>`<li class="flex items-start"><i class="ph ph-check-circle mt-0.5 mr-2 text-purple-500 shrink-0 text-lg"></i><span>${p}</span></li>`).join('')}</ul></div><div class="bg-white p-4 rounded-xl text-sm border border-purple-100"><p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1.5">Assurance Statement</p><p class="italic text-slate-700 font-medium leading-relaxed">"${res.assurance_statement}"</p></div><div class="bg-indigo-600 text-white p-5 rounded-xl text-sm flex shadow-md"><i class="ph ph-lightbulb text-2xl mr-3 shrink-0 text-indigo-300"></i><p class="font-medium leading-relaxed">${res.coach_tip}</p></div></div>`;
-                    cont.classList.remove('hidden');
-                }
-            };
-
-            document.getElementById('get-rephrase-tool-suggestions-btn').onclick = async () => {
-                const cust = document.getElementById('rephrase-customer-statement').value.trim();
-                const draft = document.getElementById('rephrase-agent-draft').value.trim();
-                const cont = document.getElementById('rephrase-tool-suggestions-container');
-                const load = document.getElementById('rephrase-tool-loading');
-                if(!cust || !draft) return;
-                
-                cont.classList.add('hidden'); load.classList.remove('hidden'); load.classList.add('flex');
-                const res = await getFromAI(`Cust: "${cust}". Agent draft: "${draft}". Provide 3 better empathetic versions. JSON: {"rephrased_suggestions":["<1>","<2>","<3>"]}`, {type:"OBJECT",properties:{"rephrased_suggestions":{type:"ARRAY",items:{type:"STRING"}}},required:["rephrased_suggestions"]});
-                
-                load.classList.add('hidden'); load.classList.remove('flex');
-                if(res && res.rephrased_suggestions) {
-                    cont.innerHTML = `<div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-100 shadow-inner"><p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4">Better Options</p><div class="space-y-3">${res.rephrased_suggestions.map(s=>`<div class="bg-white p-4 border border-emerald-200 rounded-xl flex justify-between items-center shadow-sm"><span class="text-sm font-medium text-slate-700 mr-4 leading-relaxed">${s}</span><button class="shrink-0 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 px-3 py-1.5 rounded-lg transition" onclick="navigator.clipboard.writeText('${s.replace(/'/g, "\\'")}'); this.innerHTML='<i class=\\'ph ph-check text-emerald-600 mr-1\\'></i> Copied'; setTimeout(()=>this.innerHTML='Copy',2000)">Copy</button></div>`).join('')}</div></div>`;
-                    cont.classList.remove('hidden');
-                }
-            };
-
-            document.getElementById('craft-email-btn').onclick = async () => {
-                const cust = document.getElementById('customer-email-input').value.trim();
-                const resO = document.getElementById('resolution-input').value.trim();
-                const alt = document.getElementById('alternatives-input').value.trim();
-                if(!cust || !resO) return;
-                
-                document.getElementById('crafted-email-container').classList.add('hidden');
-                const load = document.getElementById('email-craft-loading'); load.classList.remove('hidden'); load.classList.add('flex');
-                
-                const res = await getFromAI(`Write empathetic support email. Cust: "${cust}". Resolution: "${resO}". Extras: "${alt}". JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
-                
-                load.classList.add('hidden'); load.classList.remove('flex');
-                if(res) {
-                    document.getElementById('crafted-email-subject').value = res.subject;
-                    document.getElementById('crafted-email-body').value = res.body;
-                    document.getElementById('crafted-email-container').classList.remove('hidden');
-                }
-            };
-
-            document.getElementById('recraft-email-btn').onclick = () => document.getElementById('recraft-feedback-container').classList.toggle('hidden');
+        // Feature tools
+        document.getElementById('draft-email-btn').onclick = async () => {
+            const ec = document.getElementById('email-draft-container');
+            const el = document.getElementById('email-draft-loading');
+            const eCont = document.getElementById('email-draft-content');
+            ec.classList.remove('hidden'); eCont.classList.add('hidden'); el.classList.remove('hidden'); el.classList.add('flex');
             
-            document.getElementById('submit-recraft-btn').onclick = async () => {
-                const fb = document.getElementById('recraft-feedback-input').value.trim();
-                const curB = document.getElementById('crafted-email-body').value;
-                if(!fb) return;
-                document.getElementById('recraft-feedback-container').classList.add('hidden');
-                const res = await getFromAI(`Revise this email draft based on feedback: "${fb}". Current draft: "${curB}". JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
-                if(res) { document.getElementById('crafted-email-subject').value = res.subject; document.getElementById('crafted-email-body').value = res.body; }
-            };
+            const hist = sessionInteractions.map(i => `C: ${i.customerSays}\nA: ${i.userResponse}`).join('\n');
+            const res = await getFromAI(`Draft follow-up email confirming resolution. Scenario: ${currentScenario.title}. Persona: ${currentScenario.persona}. Hist:\n${hist}. JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
+            
+            el.classList.add('hidden'); el.classList.remove('flex'); eCont.classList.remove('hidden');
+            if(res) { document.getElementById('email-subject').value = res.subject; document.getElementById('email-body').value = res.body; }
+        };
 
-            document.getElementById('save-email-btn').onclick = async (e) => {
-                const btn = e.target;
-                const sub = document.getElementById('crafted-email-subject').value;
-                const bod = document.getElementById('crafted-email-body').value;
-                const cat = document.getElementById('email-category-input').value.trim();
-                if(!sub || !bod) return;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-1.5 text-lg"></i>Saving';
-                await db.from('saved_emails').insert({ user_id: userId, subject: sub, body: bod, category: cat || null });
-                btn.innerHTML = '<i class="ph ph-check mr-1.5 text-lg text-emerald-300"></i>Saved!';
-                setTimeout(()=> btn.innerHTML = '<i class="ph ph-floppy-disk mr-1.5 text-lg"></i>Save Template', 2000);
-            };
+        document.getElementById('copy-email-btn').onclick = () => {
+            const text = `Subject: ${document.getElementById('email-subject').value}\n\n${document.getElementById('email-body').value}`;
+            navigator.clipboard.writeText(text);
+            const btn = document.getElementById('copy-email-btn'); btn.innerHTML = '<i class="ph ph-check mr-1 text-emerald-500"></i>Copied';
+            setTimeout(()=> btn.innerHTML = '<i class="ph ph-copy mr-1.5 text-lg"></i>Copy text', 2000);
+        };
+        
+        document.getElementById('get-empathy-help-btn').onclick = async (e) => {
+            const desc = document.getElementById('situation-description').value.trim();
+            const cont = document.getElementById('empathy-response-container');
+            const load = document.getElementById('empathy-help-loading');
+            if(!desc) return;
+            
+            cont.classList.add('hidden'); load.classList.remove('hidden'); load.classList.add('flex');
+            const res = await getFromAI(`Empathy report for: "${desc}". JSON: {"key_emotion":"<str>","empathetic_phrases":["<1>","<2>"],"assurance_statement":"<str>","coach_tip":"<str>"}`, {type:"OBJECT",properties:{"key_emotion":{type:"STRING"},"empathetic_phrases":{type:"ARRAY",items:{type:"STRING"}},"assurance_statement":{type:"STRING"},"coach_tip":{type:"STRING"}},required:["key_emotion","empathetic_phrases","assurance_statement","coach_tip"]});
+            
+            load.classList.add('hidden'); load.classList.remove('flex');
+            if(res) {
+                cont.innerHTML = `<div class="bg-purple-50 p-6 rounded-2xl border border-purple-100 space-y-6"><div class="flex items-center"><i class="ph ph-heartbeat text-purple-600 text-3xl mr-3"></i><div><p class="text-[10px] font-black text-purple-400 uppercase tracking-widest mb-1">Core Emotion</p><span class="font-black text-purple-900 text-xl">${res.key_emotion}</span></div></div><div><p class="text-xs font-black text-purple-800 uppercase tracking-wider mb-3">Phrases to use</p><ul class="space-y-3">${res.empathetic_phrases.map(p=>`<li class="flex items-start"><i class="ph ph-check-circle mt-1 mr-3 text-purple-500 shrink-0 text-lg"></i><span class="text-sm font-medium text-purple-900">${p}</span></li>`).join('')}</ul></div><div class="bg-white p-5 rounded-xl border border-purple-100 shadow-sm"><p class="font-black text-slate-400 text-[10px] uppercase tracking-widest mb-2">Assurance Statement</p><p class="font-bold text-slate-800 text-lg">"${res.assurance_statement}"</p></div><div class="bg-indigo-600 text-white p-5 rounded-xl text-sm flex items-start shadow-md"><i class="ph ph-lightbulb text-2xl mr-4 shrink-0 text-indigo-300"></i><p class="leading-relaxed font-medium mt-1">${res.coach_tip}</p></div></div>`;
+                cont.classList.remove('hidden');
+            }
+        };
 
-            // Saved Emails View Logic
-            document.querySelector('[data-nav="savedEmails"]').addEventListener('click', async () => {
-                showView('savedEmails');
-                const cont = document.getElementById('saved-emails-container');
-                cont.innerHTML = '<div class="flex justify-center py-10"><div class="loader border-t-teal-500"></div></div>';
-                const { data } = await db.from('saved_emails').select('*').eq('user_id', userId).order('created_at', { ascending: false });
-                
-                const cats = [...new Set((data||[]).map(e=>e.category).filter(Boolean))].sort();
-                const sel = document.getElementById('category-filter');
-                sel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-                
-                const render = (filter) => {
-                    cont.innerHTML = '';
-                    const filtered = filter==='all' ? data : data.filter(e=>e.category===filter);
-                    if(!filtered.length) { cont.innerHTML = '<div class="saas-card py-16 text-center text-slate-500"><i class="ph ph-folder-open text-4xl mb-2"></i><p>No saved templates found.</p></div>'; return; }
-                    filtered.forEach(e => {
-                        const d = document.createElement('div'); d.className = 'saas-card overflow-hidden';
-                        d.innerHTML = `
-                            <div class="p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer bg-slate-50 hover:bg-slate-100 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
-                                <div class="flex items-center space-x-3"><i class="ph ph-envelope-simple text-teal-600 text-xl"></i><h4 class="font-bold text-slate-900">${e.subject}</h4>${e.category?`<span class="bg-teal-100 border border-teal-200 text-teal-800 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-widest">${e.category}</span>`:''}</div>
-                                <i class="ph ph-caret-down text-slate-400"></i>
+        document.getElementById('get-rephrase-tool-suggestions-btn').onclick = async () => {
+            const cust = document.getElementById('rephrase-customer-statement').value.trim();
+            const draft = document.getElementById('rephrase-agent-draft').value.trim();
+            const cont = document.getElementById('rephrase-tool-suggestions-container');
+            const load = document.getElementById('rephrase-tool-loading');
+            if(!cust || !draft) return;
+            
+            cont.classList.add('hidden'); load.classList.remove('hidden'); load.classList.add('flex');
+            const res = await getFromAI(`Cust: "${cust}". Agent draft: "${draft}". Provide 3 better empathetic versions. JSON: {"rephrased_suggestions":["<1>","<2>","<3>"]}`, {type:"OBJECT",properties:{"rephrased_suggestions":{type:"ARRAY",items:{type:"STRING"}}},required:["rephrased_suggestions"]});
+            
+            load.classList.add('hidden'); load.classList.remove('flex');
+            if(res && res.rephrased_suggestions) {
+                cont.innerHTML = `<div class="bg-emerald-50 p-6 rounded-2xl border border-emerald-100"><p class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4">Better Options</p><div class="space-y-3">${res.rephrased_suggestions.map(s=>`<div class="bg-white p-4 border border-emerald-200 rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4"><span class="text-sm font-medium text-slate-700">${s}</span><button class="shrink-0 text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg transition" onclick="navigator.clipboard.writeText('${s.replace(/'/g, "\\'")}'); this.innerHTML='<i class=\\'ph ph-check text-emerald-500 mr-1\\'></i> Copied'; setTimeout(()=>this.innerHTML='Copy',2000)">Copy</button></div>`).join('')}</div></div>`;
+                cont.classList.remove('hidden');
+            }
+        };
+
+        document.getElementById('craft-email-btn').onclick = async () => {
+            const cust = document.getElementById('customer-email-input').value.trim();
+            const resO = document.getElementById('resolution-input').value.trim();
+            const alt = document.getElementById('alternatives-input').value.trim();
+            if(!cust || !resO) return;
+            
+            document.getElementById('crafted-email-container').classList.add('hidden');
+            const load = document.getElementById('email-craft-loading'); load.classList.remove('hidden'); load.classList.add('flex');
+            
+            const res = await getFromAI(`Write empathetic support email. Cust: "${cust}". Resolution: "${resO}". Extras: "${alt}". JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
+            
+            load.classList.add('hidden'); load.classList.remove('flex');
+            if(res) {
+                document.getElementById('crafted-email-subject').value = res.subject;
+                document.getElementById('crafted-email-body').value = res.body;
+                document.getElementById('crafted-email-container').classList.remove('hidden');
+            }
+        };
+
+        document.getElementById('recraft-email-btn').onclick = () => document.getElementById('recraft-feedback-container').classList.toggle('hidden');
+        
+        document.getElementById('submit-recraft-btn').onclick = async () => {
+            const fb = document.getElementById('recraft-feedback-input').value.trim();
+            const curB = document.getElementById('crafted-email-body').value;
+            if(!fb) return;
+            document.getElementById('recraft-feedback-container').classList.add('hidden');
+            const res = await getFromAI(`Revise this email draft based on feedback: "${fb}". Current draft: "${curB}". JSON: {"subject":"<str>","body":"<str>"}`, {type:"OBJECT",properties:{"subject":{type:"STRING"},"body":{type:"STRING"}},required:["subject","body"]});
+            if(res) { document.getElementById('crafted-email-subject').value = res.subject; document.getElementById('crafted-email-body').value = res.body; }
+        };
+
+        document.getElementById('save-email-btn').onclick = async (e) => {
+            const btn = e.target;
+            const sub = document.getElementById('crafted-email-subject').value;
+            const bod = document.getElementById('crafted-email-body').value;
+            const cat = document.getElementById('email-category-input').value.trim();
+            if(!sub || !bod) return;
+            btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-1.5 text-lg"></i>Saving';
+            await db.from('saved_emails').insert({ user_id: userId, subject: sub, body: bod, category: cat || null });
+            btn.innerHTML = '<i class="ph ph-check mr-1.5 text-emerald-300 text-lg"></i>Saved!';
+            setTimeout(()=> btn.innerHTML = '<i class="ph ph-floppy-disk mr-1.5 text-lg"></i>Save Template', 2000);
+        };
+
+        // Saved Emails View Logic
+        document.querySelector('[data-nav="savedEmails"]').addEventListener('click', async () => {
+            showView('savedEmails');
+            const cont = document.getElementById('saved-emails-container');
+            cont.innerHTML = '<div class="flex justify-center py-10"><div class="loader border-t-teal-500"></div></div>';
+            const { data } = await db.from('saved_emails').select('*').eq('user_id', userId).order('created_at', { ascending: false });
+            
+            const cats = [...new Set((data||[]).map(e=>e.category).filter(Boolean))].sort();
+            const sel = document.getElementById('category-filter');
+            sel.innerHTML = '<option value="all">All Categories</option>' + cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+            
+            const render = (filter) => {
+                cont.innerHTML = '';
+                const filtered = filter==='all' ? data : data.filter(e=>e.category===filter);
+                if(!filtered.length) { cont.innerHTML = '<div class="saas-card py-16 text-center text-slate-500 font-medium">No saved templates found.</div>'; return; }
+                filtered.forEach(e => {
+                    const d = document.createElement('div'); d.className = 'saas-card overflow-hidden shadow-sm';
+                    d.innerHTML = `
+                        <div class="p-5 border-b border-slate-100 flex justify-between items-center cursor-pointer bg-slate-50 hover:bg-indigo-50 transition" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                            <div class="flex items-center space-x-3"><i class="ph ph-envelope-simple text-teal-600 text-xl"></i><h4 class="font-bold text-slate-900 tracking-tight">${e.subject}</h4>${e.category?`<span class="bg-teal-100 text-teal-800 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest ml-3">${e.category}</span>`:''}</div>
+                            <i class="ph ph-caret-down text-slate-400"></i>
+                        </div>
+                        <div class="p-5 hidden bg-white">
+                            <textarea class="w-full text-sm font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-xl p-4 outline-none resize-y mb-4 leading-relaxed" rows="6" readonly id="bod-${e.id}">${e.body}</textarea>
+                            <div class="flex justify-end space-x-3 border-t border-slate-100 pt-4">
+                                <button class="text-xs font-bold bg-white border border-slate-300 text-slate-700 hover:bg-slate-50 px-4 py-2 rounded-lg transition shadow-sm" onclick="navigator.clipboard.writeText(document.getElementById('bod-${e.id}').value); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy text',2000)">Copy text</button>
+                                <button class="text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 px-4 py-2 rounded-lg transition" onclick="db.from('saved_emails').delete().eq('id','${e.id}').then(()=>this.closest('.saas-card').remove())">Delete</button>
                             </div>
-                            <div class="p-5 hidden bg-white">
-                                <textarea class="w-full text-sm text-slate-700 bg-slate-50 border border-slate-200 rounded-lg p-3 outline-none resize-none mb-4 leading-relaxed font-medium" rows="6" readonly id="bod-${e.id}">${e.body}</textarea>
-                                <div class="flex justify-end space-x-3">
-                                    <button class="text-xs font-bold bg-slate-100 border border-slate-200 text-slate-700 hover:bg-slate-200 px-4 py-2 rounded-lg transition" onclick="navigator.clipboard.writeText(document.getElementById('bod-${e.id}').value); this.textContent='Copied'; setTimeout(()=>this.textContent='Copy',2000)">Copy Text</button>
-                                    <button class="text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 px-4 py-2 rounded-lg transition" onclick="db.from('saved_emails').delete().eq('id','${e.id}').then(()=>this.closest('.saas-card').remove())">Delete Template</button>
-                                </div>
-                            </div>`;
-                        cont.appendChild(d);
-                    });
-                };
-                render('all'); sel.onchange = (e) => render(e.target.value);
-            });
-        }
+                        </div>`;
+                    cont.appendChild(d);
+                });
+            };
+            render('all'); sel.onchange = (e) => render(e.target.value);
+        });
 
         /* ========================================================================
            --- RUN APP ---
            ======================================================================== */
         document.getElementById('user-response').addEventListener('input', saveSessionState);
         document.getElementById('submit-response-btn').addEventListener('click', handleSubmitResponse);
-        setupEventListeners();
         initializeApp();
     </script>
 </body>
