@@ -942,10 +942,15 @@
 
             document.getElementById('sidebar-user-email').textContent = session.user.email.split('@')[0];
 
+            // FIX: Wait a micro-second for Supabase to fully attach the secure token to the client headers
+            // This prevents the "Refresh Bug" where DB requests get blocked right after reloading.
+            await new Promise(resolve => setTimeout(resolve, 100));
+
             const { data: userData, error: profileError } = await db.from('users').select('role').eq('id', userId).single();
+            
             if (profileError && profileError.code !== 'PGRST116') {
-                await db.auth.signOut();
-                return;
+                console.error("Profile fetch error on load:", profileError);
+                // We log the error but don't force a sign-out, allowing the UI to gracefully recover
             }
 
             isAdmin = (userData && userData.role === 'admin') || session.user.email === 'admin@kindly.app';
@@ -954,14 +959,13 @@
             document.getElementById('sidebar-user-role').classList.toggle('text-rose-500', isAdmin);
             document.getElementById('sidebar-user-role').classList.toggle('text-slate-500', !isAdmin);
 
-            updateBadges();
+            await updateBadges();
 
-            if (!authReady) {
-                authReady = true;
-                if (!loadSessionState() && !loadLastViewState()) {
-                    showView('dashboard');
-                    updateDashboardStats();
-                }
+            authReady = true;
+
+            if (!loadSessionState() && !loadLastViewState()) {
+                showView('dashboard');
+                updateDashboardStats();
             }
         }
 
@@ -981,21 +985,28 @@
         }
 
         async function initializeApp() {
-            // FIX: Robust Auth Listener to prevent tab switch resetting. 
-            // We ignore token refreshes if the user ID hasn't changed.
-            db.auth.onAuthStateChange(async (event, session) => {
+            // Setup listener for explicit sign in/out across tabs
+            db.auth.onAuthStateChange((event, session) => {
                 if (event === 'SIGNED_OUT') {
                     setupLoggedOutState();
-                } else if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESH') {
-                    if (session) {
-                        // Prevent reset on tab switch background refresh
-                        if (authReady && userId === session.user.id) return;
-                        await setupLoggedInState(session);
-                    } else if (event === 'INITIAL_SESSION') {
-                        setupLoggedOutState();
-                    }
+                } else if (event === 'SIGNED_IN') {
+                    // Prevent reset on tab switch if already logged in
+                    if (authReady && userId === session?.user?.id) return;
+                    setupLoggedInState(session);
                 }
             });
+
+            // FIX: Explicitly get the session on load to guarantee token presence
+            const { data: { session }, error } = await db.auth.getSession();
+            
+            if (error || !session) {
+                setupLoggedOutState();
+            } else {
+                // If onAuthStateChange hasn't already handled it, do it here
+                if (!authReady) {
+                    await setupLoggedInState(session);
+                }
+            }
         }
 
         document.getElementById('show-register').addEventListener('click', (e) => {
@@ -1147,19 +1158,32 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error("Audio API failed");
+                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
                 
                 const result = await response.json();
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
-                if (part?.inlineData?.data) {
-                    const sampleRate = parseInt(part.inlineData.mimeType.match(/rate=(\d+)/)[1], 10);
-                    const wavBlob = pcmToWav(new Int16Array(base64ToArrayBuffer(part.inlineData.data)), sampleRate);
-                    new Audio(URL.createObjectURL(wavBlob)).play();
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
+                    
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmDataBuffer);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    new Audio(audioUrl).play();
+                } else {
+                    console.error("Audio data not found in response", result);
                 }
-            } catch (e) { 
-                console.error("Audio error", e); 
-            } finally { 
-                audioLoader.classList.add('hidden'); audioBtn.classList.remove('hidden'); 
+
+            } catch (error) {
+                console.error("Error generating or playing audio:", error);
+            } finally {
+                audioLoader.classList.add('hidden');
+                audioBtn.classList.remove('hidden');
             }
         }
 
@@ -1168,44 +1192,57 @@
            ======================================================================== */
         async function updateDashboardStats() {
             if(!userId) return;
-            const [{ data: sessions }, { data: assignments }] = await Promise.all([
-                db.from('sessions').select('id, scenario_title').eq('user_id', userId),
-                db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId)
-            ]);
-            
-            document.getElementById('dash-sessions-count').textContent = sessions ? sessions.length : 0;
-            
-            let pendingCount = 0;
-            if (assignments && sessions) {
+            try {
+                const [sessionsRes, assignmentsRes] = await Promise.all([
+                    db.from('sessions').select('id, scenario_title').eq('user_id', userId),
+                    db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId)
+                ]);
+                
+                const sessions = sessionsRes.data || [];
+                const assignments = assignmentsRes.data || [];
+                
+                document.getElementById('dash-sessions-count').textContent = sessions.length;
+                
                 const completedTitles = sessions.map(s => s.scenario_title);
-                pendingCount = assignments.filter(a => !completedTitles.includes(a.scenario_data.title)).length;
+                const pendingCount = assignments.filter(a => !completedTitles.includes(a.scenario_data.title)).length;
+                document.getElementById('dash-pending-count').textContent = pendingCount;
+            } catch (err) {
+                console.error("Dashboard Stats Error:", err);
+                document.getElementById('dash-sessions-count').textContent = "0";
+                document.getElementById('dash-pending-count').textContent = "0";
             }
-            document.getElementById('dash-pending-count').textContent = pendingCount;
         }
 
         async function updateBadges() {
             if(!userId) return;
-            const { data: assignments } = await db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId);
-            const { data: sessions } = await db.from('sessions').select('scenario_title').eq('user_id', userId);
-            
-            let pendingAssigned = 0;
-            if(assignments && sessions) {
+            try {
+                const [assignmentsRes, sessionsRes] = await Promise.all([
+                    db.from('assigned_scenarios').select('scenario_data').eq('user_id', userId),
+                    db.from('sessions').select('scenario_title').eq('user_id', userId)
+                ]);
+                
+                const assignments = assignmentsRes.data || [];
+                const sessions = sessionsRes.data || [];
+                
                 const completed = sessions.map(s => s.scenario_title);
-                pendingAssigned = assignments.filter(a => !completed.includes(a.scenario_data.title)).length;
-            }
-            const assignedBadge = document.getElementById('nav-assigned-badge');
-            assignedBadge.textContent = pendingAssigned + " NEW";
-            assignedBadge.classList.toggle('hidden', pendingAssigned === 0);
+                const pendingAssigned = assignments.filter(a => !completed.includes(a.scenario_data.title)).length;
+                
+                const assignedBadge = document.getElementById('nav-assigned-badge');
+                assignedBadge.textContent = pendingAssigned + " NEW";
+                assignedBadge.classList.toggle('hidden', pendingAssigned === 0);
 
-            if(isAdmin) {
-                const { data: allSessions } = await db.from('sessions').select('interactions');
-                let pendingReviews = 0;
-                if(allSessions) {
-                    pendingReviews = allSessions.filter(s => s.interactions && s.interactions.some(i => i.aiFeedback === 'Pending Coach Review')).length;
+                if(isAdmin) {
+                    const { data: allSessions } = await db.from('sessions').select('interactions');
+                    let pendingReviews = 0;
+                    if(allSessions) {
+                        pendingReviews = allSessions.filter(s => s.interactions && s.interactions.some(i => i.aiFeedback === 'Pending Coach Review')).length;
+                    }
+                    const reviewBadge = document.getElementById('nav-review-badge');
+                    reviewBadge.textContent = pendingReviews + " PENDING";
+                    reviewBadge.classList.toggle('hidden', pendingReviews === 0);
                 }
-                const reviewBadge = document.getElementById('nav-review-badge');
-                reviewBadge.textContent = pendingReviews + " PENDING";
-                reviewBadge.classList.toggle('hidden', pendingReviews === 0);
+            } catch (err) {
+                console.error("Badge Update Error:", err);
             }
         }
 
