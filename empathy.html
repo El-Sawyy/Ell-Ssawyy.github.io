@@ -1057,17 +1057,19 @@
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             if (schema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
 
+            const apiKey = ""; // Canvas injects the secure key here automatically
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
             try {
-                // Securely use the Supabase Edge Function Proxy
-                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
-                    body: { action: 'generateContent', payload: payload }
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
-                if (error) {
-                    console.error("Edge Function Error:", error);
-                    throw new Error(error.message);
-                }
+                if (!response.ok) throw new Error("API request failed");
 
+                const result = await response.json();
                 if (result && result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
                     const rawJson = result.candidates[0].content.parts[0].text;
                     try { return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim()); } 
@@ -1134,15 +1136,20 @@
             for (const emotion of emotions) { if (persona.toLowerCase().includes(emotion)) { foundEmotion = emotion; break; } }
             
             const payload = { model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: `Say in a ${foundEmotion} tone: ${text}` }] }], generationConfig: { responseModalities: ["AUDIO"] } };
+            
+            const apiKey = ""; // Canvas injects the secure key here automatically
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
-                // Securely use the Supabase Edge Function Proxy for TTS
-                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
-                    body: { action: 'tts', payload: payload }
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
-                if (error) throw new Error(error.message);
+                if (!response.ok) throw new Error("Audio API failed");
                 
+                const result = await response.json();
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
                 if (part?.inlineData?.data) {
                     const sampleRate = parseInt(part.inlineData.mimeType.match(/rate=(\d+)/)[1], 10);
