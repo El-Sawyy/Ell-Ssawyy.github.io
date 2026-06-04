@@ -1063,78 +1063,25 @@
         /* ========================================================================
            --- 6. AI & EXTERNAL API CALLS ---
            ======================================================================== */
-        
         async function getFromAI(prompt, schema = null) {
             const payload = { contents: [{ parts: [{ text: prompt }] }] };
             if (schema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: schema };
 
-            const apiKey = ""; // Canvas injects the secure key here automatically
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
-
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                // Securely call your Supabase Edge Function instead of Google directly
+                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
+                    body: { action: 'generateContent', payload: payload }
                 });
 
-                if (!response.ok) throw new Error("API request failed");
+                if (error) throw error;
 
-                const result = await response.json();
                 if (result && result.candidates && result.candidates.length > 0 && result.candidates[0].content && result.candidates[0].content.parts && result.candidates[0].content.parts.length > 0) {
-                    const rawJson = result.candidates[0].content.parts[0].text;
-                    try { return JSON.parse(rawJson.replace(/```json/g, '').replace(/```/g, '').trim()); } 
+                    const text = result.candidates[0].content.parts[0].text;
+                    try { return JSON.parse(text.replace(/```json/g, '').replace(/```/g, '').trim()); } 
                     catch { return null; }
                 }
                 return null;
             } catch (e) { console.error("AI Error:", e); return null; }
-        }
-
-        function base64ToArrayBuffer(base64) {
-            const binaryString = window.atob(base64);
-            const len = binaryString.length;
-            const bytes = new Uint8Array(len);
-            for (let i = 0; i < len; i++) {
-                bytes[i] = binaryString.charCodeAt(i);
-            }
-            return bytes.buffer;
-        }
-
-        function pcmToWav(pcmData, sampleRate) {
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-            const blockAlign = numChannels * (bitsPerSample / 8);
-            const dataSize = pcmData.length * 2;
-            const buffer = new ArrayBuffer(44 + dataSize);
-            const view = new DataView(buffer);
-
-            function writeString(view, offset, string) {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            }
-
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + dataSize, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true);
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            let offset = 44;
-            for (let i = 0; i < pcmData.length; i++, offset += 2) {
-                view.setInt16(offset, pcmData[i], true);
-            }
-
-            return new Blob([view], { type: 'audio/wav' });
         }
 
         async function getAudioFromAI(text, persona) {
@@ -1147,44 +1094,23 @@
             for (const emotion of emotions) { if (persona.toLowerCase().includes(emotion)) { foundEmotion = emotion; break; } }
             
             const payload = { model: "gemini-2.5-flash-preview-tts", contents: [{ parts: [{ text: `Say in a ${foundEmotion} tone: ${text}` }] }], generationConfig: { responseModalities: ["AUDIO"] } };
-            
-            const apiKey = ""; // Canvas injects the secure key here automatically
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
 
             try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                // Securely call your Supabase Edge Function for Text-to-Speech
+                const { data: result, error } = await db.functions.invoke('gemini-proxy', {
+                    body: { action: 'tts', payload: payload }
                 });
 
-                if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
-                
-                const result = await response.json();
+                if (error) throw error;
+
                 const part = result?.candidates?.[0]?.content?.parts?.[0];
-                const audioData = part?.inlineData?.data;
-                const mimeType = part?.inlineData?.mimeType;
-
-                if (audioData && mimeType && mimeType.startsWith("audio/")) {
-                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
-                    if (!sampleRateMatch) throw new Error("Could not parse sample rate from mime type.");
-                    
-                    const sampleRate = parseInt(sampleRateMatch[1], 10);
-                    const pcmDataBuffer = base64ToArrayBuffer(audioData);
-                    const pcm16 = new Int16Array(pcmDataBuffer);
-                    const wavBlob = pcmToWav(pcm16, sampleRate);
-                    const audioUrl = URL.createObjectURL(wavBlob);
-                    new Audio(audioUrl).play();
-                } else {
-                    console.error("Audio data not found in response", result);
+                if (part?.inlineData?.data) {
+                    const sampleRate = parseInt(part.inlineData.mimeType.match(/rate=(\d+)/)[1], 10);
+                    const wavBlob = pcmToWav(new Int16Array(base64ToArrayBuffer(part.inlineData.data)), sampleRate);
+                    new Audio(URL.createObjectURL(wavBlob)).play();
                 }
-
-            } catch (error) {
-                console.error("Error generating or playing audio:", error);
-            } finally {
-                audioLoader.classList.add('hidden');
-                audioBtn.classList.remove('hidden');
-            }
+            } catch (e) { console.error("Audio error", e); } 
+            finally { audioLoader.classList.add('hidden'); audioBtn.classList.remove('hidden'); }
         }
 
         /* ========================================================================
