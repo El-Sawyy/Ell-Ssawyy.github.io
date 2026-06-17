@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tempo Academy | Agent Certification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .hide { display: none !important; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="min-h-screen text-slate-900">
+
+    <!-- TOP NAVIGATION -->
+    <nav class="bg-slate-900 text-white p-4 shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-indigo-500 rounded-xl flex items-center justify-center font-black text-xl">T</div>
+                <div>
+                    <h1 class="font-black text-xl tracking-tight leading-none">Tempo Academy</h1>
+                    <p class="text-xs text-indigo-300 font-bold tracking-widest uppercase">Agent Certification Hub</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="ui.showAdmin()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm font-bold flex items-center transition-colors">
+                    <i class="fa-solid fa-gear mr-2"></i> Admin & DB Setup
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-7xl mx-auto p-4 md:p-8">
+
+        <!-- DASHBOARD (TRAINEE VIEW) -->
+        <section id="view-dashboard" class="animate-fade-in">
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Trainee Profile -->
+                <div class="md:col-span-1 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200">
+                        <h2 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Trainee Profile</h2>
+                        <input type="text" id="trainee-name" placeholder="Enter your full name..." class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-bold text-slate-800 mb-4" onchange="saveLocal('traineeName', this.value)">
+                        
+                        <div class="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 flex items-center justify-between mb-4">
+                            <div>
+                                <p class="text-indigo-800 font-bold text-sm">Certification Status</p>
+                                <p class="text-indigo-500 text-xs font-medium">Complete 5 scenarios to certify</p>
+                            </div>
+                            <div class="w-12 h-12 bg-white rounded-full flex items-center justify-center text-indigo-600 font-black text-xl shadow-sm">
+                                <span id="trainee-score">0</span><span class="text-xs text-slate-400 mt-1">/5</span>
+                            </div>
+                        </div>
+
+                        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 mt-6">Personal API Key</label>
+                        <input type="password" id="api-key" placeholder="Gemini API Key" class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono mb-2" onchange="saveLocal('geminiKey', this.value)">
+                        <p class="text-[10px] text-slate-500"><i class="fa-solid fa-lock"></i> Required to run simulations.</p>
+                    </div>
+
+                    <!-- DB Status Card -->
+                    <div class="bg-slate-900 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                        <i class="fa-solid fa-database absolute -right-4 -bottom-4 text-8xl text-slate-800 opacity-50"></i>
+                        <h3 class="font-bold text-lg relative z-10 flex items-center gap-2">
+                            <span id="db-status-dot" class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                            Database Status
+                        </h3>
+                        <p id="db-status-text" class="text-slate-400 text-sm mt-1 relative z-10">Disconnected. Setup required in Admin panel.</p>
+                    </div>
+                </div>
+
+                <!-- Scenario Selection -->
+                <div class="md:col-span-2 space-y-6">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-800">Training Scenarios</h2>
+                                <p class="text-slate-500">Select a channel to practice real customer interactions.</p>
+                            </div>
+                        </div>
+
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <button onclick="app.startSim('chat')" class="text-left p-6 rounded-2xl border-2 border-slate-100 hover:border-indigo-500 hover:bg-indigo-50 transition-all group relative overflow-hidden bg-white">
+                                <div class="absolute top-0 right-0 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl opacity-0 group-hover:opacity-100 transition-opacity">START</div>
+                                <i class="fa-solid fa-comment-dots text-3xl text-indigo-500 mb-4 block group-hover:scale-110 transition-transform"></i>
+                                <h3 class="font-bold text-lg text-slate-800">Live Chat Queue</h3>
+                                <p class="text-sm text-slate-500 mt-1">Practice written de-escalation and policy adherence.</p>
+                            </button>
+
+                            <button onclick="app.startSim('call')" class="text-left p-6 rounded-2xl border-2 border-slate-100 hover:border-rose-500 hover:bg-rose-50 transition-all group relative overflow-hidden bg-white">
+                                <div class="absolute top-0 right-0 bg-rose-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl opacity-0 group-hover:opacity-100 transition-opacity">VOICE</div>
+                                <i class="fa-solid fa-headset text-3xl text-rose-500 mb-4 block group-hover:scale-110 transition-transform"></i>
+                                <h3 class="font-bold text-lg text-slate-800">Inbound Phone Call</h3>
+                                <p class="text-sm text-slate-500 mt-1">Realistic voice dictation and active listening practice.</p>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN & DATABASE PANEL -->
+        <section id="view-admin" class="hide animate-fade-in max-w-4xl mx-auto">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="ui.showDashboard()" class="w-10 h-10 bg-white rounded-full shadow-sm flex items-center justify-center text-slate-500 hover:text-slate-800">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <h2 class="text-3xl font-black text-slate-800">Admin Control Center</h2>
+            </div>
+
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="flex border-b border-slate-100 bg-slate-50 overflow-x-auto">
+                    <button id="tab-db" onclick="ui.switchAdminTab('db')" class="px-6 py-4 text-sm font-black uppercase tracking-wider text-indigo-600 border-b-2 border-indigo-600 whitespace-nowrap">Database Setup</button>
+                    <button id="tab-ai" onclick="ui.switchAdminTab('ai')" class="px-6 py-4 text-sm font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 border-b-2 border-transparent whitespace-nowrap">AI Knowledge Base</button>
+                    <button id="tab-coaching" onclick="ui.switchAdminTab('coaching'); adminCoaching.loadLogs();" class="px-6 py-4 text-sm font-black uppercase tracking-wider text-slate-400 hover:text-slate-600 border-b-2 border-transparent whitespace-nowrap">Coaching & Logs</button>
+                </div>
+
+                <!-- DB Tab -->
+                <div id="admin-db-content" class="p-8">
+                    <div class="bg-green-50 border border-green-200 rounded-xl p-4 flex gap-4">
+                        <i class="fa-solid fa-circle-check text-green-500 text-xl mt-1"></i>
+                        <div>
+                            <h4 class="font-bold text-green-800">Database Connected</h4>
+                            <p class="text-sm text-green-700 mt-1">Tempo Academy is permanently synced to your Firebase project (tempo-academy.firebaseapp.com). All trainees will automatically pull the rules you save in the AI Training Data tab.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Data Tab -->
+                <div id="admin-ai-content" class="p-8 hide space-y-6">
+                    <p class="text-sm text-slate-500 mb-4">This data is injected directly into the AI's brain to handle customer interactions accurately.</p>
+                    
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Standard Operating Procedures (SOPs) & Policies</label>
+                        <textarea id="db-sops" placeholder="Example: Always verify the shipping address before processing a return. Never promise a refund without manager approval..." class="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm"></textarea>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Common CX Questions & Expected Agent Responses</label>
+                        <textarea id="db-qa" placeholder="Example:\nIf CX asks: 'Can I cancel right now?'\nExpected Response: 'I can help with that, but may I ask why you are looking to leave today?'" class="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm font-mono"></textarea>
+                        <p class="text-[10px] text-slate-500 mt-1">The AI Evaluator will specifically check if the agent used these correct responses.</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-2">Real Customer Chat Logs (Tone Mimicry)</label>
+                        <textarea id="db-tone" placeholder="Paste real Zendesk/Intercom logs here for the AI to mimic vocabulary and sentence length..." class="w-full h-32 p-4 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 font-mono text-sm"></textarea>
+                    </div>
+
+                    <button onclick="dbSync.saveAiData()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors w-full shadow-lg flex items-center justify-center">
+                        <i class="fa-solid fa-cloud-arrow-up mr-2"></i> Update Global AI Knowledge Base
+                    </button>
+                </div>
+
+                <!-- Coaching & Logs Tab -->
+                <div id="admin-coaching-content" class="p-8 hide flex flex-col h-[600px]">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-sm text-slate-500">Review real-time simulation transcripts from all trainees.</p>
+                        <button onclick="adminCoaching.loadLogs()" class="text-sm font-bold text-indigo-600 hover:text-indigo-800"><i class="fa-solid fa-rotate-right mr-1"></i> Refresh</button>
+                    </div>
+                    
+                    <div class="flex flex-1 gap-6 overflow-hidden">
+                        <!-- Log List -->
+                        <div class="w-1/3 border-r border-slate-200 pr-4 overflow-y-auto space-y-3" id="coaching-list">
+                            <div class="text-center text-slate-400 py-8 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading logs...</div>
+                        </div>
+                        
+                        <!-- Log Detail -->
+                        <div class="w-2/3 bg-slate-50 rounded-xl p-6 overflow-y-auto border border-slate-200" id="coaching-detail">
+                            <div class="h-full flex flex-col items-center justify-center text-slate-400 text-center">
+                                <i class="fa-solid fa-magnifying-glass text-4xl mb-3 opacity-50"></i>
+                                <p class="text-sm font-medium">Select a log from the left to review the transcript and AI evaluation.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SIMULATION VIEW -->
+        <section id="view-sim" class="hide animate-fade-in max-w-4xl mx-auto h-[80vh] flex flex-col bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden relative">
+            <div class="bg-slate-900 text-white p-4 flex justify-between items-center z-20">
+                <div>
+                    <h2 class="font-bold text-lg" id="sim-scenario-title">Scenario Title</h2>
+                    <p class="text-xs text-slate-400">Live Simulation Session</p>
+                </div>
+                <div id="call-timer" class="text-indigo-400 font-mono text-xl font-bold tracking-widest hide">00:00</div>
+                <button onclick="app.endSim()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 rounded-lg text-sm font-bold transition-colors">End Session</button>
+            </div>
+            
+            <div id="sim-scroll-area" class="flex-1 overflow-y-auto p-6 bg-slate-50 relative z-10">
+                <!-- Text Chat View -->
+                <div id="chat-history" class="space-y-4 pb-4"></div>
+                
+                <!-- Voice Call View (Overlay) -->
+                <div id="voice-captions" class="hide absolute inset-0 bg-slate-900 flex flex-col items-center justify-center p-8 text-center z-30">
+                    <div class="w-32 h-32 bg-slate-800 border-4 border-slate-700 rounded-full flex items-center justify-center mb-8 relative">
+                        <div id="ai-speaking-ring" class="absolute inset-0 bg-indigo-500 rounded-full animate-ping opacity-50 hide"></div>
+                        <i class="fa-solid fa-user text-5xl text-slate-400 relative z-10"></i>
+                    </div>
+                    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-lg min-h-[140px] flex flex-col justify-center items-center shadow-inner overflow-hidden">
+                        <span id="voice-status" class="text-xs font-bold text-indigo-400 uppercase tracking-widest mb-3 bg-indigo-900/30 px-3 py-1 rounded-full">Connecting...</span>
+                        <div class="w-full max-h-[80px] overflow-y-auto">
+                            <p id="voice-text" class="text-lg text-slate-200 italic">Ringing...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="typing-indicator" class="hide flex items-center space-x-2 mt-4 text-slate-400">
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce"></div>
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                    <div class="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                </div>
+            </div>
+
+            <!-- Inputs -->
+            <div class="p-4 bg-white border-t border-slate-100 z-20">
+                <form id="text-form" onsubmit="event.preventDefault(); app.sendText();" class="flex gap-3">
+                    <input type="text" id="text-input" placeholder="Type your response to the customer..." class="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <button type="submit" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-colors"><i class="fa-solid fa-paper-plane"></i></button>
+                </form>
+
+                <div id="voice-form" class="hide flex justify-center bg-slate-900 -m-4 p-6">
+                    <button id="mic-btn" onclick="app.forceSendVoice()" class="flex flex-col items-center opacity-0 transition-opacity">
+                        <div class="w-16 h-16 bg-rose-500/20 text-rose-500 border border-rose-500/50 rounded-full flex items-center justify-center mb-2 animate-pulse shadow-[0_0_15px_rgba(244,63,94,0.3)]">
+                            <i class="fa-solid fa-microphone text-2xl"></i>
+                        </div>
+                        <span class="text-slate-400 font-bold text-xs uppercase tracking-widest">Tap when done</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- EVALUATION VIEW -->
+        <section id="view-eval" class="hide animate-fade-in max-w-4xl mx-auto">
+            <div id="eval-loading" class="h-96 flex flex-col items-center justify-center text-slate-500">
+                <i class="fa-solid fa-spinner fa-spin text-5xl mb-6 text-indigo-500"></i>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Analyzing Interaction...</h2>
+                <p class="font-medium">AI QA Manager is evaluating the transcript against Tempo Policies.</p>
+            </div>
+
+            <div id="eval-results" class="hide space-y-6">
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col items-center justify-center text-center">
+                        <i class="fa-solid fa-award text-5xl text-slate-200 mb-4"></i>
+                        <div id="eval-score" class="text-6xl font-black text-slate-800">0<span class="text-2xl text-slate-400">/100</span></div>
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">QA Score</p>
+                    </div>
+                    <div class="md:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-200 flex flex-col justify-center">
+                        <p class="text-xs font-black text-slate-400 uppercase tracking-widest mb-2">Simulation Outcome</p>
+                        <h3 id="eval-outcome" class="text-3xl font-black text-slate-800 mb-4">Retained</h3>
+                        <p id="eval-summary" class="text-slate-600 leading-relaxed"></p>
+                    </div>
+                </div>
+
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-green-700 mb-4 flex items-center text-lg"><i class="fa-solid fa-circle-check mr-3"></i> Strengths</h3>
+                        <ul id="eval-good" class="text-sm text-slate-700 space-y-3"></ul>
+                    </div>
+                    <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-amber-700 mb-4 flex items-center text-lg"><i class="fa-solid fa-triangle-exclamation mr-3"></i> Areas for Improvement</h3>
+                        <ul id="eval-bad" class="text-sm text-slate-700 space-y-3"></ul>
+                    </div>
+                </div>
+
+                <div class="flex justify-center mt-10">
+                    <button onclick="ui.showDashboard()" class="px-8 py-4 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold flex items-center shadow-lg transition-colors">
+                        <i class="fa-solid fa-rotate-right mr-3"></i> Return to Dashboard
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FIREBASE & LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, addDoc, collection, query, orderBy, getDocs, serverTimestamp, limit } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+
+        // Hardcoded Tempo Academy Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyBWt_7KNn4lrDU1McGtXMa6dXkrDD9mDgY",
+            authDomain: "tempo-academy.firebaseapp.com",
+            projectId: "tempo-academy",
+            storageBucket: "tempo-academy.firebasestorage.app",
+            messagingSenderId: "632228919825",
+            appId: "1:632228919825:web:32d732f9a54a4bccb10fb0",
+            measurementId: "G-9RW2CQZE6C"
+        };
+
+        // Initialize Firebase Automatically
+        const app = initializeApp(firebaseConfig);
+        window.db = getFirestore(app);
+
+        // Global State
+        window.aiData = { sops: "", qa: "", tone: "" }; // Pulled from Firebase
+        
+        // Exact Scenarios from Slide
+        const SCENARIOS = [
+            {
+                title: 'Membership Pause Request',
+                description: 'Customer is traveling and wants to pause their membership.',
+                initial: "Hi, I'm traveling for work for two months. Can I pause my account so I don't get charged?",
+                policy: "Tempo Policy: Offer up to a 3-month pause. Billing automatically resumes. Agent MUST explain the exact date billing resumes."
+            },
+            {
+                title: 'Bundled Membership Inquiry',
+                description: 'Customer confused about bundled hardware + sub fees.',
+                initial: "I bought the bundle upfront, why am I still paying a monthly fee?",
+                policy: "Tempo Policy: Upfront price is hardware only. Requires 12-month software sub. Agent must clarify difference between hardware cost and live class subscription."
+            },
+            {
+                title: 'Membership Reactivation',
+                description: 'Previously canceled customer wants to reactivate with a promo.',
+                initial: "I canceled last year but want to return. Do you have promos? I won't pay a setup fee.",
+                policy: "Tempo Policy: Offer 'Welcome Back' 20% discount for first month. No setup fees. MUST verify old account email to link historical data."
+            },
+            {
+                title: 'Core Issue (HDMI)',
+                description: 'Tempo Core will not connect to TV.',
+                initial: "My Core flashes red and won't show on my TV. I swapped the HDMI. Fix it or I return it.",
+                policy: "Tempo Policy: Agent MUST ask to perform hard reset (unplug 60s) AND check TV input is HDMI 2.1 (Enhanced). If fails, offer free replacement dock."
+            }
+        ];
+
+        // Storage Helpers
+        window.saveLocal = (key, val) => localStorage.setItem(key, val);
+        window.getLocal = (key) => localStorage.getItem(key) || '';
+
+        // UI Management
+        window.ui = {
+            screens: ['view-dashboard', 'view-admin', 'view-sim', 'view-eval'],
+            show: (id) => {
+                ui.screens.forEach(s => document.getElementById(s).classList.add('hide'));
+                document.getElementById(id).classList.remove('hide');
+            },
+            showDashboard: () => {
+                ui.show('view-dashboard');
+                document.getElementById('trainee-name').value = getLocal('traineeName');
+                document.getElementById('api-key').value = getLocal('geminiKey');
+                document.getElementById('trainee-score').innerText = getLocal('certScore') || '0';
+            },
+            showAdmin: () => {
+                ui.show('view-admin');
+            },
+            switchAdminTab: (tab) => {
+                ['db', 'ai', 'coaching'].forEach(t => {
+                    const btn = document.getElementById(`tab-${t}`);
+                    if(btn) {
+                        btn.classList.remove('text-indigo-600', 'border-indigo-600');
+                        btn.classList.add('text-slate-400', 'border-transparent');
+                        document.getElementById(`admin-${t}-content`).classList.add('hide');
+                    }
+                });
+                
+                const activeBtn = document.getElementById(`tab-${tab}`);
+                if(activeBtn) {
+                    activeBtn.classList.remove('text-slate-400', 'border-transparent');
+                    activeBtn.classList.add('text-indigo-600', 'border-indigo-600');
+                    document.getElementById(`admin-${tab}-content`).classList.remove('hide');
+                }
+            }
+        };
+
+        // Firebase Operations
+        window.dbSync = {
+            saveAiData: async () => {
+                if(!window.db) return alert("Database not connected!");
+                try {
+                    const data = {
+                        sops: document.getElementById('db-sops').value,
+                        qa: document.getElementById('db-qa').value,
+                        tone: document.getElementById('db-tone').value
+                    };
+                    await setDoc(doc(window.db, "admin", "ai_config"), data);
+                    window.aiData = data;
+                    alert("Advanced AI Knowledge Base Pushed to Database!");
+                } catch(e) { alert("Error saving: " + e.message); }
+            },
+            fetchAiData: async () => {
+                if(!window.db) return false;
+                try {
+                    const snap = await getDoc(doc(window.db, "admin", "ai_config"));
+                    if(snap.exists()) {
+                        window.aiData = snap.data();
+                        document.getElementById('db-sops').value = window.aiData.sops || "";
+                        document.getElementById('db-qa').value = window.aiData.qa || "";
+                        document.getElementById('db-tone').value = window.aiData.tone || "";
+                    }
+                    return true;
+                } catch(e) { 
+                    console.error("Failed to fetch AI data", e); 
+                    return false;
+                }
+            }
+        };
+
+        // Admin Coaching Logic
+        window.adminCoaching = {
+            logs: [],
+            loadLogs: async () => {
+                if(!window.db) return;
+                const listEl = document.getElementById('coaching-list');
+                listEl.innerHTML = '<div class="text-center text-slate-400 py-8 text-sm"><i class="fa-solid fa-spinner fa-spin mr-2"></i> Loading logs...</div>';
+                try {
+                    const q = query(collection(window.db, "simulations"), orderBy("timestamp", "desc"), limit(50));
+                    const querySnapshot = await getDocs(q);
+                    window.adminCoaching.logs = [];
+                    listEl.innerHTML = '';
+                    
+                    if(querySnapshot.empty) {
+                        listEl.innerHTML = '<div class="text-center text-slate-400 py-8 text-sm">No simulations recorded yet.</div>';
+                        return;
+                    }
+
+                    querySnapshot.forEach((doc) => {
+                        const data = doc.data();
+                        window.adminCoaching.logs.push({ id: doc.id, ...data });
+                        const date = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString() : 'Just now';
+                        const scoreColor = data.score >= 80 ? 'text-green-600' : data.score >= 60 ? 'text-amber-500' : 'text-rose-500';
+                        
+                        listEl.innerHTML += `
+                            <button onclick="adminCoaching.viewLog('${doc.id}')" class="w-full text-left p-3 rounded-xl hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors focus:bg-indigo-50 focus:border-indigo-200 group">
+                                <div class="flex justify-between items-start mb-1">
+                                    <h4 class="font-bold text-slate-800 text-sm truncate">${data.traineeName}</h4>
+                                    <span class="font-black ${scoreColor} text-xs">${data.score}/100</span>
+                                </div>
+                                <p class="text-xs text-slate-500 truncate">${data.scenario}</p>
+                                <p class="text-[10px] text-slate-400 mt-2">${date}</p>
+                            </button>
+                        `;
+                    });
+                } catch(e) {
+                    console.error("Error loading logs", e);
+                    listEl.innerHTML = '<div class="text-center text-rose-500 py-8 text-sm">Error loading logs. Check permissions.</div>';
+                }
+            },
+            viewLog: (id) => {
+                const log = window.adminCoaching.logs.find(l => l.id === id);
+                if(!log) return;
+                
+                const outcomeColor = log.outcome === 'Retained' ? 'bg-green-100 text-green-800' : 'bg-rose-100 text-rose-800';
+                
+                document.getElementById('coaching-detail').innerHTML = `
+                    <div class="flex justify-between items-start mb-6 border-b border-slate-200 pb-4">
+                        <div>
+                            <h2 class="text-xl font-black text-slate-800">${log.traineeName}</h2>
+                            <p class="text-sm text-slate-500">${log.scenario} (${log.channel})</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-black text-slate-800">${log.score}<span class="text-sm text-slate-400">/100</span></div>
+                            <span class="inline-block px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${outcomeColor} mt-1">${log.outcome}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">AI QA Summary</h3>
+                        <p class="text-sm text-slate-700 bg-white p-4 rounded-xl shadow-sm border border-slate-100">${log.summary}</p>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center justify-between">
+                            Full Transcript
+                            <button onclick="navigator.clipboard.writeText(\`${log.transcript.replace(/`/g, '')}\`); alert('Copied!')" class="text-indigo-500 hover:text-indigo-700 cursor-pointer"><i class="fa-regular fa-copy"></i> Copy</button>
+                        </h3>
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-100 font-mono text-xs whitespace-pre-wrap leading-relaxed text-slate-600 h-64 overflow-y-auto">${log.transcript}</div>
+                    </div>
+                `;
+            }
+        };
+
+        // On Load
+        window.onload = async () => {
+            ui.showDashboard();
+            
+            // Fetch the latest rules automatically
+            const isConnected = await dbSync.fetchAiData();
+            
+            // Set Database UI Status based on connection success
+            const dot = document.getElementById('db-status-dot');
+            const text = document.getElementById('db-status-text');
+            
+            if (isConnected) {
+                dot.classList.replace('bg-red-500', 'bg-green-500');
+                text.innerText = "Connected & Synced to tempo-academy";
+            } else {
+                dot.classList.replace('bg-green-500', 'bg-red-500');
+                text.innerText = "Action Required: Enable Firestore in Firebase Console";
+            }
+        };
+
+        // --- SIMULATION LOGIC ---
+        let sim = { channel: null, scenario: null, messages: [], isTyping: false };
+        
+        // Voice State
+        let recognition = null, audioPlayer = null, isListening = false, isCallActive = false, isPlayingAudio = false;
+        let currentSpoken = "", finalSpoken = "", manualStop = false, silenceTimer = null;
+
+        window.app = {
+            startSim: (channel) => {
+                const key = getLocal('geminiKey');
+                if(!key) return alert("Please enter your Gemini API Key first.");
+                if(!window.db) alert("Warning: Database not connected. Running offline without admin rules.");
+
+                sim.channel = channel;
+                sim.scenario = SCENARIOS[Math.floor(Math.random() * SCENARIOS.length)];
+                sim.messages = [];
+                isCallActive = (channel === 'call');
+                
+                ui.show('view-sim');
+                document.getElementById('sim-scenario-title').innerText = sim.scenario.title;
+                document.getElementById('chat-history').innerHTML = '';
+                
+                if(isCallActive) {
+                    document.getElementById('text-form').classList.add('hide');
+                    document.getElementById('voice-form').classList.remove('hide');
+                    document.getElementById('voice-captions').classList.remove('hide');
+                    document.getElementById('chat-history').classList.add('hide');
+                    document.getElementById('call-timer').classList.remove('hide');
+                    
+                    document.getElementById('voice-status').innerText = "Dialing...";
+                    document.getElementById('voice-text').innerText = "Ringing...";
+                    
+                    setTimeout(() => {
+                        app.addMsg('model', sim.scenario.initial);
+                        app.playTTS(sim.scenario.initial);
+                    }, 1500);
+                } else {
+                    document.getElementById('text-form').classList.remove('hide');
+                    document.getElementById('voice-form').classList.add('hide');
+                    document.getElementById('voice-captions').classList.add('hide');
+                    document.getElementById('chat-history').classList.remove('hide');
+                    document.getElementById('call-timer').classList.add('hide');
+                    
+                    app.addMsg('model', sim.scenario.initial);
+                }
+            },
+            
+            addMsg: (role, text) => {
+                sim.messages.push({ role, text });
+                if(isCallActive) return; // Voice uses captions, not chat bubbles
+                
+                const isUser = role === 'user';
+                const div = document.createElement('div');
+                div.className = `flex ${isUser ? 'justify-end' : 'justify-start'}`;
+                div.innerHTML = `
+                    <div class="max-w-[80%] rounded-2xl p-4 shadow-sm ${isUser ? 'bg-indigo-600 text-white rounded-br-none' : 'bg-white border border-slate-200 rounded-bl-none text-slate-800'}">
+                        <div class="text-xs font-bold mb-1 opacity-50">${isUser ? 'Agent' : 'Customer'}</div>
+                        <div class="whitespace-pre-wrap">${text}</div>
+                    </div>`;
+                document.getElementById('chat-history').appendChild(div);
+                document.getElementById('sim-scroll-area').scrollTop = document.getElementById('sim-scroll-area').scrollHeight;
+            },
+
+            sendText: () => {
+                const el = document.getElementById('text-input');
+                const text = el.value.trim();
+                if(!text || sim.isTyping) return;
+                el.value = '';
+                app.processTurn(text);
+            },
+
+            processTurn: async (userText) => {
+                app.addMsg('user', userText);
+                app.setTyping(true);
+
+                const sysPrompt = `You are a customer of "Tempo". Channel: ${sim.channel}. Reason: ${sim.scenario.title} - ${sim.scenario.description}.
+RULES:
+1. Act human, stubborn. ${isCallActive ? 'Keep it to spoken dialogue.' : ''}
+2. KEEP IT SHORT. 1-3 sentences max.
+3. Only agree to stay/resolve if agent follows this exact policy: ${sim.scenario.policy}
+
+TEMPO STANDARD OPERATING PROCEDURES (SOPs):
+${window.aiData.sops || 'Standard customer service applies.'}
+
+COMMON CX QUESTIONS & EXPECTED AGENT RESPONSES:
+(If the agent gives the expected response below, react positively and cooperatively):
+${window.aiData.qa || 'None specified.'}
+
+${window.aiData.tone ? `\nMIMIC THIS CUSTOMER TONE:\n${window.aiData.tone}` : ''}`;
+
+                const apiMsgs = [{role: 'user', parts: [{text: `[Sys]: Scenario: ${sim.scenario.title}`}]}, {role: 'model', parts: [{text: 'Ready.'}]}];
+                sim.messages.forEach(m => apiMsgs.push({role: m.role==='user'?'user':'model', parts: [{text: m.text}]}));
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${getLocal('geminiKey')}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: apiMsgs, systemInstruction: {parts: [{text: sysPrompt}]} })
+                    });
+                    const data = await res.json();
+                    if(data.error) throw new Error(data.error.message);
+                    
+                    const reply = data.candidates[0].content.parts[0].text;
+                    app.addMsg('model', reply);
+                    
+                    if(isCallActive) app.playTTS(reply);
+                    else app.setTyping(false);
+                } catch(e) {
+                    app.addMsg('model', "*(System Error: API failed)*");
+                    app.setTyping(false);
+                }
+            },
+
+            setTyping: (bool) => {
+                sim.isTyping = bool;
+                const ind = document.getElementById('typing-indicator');
+                bool ? ind.classList.remove('hide') : ind.classList.add('hide');
+                document.getElementById('sim-scroll-area').scrollTop = document.getElementById('sim-scroll-area').scrollHeight;
+                if(isCallActive && bool) {
+                    document.getElementById('voice-status').innerText = "AI Thinking";
+                    document.getElementById('voice-text').innerText = "...";
+                }
+            },
+
+            // --- VOICE LOGIC ---
+            playTTS: (text) => {
+                if(!isCallActive) return;
+                app.setTyping(true);
+                document.getElementById('voice-status').innerText = "Customer Speaking";
+                document.getElementById('voice-text').innerText = text;
+                document.getElementById('ai-speaking-ring').classList.remove('hide');
+
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(text);
+                const voices = window.speechSynthesis.getVoices();
+                u.voice = voices.find(v => v.lang==='en-US' && v.name.includes('Google')) || voices.find(v => v.lang.startsWith('en'));
+                
+                u.onend = () => {
+                    document.getElementById('ai-speaking-ring').classList.add('hide');
+                    setTimeout(() => app.startVoiceListen(false), 300);
+                };
+                u.onerror = () => { document.getElementById('ai-speaking-ring').classList.add('hide'); app.startVoiceListen(false); };
+                app.setTyping(false);
+                window.speechSynthesis.speak(u);
+            },
+
+            formatSentence: (exist, next) => {
+                let t1 = exist.trim(), t2 = next.trim();
+                if(!t2) return t1 ? t1 + ' ' : '';
+                if(t1) {
+                    t1 += !['.', '?', '!'].includes(t1.slice(-1)) ? '. ' : ' ';
+                    t2 = t2.charAt(0).toUpperCase() + t2.slice(1);
+                } else { t2 = t2.charAt(0).toUpperCase() + t2.slice(1); }
+                return t1 + t2 + ' ';
+            },
+
+            startVoiceListen: (keepOld = false) => {
+                if(sim.isTyping || !isCallActive) return;
+                const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if(!SR) return alert("Browser does not support speech recognition.");
+
+                recognition = new SR();
+                recognition.continuous = true; recognition.interimResults = true; recognition.lang = 'en-US';
+                if(!keepOld) { currentSpoken = ""; finalSpoken = ""; }
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('voice-status').innerText = "Your Turn";
+                    document.getElementById('voice-text').innerText = currentSpoken || "Listening... Tap button when done.";
+                    document.getElementById('mic-btn').classList.remove('opacity-0');
+                };
+
+                recognition.onresult = (e) => {
+                    let interim = '';
+                    for(let i=e.resultIndex; i<e.results.length; ++i) {
+                        if(e.results[i].isFinal) finalSpoken = app.formatSentence(finalSpoken, e.results[i][0].transcript);
+                        else interim += e.results[i][0].transcript;
+                    }
+                    currentSpoken = finalSpoken + interim;
+                    document.getElementById('voice-text').innerText = currentSpoken;
+                    const c = document.getElementById('voice-text').parentElement;
+                    c.scrollTop = c.scrollHeight;
+                };
+
+                recognition.onerror = (e) => { if(e.error !== 'aborted' && e.error !== 'no-speech') isListening = false; };
+                recognition.onend = () => {
+                    isListening = false;
+                    document.getElementById('mic-btn').classList.add('opacity-0');
+                    if(manualStop) {
+                        manualStop = false;
+                        if(currentSpoken.trim() && !sim.isTyping) app.processTurn(currentSpoken.trim());
+                    } else if(isCallActive && !sim.isTyping) {
+                        if(currentSpoken.length > finalSpoken.length) finalSpoken = app.formatSentence(finalSpoken, currentSpoken.substring(finalSpoken.length));
+                        app.startVoiceListen(true);
+                    }
+                };
+                recognition.start();
+            },
+
+            forceSendVoice: () => {
+                if(isListening && recognition) { manualStop = true; recognition.stop(); }
+            },
+
+            // --- EVALUATION ---
+            endSim: async () => {
+                isCallActive = false; window.speechSynthesis.cancel();
+                if(recognition) { manualStop = false; recognition.onend = null; recognition.stop(); }
+                
+                ui.show('view-eval');
+                document.getElementById('eval-loading').classList.remove('hide');
+                document.getElementById('eval-results').classList.add('hide');
+
+                const log = sim.messages.map(m => `${m.role==='user'?'Agent':'Customer'}: ${m.text}`).join('\n\n');
+                const prompt = `Review this transcript. Issue: ${sim.scenario.title}.
+TEMPO POLICY MUST BE FOLLOWED: ${sim.scenario.policy}
+
+GLOBAL TEMPO SOPs TO ENFORCE:
+${window.aiData.sops || 'None provided.'}
+
+EXPECTED AGENT ANSWERS (Did the agent answer questions correctly based on this?):
+${window.aiData.qa || 'None provided.'}
+
+Respond ONLY JSON: {"score": 0-100, "outcome": "Retained/Churned", "summary": "...", "good": [".."], "bad": [".."]}`;
+
+                try {
+                    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${getLocal('geminiKey')}`, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ contents: [{role:'user', parts:[{text:`Log:\n${log}`}]}], systemInstruction: {parts:[{text:prompt}]}, generationConfig: {responseMimeType: "application/json"} })
+                    });
+                    const d = await res.json();
+                    const result = JSON.parse(d.candidates[0].content.parts[0].text.replace(/```json/gi,'').replace(/```/g,'').trim());
+                    
+                    // SAVE SIMULATION LOG TO FIREBASE DATABASE FOR COACHING
+                    if (window.db) {
+                        try {
+                            await addDoc(collection(window.db, "simulations"), {
+                                traineeName: getLocal('traineeName') || 'Unknown Trainee',
+                                scenario: sim.scenario.title,
+                                channel: sim.channel,
+                                score: result.score,
+                                outcome: result.outcome,
+                                summary: result.summary,
+                                transcript: log,
+                                timestamp: serverTimestamp()
+                            });
+                        } catch (saveErr) { console.error("Failed to save transcript to DB:", saveErr); }
+                    }
+                    
+                    document.getElementById('eval-loading').classList.add('hide');
+                    document.getElementById('eval-results').classList.remove('hide');
+                    
+                    document.getElementById('eval-score').innerHTML = `${result.score}<span class="text-3xl text-slate-300">/100</span>`;
+                    document.getElementById('eval-outcome').innerText = result.outcome;
+                    document.getElementById('eval-summary').innerText = result.summary;
+                    
+                    const buildList = (arr, id) => document.getElementById(id).innerHTML = (arr||[]).map(i=>`<li>- ${i}</li>`).join('');
+                    buildList(result.good, 'eval-good');
+                    buildList(result.bad, 'eval-bad');
+
+                    if(result.outcome === 'Retained' && result.score > 70) {
+                        let sc = parseInt(getLocal('certScore')||'0') + 1;
+                        saveLocal('certScore', sc);
+                        confetti({particleCount: 100, spread: 70, origin: {y:0.6}});
+                    }
+                } catch(e) {
+                    alert("Evaluation Failed. Check API Key.");
+                    ui.showDashboard();
+                }
+            }
+        };
+    </script>
+</body>
+</html>
