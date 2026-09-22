@@ -485,7 +485,7 @@
                         <table class="w-full text-left border-collapse whitespace-nowrap">
                             <thead class="sticky top-0 bg-white shadow-sm z-10">
                                 <tr class="text-xs text-gray-500 uppercase tracking-wider bg-gray-50">
-                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Date</th>
+                                    <th class="py-2 px-4 font-semibold border-b border-gray-200">Effective Date</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Ticket ID</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Agent</th>
                                     <th class="py-2 px-4 font-semibold border-b border-gray-200">Channel</th>
@@ -694,8 +694,6 @@
             'santos.nyikang@tempo.fit',
             'youkabed.farid@tempo.fit',
             'ahmed.elsawy@tempo.fit',
-            'salma.ahmed@tempo.fit',
-            'shahd.emad@tempo.fit'
         ];
         
         const TEAM_MENTORS = [
@@ -951,19 +949,29 @@
                 }
 
                 // Map exactly what needs to be downloaded
-                const exportArray = filteredData.map(row => ({
-                    'Created date': new Date(row._timestamp).toLocaleString([], {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'}),
-                    'Ticket ID': row['Ticket ID'],
-                    'Submitted By': row['Submitted By'],
-                    'Order ID': row['Order ID'] || '',
-                    'Freshchat Conversation ID': row['Freshchat Conversation ID'] || '',
-                    'Order Request Channel': row._channel || '',
-                    'Order Request Type': row._requestType || '',
-                    'Cancellation & Return Reason': row._cleanReason,
-                    'New Prevention Reason': row._preventionReason || '',
-                    'Status': row['Status'],
-                    'New Request Prevented': row['New Request Prevented']
-                }));
+                const exportArray = filteredData.map(row => {
+                    const formatDateTime = (dateStrOrMs) => {
+                        if (!dateStrOrMs) return '';
+                        const d = new Date(dateStrOrMs);
+                        return isNaN(d.getTime()) ? dateStrOrMs : d.toLocaleString([], {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+                    };
+
+                    return {
+                        'Effective Date (Reporting)': formatDateTime(row._timestamp),
+                        'Original Created Date': formatDateTime(row['Created date']),
+                        'Prevention Status At': formatDateTime(row['Prevention Status At']),
+                        'Ticket ID': row['Ticket ID'],
+                        'Submitted By': row['Submitted By'],
+                        'Order ID': row['Order ID'] || '',
+                        'Freshchat Conversation ID': row['Freshchat Conversation ID'] || '',
+                        'Order Request Channel': row._channel || '',
+                        'Order Request Type': row._requestType || '',
+                        'Cancellation & Return Reason': row._cleanReason,
+                        'New Prevention Reason': row._preventionReason || '',
+                        'Status': row['Status'],
+                        'New Request Prevented': row['New Request Prevented']
+                    };
+                });
 
                 // Use SheetJS to create Excel File
                 const worksheet = XLSX.utils.json_to_sheet(exportArray);
@@ -1210,7 +1218,7 @@
                     '_preventionReason': prevReason,
                     '_channel': channel,
                     '_requestType': reqTypeRaw,
-                    '_timestamp': parsedDate.getTime(), 
+                    '_timestamp': parsedDate.getTime(), // The computed Effective Reporting Date
                     '_batchId': batchId,
                     '_batchName': originalFileName,
                     '_batchDate': batchDate
@@ -1243,14 +1251,17 @@
                 if (hasConflict) {
                     const exRow = conflictObj.existing;
                     
+                    // Normalize dates to ignore exact time differences
                     const inDate = new Date(inRow['_timestamp']).toISOString().split('T')[0];
                     const exDate = new Date(exRow['_timestamp']).toISOString().split('T')[0];
 
+                    // Normalize Status to treat Closed and Resolved as the same
                     const inStatusRaw = (inRow['Status'] || '').trim().toLowerCase();
                     const exStatusRaw = (exRow['Status'] || '').trim().toLowerCase();
                     const inStatus = (inStatusRaw === 'closed' || inStatusRaw === 'resolved') ? 'resolved/closed' : inStatusRaw;
                     const exStatus = (exStatusRaw === 'closed' || exStatusRaw === 'resolved') ? 'resolved/closed' : exStatusRaw;
 
+                    // Ignore perfectly identical matches (now comparing only the date portion)
                     const isIdentical = (
                         inRow['Ticket ID'] === (exRow['Ticket ID'] || '') &&
                         inRow['Order ID'] === (exRow['Order ID'] || '') &&
@@ -1660,9 +1671,18 @@
             const selectedTeams = Array.from(document.querySelectorAll('.team-filter-cb:checked')).map(cb => cb.value);
             const selectedChannels = Array.from(document.querySelectorAll('.channel-filter-cb:checked')).map(cb => cb.value);
 
-            let start = startDateStr ? new Date(startDateStr) : null;
-            let end = endDateStr ? new Date(endDateStr) : null;
-            if(end) end.setHours(23, 59, 59, 999);
+            // FORCE LOCAL TIMEZONE MIDNIGHT TO MIDNIGHT FILTERING
+            let start = null;
+            if (startDateStr) {
+                const [y, m, d] = startDateStr.split('-');
+                start = new Date(y, m - 1, d, 0, 0, 0); 
+            }
+            
+            let end = null;
+            if (endDateStr) {
+                const [y, m, d] = endDateStr.split('-');
+                end = new Date(y, m - 1, d, 23, 59, 59, 999); 
+            }
 
             let result = [];
             globalDataMap.forEach(row => {
@@ -1731,7 +1751,10 @@
             const statusMap = {};
 
             data.forEach(row => {
-                const dayKey = row._parsedDate.toISOString().split('T')[0];
+                // Ensure the chart groups by local day, not UTC day
+                const d = row._parsedDate;
+                const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                
                 if(!timelineMap[dayKey]) timelineMap[dayKey] = { total: 0, saved: 0, pending: 0 };
                 timelineMap[dayKey].total++;
                 if(row._isSaved) timelineMap[dayKey].saved++;
