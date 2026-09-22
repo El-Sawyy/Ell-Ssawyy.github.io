@@ -50,6 +50,7 @@
             <div class="flex space-x-6" id="navTabs">
                 <button onclick="switchTab('overview')" class="tab-active pb-1 px-1 transition-colors outline-none" data-tab="overview">Overview</button>
                 <button onclick="switchTab('agents')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agents">Agent Performance</button>
+                <button onclick="switchTab('agentFocus')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="agentFocus">Individual Agent</button>
                 <button onclick="switchTab('insights')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="insights">Insights & Channels</button>
                 <button onclick="switchTab('types')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="types">Request Types</button>
                 <button onclick="switchTab('data')" class="tab-inactive pb-1 px-1 transition-colors outline-none" data-tab="data" style="display: none;">Data Manager</button>
@@ -131,12 +132,12 @@
                         <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Chat</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group">
-                        <input type="checkbox" value="email" class="channel-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
-                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Email</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" value="phone" class="channel-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
                         <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Phone</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer group">
+                        <input type="checkbox" value="email" class="channel-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
+                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Email</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" value="social" class="channel-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
@@ -162,7 +163,7 @@
             </div>
 
             <!-- Reason Filters -->
-            <div class="flex-1 flex flex-col shrink-0">
+            <div class="flex-1 flex flex-col shrink-0 min-h-[300px]">
                 <div class="p-4 pb-2 flex justify-between items-center bg-white shrink-0">
                     <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1"><i class="ph ph-funnel"></i> Exclude Reasons</h2>
                     <button id="selectAllBtn" class="text-[10px] text-blue-600 hover:text-blue-800 font-bold bg-blue-50 px-2 py-1 rounded">Toggle All</button>
@@ -237,14 +238,13 @@
                 </div>
             </div>
 
-            <!-- TAB 2: AGENTS (Drill-Down Setup) -->
-            <div id="tab-agents" class="tab-pane hidden h-[calc(100vh-140px)] flex-col gap-6 pb-6">
-                
+            <!-- TAB 2: AGENTS (Team Leaderboard) -->
+            <div id="tab-agents" class="tab-pane hidden flex-col gap-6 h-[calc(100vh-140px)] pb-6">
                 <!-- View 1: Leaderboard -->
                 <div id="agentLeaderboardView" class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-full overflow-hidden">
                     <div class="px-5 py-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
                         <h3 class="text-sm font-bold text-gray-900">Agent Performance Leaderboard</h3>
-                        <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">Click any agent to view full profile & tickets</span>
+                        <span class="text-xs text-gray-500 bg-white px-2 py-1 rounded border border-gray-200 shadow-sm">Click any agent to jump to their specific profile tab</span>
                     </div>
                     <div class="overflow-y-auto flex-1 custom-scrollbar">
                         <table class="w-full text-left border-collapse">
@@ -263,74 +263,76 @@
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- View 2: Detailed Agent Profile -->
-                <div id="agentProfileView" class="hidden flex-col h-full gap-4">
-                    <!-- Top Toolbar for Profile -->
-                    <div class="flex items-center justify-between shrink-0 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                        <div class="flex items-center gap-4">
-                            <button onclick="backToLeaderboard()" class="flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 px-3 py-1.5 bg-gray-50 hover:bg-blue-50 rounded-md border border-gray-200 transition-colors">
-                                <i class="ph ph-arrow-left text-lg"></i> Back to Leaderboard
-                            </button>
-                            <div class="w-px h-6 bg-gray-300"></div>
-                            <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2" id="selectedAgentTitle">Agent Name</h3>
+            <!-- TAB 2.5: INDIVIDUAL AGENT FOCUS -->
+            <div id="tab-agentFocus" class="tab-pane hidden flex-col gap-6 pb-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="text-lg font-bold text-gray-900">Individual Agent Analysis</h3>
+                        <p class="text-xs text-gray-500 mt-1">Filter down to a single agent to view their complete performance dashboard.</p>
+                    </div>
+                    <select id="agentFocusSelect" class="text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white w-72 cursor-pointer shadow-sm">
+                        <option value="">-- Select an Agent --</option>
+                    </select>
+                </div>
+
+                <!-- Agent Focus KPIs -->
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Total Cases</p>
+                        <h3 class="text-2xl font-bold text-gray-900" id="focusKpiTotal">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 bottom-0 w-2 bg-green-500"></div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Prevented / Saved</p>
+                        <h3 class="text-2xl font-bold text-green-600" id="focusKpiSaved">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 bottom-0 w-2 bg-yellow-400"></div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Pending Cases</p>
+                        <h3 class="text-2xl font-bold text-yellow-600" id="focusKpiPending">0</h3>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 relative overflow-hidden">
+                        <div class="absolute right-0 top-0 bottom-0 w-2 bg-blue-600"></div>
+                        <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Retention Rate</p>
+                        <h3 class="text-2xl font-bold text-blue-600" id="focusKpiRate">0%</h3>
+                    </div>
+                </div>
+
+                <!-- Agent Focus Charts Row 1 -->
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="col-span-2 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4">Agent Retention Trend</h3>
+                        <div class="w-full h-64">
+                            <canvas id="focusTrendChart"></canvas>
                         </div>
                     </div>
-                    
-                    <!-- Stats Cards -->
-                    <div class="grid grid-cols-2 gap-4 shrink-0">
-                        <div class="bg-white border border-gray-200 p-6 rounded-xl shadow-sm text-center">
-                            <div class="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-2">Retention Rate</div>
-                            <div class="text-4xl font-bold text-blue-600" id="snapRate">0%</div>
-                        </div>
-                        <div class="bg-white border border-gray-200 p-6 rounded-xl shadow-sm text-center">
-                            <div class="text-sm text-gray-500 font-semibold uppercase tracking-wider mb-2">Resolved Volume</div>
-                            <div class="text-4xl font-bold text-gray-900" id="snapVol">0</div>
-                        </div>
-                    </div>
-
-                    <!-- Bottom Split: Charts & Tickets -->
-                    <div class="grid grid-cols-2 gap-4 flex-1 min-h-0">
-                        <!-- Left: Reasons Chart -->
-                        <div class="bg-white border border-gray-200 p-5 rounded-xl shadow-sm flex flex-col">
-                            <h4 class="text-sm font-bold text-gray-800 mb-4">Top Cancellation Reasons Handled</h4>
-                            <div class="flex-1 relative min-h-[250px]">
-                                <canvas id="agentReasonChart"></canvas>
-                            </div>
-                        </div>
-
-                        <!-- Right: Ticket Validation List -->
-                        <div class="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col overflow-hidden">
-                            <div class="bg-gray-50 px-5 py-4 border-b border-gray-200 flex justify-between items-center shrink-0">
-                                <h4 class="text-sm font-bold text-gray-800">Validation: Agent's Tickets</h4>
-                                <div class="flex items-center gap-3">
-                                    <select id="agentTicketFilter" class="text-xs border border-gray-300 rounded px-2 py-1 outline-none bg-white cursor-pointer" onchange="renderAgentTicketsList()">
-                                        <option value="all">All Statuses</option>
-                                        <option value="true">Saved (Yes)</option>
-                                        <option value="false">Unsaved (No)</option>
-                                        <option value="pending">Pending</option>
-                                    </select>
-                                    <span class="text-xs text-gray-500" id="ticketListCount">0 records</span>
-                                </div>
-                            </div>
-                            <div class="flex-1 overflow-y-auto custom-scrollbar p-0 bg-white">
-                                <table class="w-full text-left text-xs whitespace-nowrap">
-                                    <thead class="bg-white sticky top-0 shadow-sm z-10">
-                                        <tr class="text-gray-500 uppercase">
-                                            <th class="py-3 px-4 font-semibold border-b border-gray-100">Ticket / FC ID</th>
-                                            <th class="py-3 px-4 font-semibold border-b border-gray-100">Order ID</th>
-                                            <th class="py-3 px-4 font-semibold border-b border-gray-100 text-right">Status</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="agentTicketsBody" class="divide-y divide-gray-100">
-                                        <!-- Drill down tickets go here -->
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="col-span-1 bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-800 mb-4">Agent Ticket Status</h3>
+                        <div class="w-full h-56 flex justify-center">
+                            <canvas id="focusStatusChart"></canvas>
                         </div>
                     </div>
                 </div>
 
+                <!-- Agent Focus Charts Row 2 -->
+                <div class="grid grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-900 mb-1">Top Handled Cancellation Reasons</h3>
+                        <p class="text-xs text-gray-500 mb-4">What customers requested from this agent.</p>
+                        <div class="w-full h-72 relative">
+                            <canvas id="focusReasonsChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h3 class="text-sm font-bold text-gray-900 mb-1">Agent Prevention Strategies</h3>
+                        <p class="text-xs text-gray-500 mb-4">How this specific agent successfully saved tickets.</p>
+                        <div class="w-full h-72 relative">
+                            <canvas id="focusPrevChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- TAB 3: INSIGHTS & CHANNELS -->
@@ -578,8 +580,8 @@
                         <label class="block text-xs font-semibold text-gray-700 mb-1">Request Channel</label>
                         <select id="formChannel" class="w-full text-sm border border-gray-300 rounded p-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white">
                             <option value="Chat">Chat</option>
-                            <option value="Email">Email</option>
                             <option value="Phone">Phone</option>
+                            <option value="Email">Email</option>
                             <option value="Social">Social</option>
                         </select>
                     </div>
@@ -713,15 +715,18 @@
         let globalDataMap = new Map(); 
         let uniqueReasons = new Set();
         let excludedReasons = new Set();
-        let charts = { trend: null, status: null, topReasons: null, agentReason: null, channel: null, prevention: null, requestTypes: null };
+        let charts = { 
+            trend: null, status: null, topReasons: null, agentReason: null, channel: null, prevention: null, requestTypes: null,
+            focusTrend: null, focusStatus: null, focusReasons: null, focusPrev: null 
+        };
         let currentActiveTab = 'overview';
         let selectedAgentForSnapshot = null;
         let currentAgentSpecificTickets = []; 
 
         // Upload Conflict State
         let uploadConflicts = [];
-        let uploadReadyMap = new Map(); // Replaces array to handle intra-file replacements safely
-        let currentBatchOrderMap = new Map(); // Tracks Order IDs within the current upload batch
+        let uploadReadyMap = new Map(); 
+        let currentBatchOrderMap = new Map(); 
         let currentConflictIdx = 0;
 
         // Pagination State
@@ -793,10 +798,8 @@
 
         // --- UI & Utility Hooks ---
         function setupUIControls() {
-            // Admin Toggle Handler
             window.toggleAdmin = function() {
                 if (isAdmin) {
-                    // Lock it
                     isAdmin = false;
                     sessionStorage.removeItem('retentionAdmin');
                     if (currentActiveTab === 'data' || currentActiveTab === 'uploads') {
@@ -804,7 +807,6 @@
                     }
                     applyAdminUI();
                 } else {
-                    // Unlock it
                     const pass = prompt('Enter Admin Password to unlock data management:');
                     if (pass === ADMIN_PASS) {
                         isAdmin = true;
@@ -865,7 +867,6 @@
             document.getElementById('startDateFilter')?.addEventListener('change', refreshDashboard);
             document.getElementById('endDateFilter')?.addEventListener('change', refreshDashboard);
             
-            // Multi-Select Team Filter Event Listeners
             document.querySelectorAll('.team-filter-cb').forEach(cb => {
                 cb.addEventListener('change', refreshDashboard);
             });
@@ -877,7 +878,6 @@
                 refreshDashboard();
             };
 
-            // Multi-Select Channel Filter Event Listeners
             document.querySelectorAll('.channel-filter-cb').forEach(cb => {
                 cb.addEventListener('change', refreshDashboard);
             });
@@ -889,7 +889,6 @@
                 refreshDashboard();
             };
             
-            // Search Input for Reasons Filter
             document.getElementById('reasonSearchInput')?.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const items = document.querySelectorAll('.reason-item');
@@ -907,6 +906,12 @@
             document.getElementById('dataManagerSearch')?.addEventListener('input', () => {
                 dataManagerCurrentPage = 1;
                 renderDataTable(getFilteredData());
+            });
+            
+            document.getElementById('agentFocusSelect')?.addEventListener('change', () => {
+                if (typeof renderAgentFocusTab === 'function') {
+                    renderAgentFocusTab(getFilteredData());
+                }
             });
 
             window.clearDateFilters = function() {
@@ -929,12 +934,10 @@
 
                 let filteredData = baseData;
                 
-                // Apply Status Filter
                 if (filterVal === 'true') filteredData = filteredData.filter(t => t._isSaved && !t._isPending);
                 else if (filterVal === 'false') filteredData = filteredData.filter(t => !t._isSaved && !t._isPending);
                 else if (filterVal === 'pending') filteredData = filteredData.filter(t => t._isPending);
                 
-                // Apply Search Filter
                 if (searchVal) {
                     filteredData = filteredData.filter(t => {
                         const orderId = String(t['Order ID'] || '').toLowerCase();
@@ -948,7 +951,6 @@
                     return;
                 }
 
-                // Map exactly what needs to be downloaded
                 const exportArray = filteredData.map(row => {
                     const formatDateTime = (dateStrOrMs) => {
                         if (!dateStrOrMs) return '';
@@ -973,7 +975,6 @@
                     };
                 });
 
-                // Use SheetJS to create Excel File
                 const worksheet = XLSX.utils.json_to_sheet(exportArray);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Data");
@@ -1088,7 +1089,6 @@
                      btn.className = "bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors w-full mt-4 flex justify-center items-center gap-2";
                      btn.innerHTML = `<i class="ph ph-cloud-arrow-up text-xl"></i> Upload Data to Start`;
                      btn.onclick = () => document.getElementById('csvFileInput').click();
-                     // Only show if Admin
                      if (!isAdmin) btn.style.display = 'none';
                      document.getElementById('emptyStateBox')?.appendChild(btn);
                  } else {
@@ -1147,7 +1147,6 @@
             const batchId = 'BATCH_' + Date.now();
             const batchDate = new Date().toISOString();
             
-            // Build Map for Order IDs mapping to their existing Ticket IDs for DB conflict checks
             const existingOrderMap = new Map();
             globalDataMap.forEach(row => {
                 if(row['Order ID'] && row['Order ID'].trim() !== '') {
@@ -1171,17 +1170,16 @@
                 const isPending = (pStr === 'pending');
                 const isSaved = (pStr === 'true' || pStr === 'yes' || pStr === '1');
 
-                // DYNAMIC EFFECTIVE DATE LOGIC
                 let rawCreated = rawRow['Created date'] || rawRow['created_date'] || '';
-                let parsedDate = new Date(rawCreated);
-                if (isNaN(parsedDate.getTime())) parsedDate = new Date();
-                
                 let rawPrevention = rawRow['Prevention Status At'] || rawRow['prevention_status_at'] || '';
-                if (rawPrevention) {
-                    let prevDate = new Date(rawPrevention);
-                    if (!isNaN(prevDate.getTime()) && prevDate > parsedDate) {
-                        parsedDate = prevDate;
-                    }
+                
+                let parsedDate;
+                if (rawPrevention && !isNaN(new Date(rawPrevention).getTime())) {
+                    parsedDate = new Date(rawPrevention);
+                } else if (rawCreated && !isNaN(new Date(rawCreated).getTime())) {
+                    parsedDate = new Date(rawCreated);
+                } else {
+                    parsedDate = new Date();
                 }
                 
                 let cleanReason = (rawRow['Cancellation & Return Reason'] || 'Unspecified').trim();
@@ -1218,7 +1216,7 @@
                     '_preventionReason': prevReason,
                     '_channel': channel,
                     '_requestType': reqTypeRaw,
-                    '_timestamp': parsedDate.getTime(), // The computed Effective Reporting Date
+                    '_timestamp': parsedDate.getTime(), 
                     '_batchId': batchId,
                     '_batchName': originalFileName,
                     '_batchDate': batchDate
@@ -1227,7 +1225,6 @@
                 let hasConflict = false;
                 let conflictObj = { incoming: inRow, type: null, existing: null };
 
-                // 1. Check against LIVE database
                 if (globalDataMap.has(tId)) {
                     hasConflict = true;
                     conflictObj.type = 'Ticket ID';
@@ -1236,9 +1233,7 @@
                     hasConflict = true;
                     conflictObj.type = 'Order ID';
                     conflictObj.existing = existingOrderMap.get(orderId);
-                }
-                // 2. Check against THIS SAME UPLOAD BATCH (INTRA-FILE DUPLICATES)
-                else if (uploadReadyMap.has(tId)) {
+                } else if (uploadReadyMap.has(tId)) {
                     hasConflict = true;
                     conflictObj.type = 'Ticket ID (Same File)';
                     conflictObj.existing = uploadReadyMap.get(tId);
@@ -1251,17 +1246,14 @@
                 if (hasConflict) {
                     const exRow = conflictObj.existing;
                     
-                    // Normalize dates to ignore exact time differences
                     const inDate = new Date(inRow['_timestamp']).toISOString().split('T')[0];
                     const exDate = new Date(exRow['_timestamp']).toISOString().split('T')[0];
 
-                    // Normalize Status to treat Closed and Resolved as the same
                     const inStatusRaw = (inRow['Status'] || '').trim().toLowerCase();
                     const exStatusRaw = (exRow['Status'] || '').trim().toLowerCase();
                     const inStatus = (inStatusRaw === 'closed' || inStatusRaw === 'resolved') ? 'resolved/closed' : inStatusRaw;
                     const exStatus = (exStatusRaw === 'closed' || exStatusRaw === 'resolved') ? 'resolved/closed' : exStatusRaw;
 
-                    // Ignore perfectly identical matches (now comparing only the date portion)
                     const isIdentical = (
                         inRow['Ticket ID'] === (exRow['Ticket ID'] || '') &&
                         inRow['Order ID'] === (exRow['Order ID'] || '') &&
@@ -1277,7 +1269,7 @@
                     );
 
                     if (isIdentical) {
-                        return; // Skip perfectly identical duplicates (even within same file)
+                        return; 
                     } else {
                         uploadConflicts.push(conflictObj); 
                     }
@@ -1671,7 +1663,6 @@
             const selectedTeams = Array.from(document.querySelectorAll('.team-filter-cb:checked')).map(cb => cb.value);
             const selectedChannels = Array.from(document.querySelectorAll('.channel-filter-cb:checked')).map(cb => cb.value);
 
-            // FORCE LOCAL TIMEZONE MIDNIGHT TO MIDNIGHT FILTERING
             let start = null;
             if (startDateStr) {
                 const [y, m, d] = startDateStr.split('-');
@@ -1728,6 +1719,7 @@
             // Render specific tab
             if(currentActiveTab === 'overview') renderOverview(data);
             if(currentActiveTab === 'agents') renderAgents(data);
+            if(currentActiveTab === 'agentFocus') renderAgentFocusTab(data);
             if(currentActiveTab === 'insights') renderInsights(data);
             if(currentActiveTab === 'types') renderTypes(data);
             if(currentActiveTab === 'data') renderDataTable(data);
@@ -1751,10 +1743,7 @@
             const statusMap = {};
 
             data.forEach(row => {
-                // Ensure the chart groups by local day, not UTC day
-                const d = row._parsedDate;
-                const dayKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                
+                const dayKey = row._parsedDate.toISOString().split('T')[0];
                 if(!timelineMap[dayKey]) timelineMap[dayKey] = { total: 0, saved: 0, pending: 0 };
                 timelineMap[dayKey].total++;
                 if(row._isSaved) timelineMap[dayKey].saved++;
@@ -1835,19 +1824,13 @@
             
             leaderboard.forEach((entry, idx) => {
                 const tr = document.createElement('tr');
-                tr.className = `hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 ${selectedAgentForSnapshot === entry.agent ? 'bg-blue-50' : ''}`;
+                tr.className = `hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50`;
                 tr.onclick = () => {
-                    selectedAgentForSnapshot = entry.agent;
-                    
-                    document.getElementById('agentLeaderboardView')?.classList.add('hidden');
-                    document.getElementById('agentLeaderboardView')?.classList.remove('flex');
-                    document.getElementById('agentProfileView')?.classList.remove('hidden');
-                    document.getElementById('agentProfileView')?.classList.add('flex');
-                    
-                    renderAgentSnapshot(entry, data);
-                    
-                    Array.from(tbody.children).forEach(r => r.classList.remove('bg-blue-50'));
-                    tr.classList.add('bg-blue-50');
+                    const select = document.getElementById('agentFocusSelect');
+                    if (select) {
+                        select.value = entry.agent;
+                    }
+                    window.switchTab('agentFocus');
                 };
 
                 let medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '';
@@ -1868,45 +1851,146 @@
                 `;
                 tbody.appendChild(tr);
             });
-
-            if (selectedAgentForSnapshot) {
-                const currentEntry = leaderboard.find(l => l.agent === selectedAgentForSnapshot);
-                if (currentEntry) renderAgentSnapshot(currentEntry, data);
-                else window.backToLeaderboard();
-            } else {
-                document.getElementById('agentProfileView')?.classList.add('hidden');
-                document.getElementById('agentProfileView')?.classList.remove('flex');
-                document.getElementById('agentLeaderboardView')?.classList.remove('hidden');
-                document.getElementById('agentLeaderboardView')?.classList.add('flex');
-            }
         }
 
-        function renderAgentSnapshot(agentData, allFilteredData) {
-            if (document.getElementById('selectedAgentTitle')) document.getElementById('selectedAgentTitle').innerHTML = `${formatAgentName(agentData.agent)} ${getTeamBadge(agentData.team)}`;
-            if (document.getElementById('snapRate')) document.getElementById('snapRate').textContent = `${agentData.rate.toFixed(1)}%`;
-            if (document.getElementById('snapVol')) document.getElementById('snapVol').textContent = agentData.resolved;
-
-            const reasonsArr = Object.entries(agentData.reasons).map(([k,v]) => ({reason: k, count: v})).sort((a,b) => b.count - a.count).slice(0,5);
+        // --- TAB 2.5: Individual Agent Focus Render ---
+        function renderAgentFocusTab(data) {
+            const select = document.getElementById('agentFocusSelect');
+            if(!select) return;
             
-            if(charts.agentReason) charts.agentReason.destroy();
-            const arCtx = document.getElementById('agentReasonChart')?.getContext('2d');
-            if (arCtx) {
-                charts.agentReason = new Chart(arCtx, {
+            const currentVal = select.value;
+            
+            // Re-populate dropdown with uniquely available agents from current filtered data
+            const uniqueAgents = [...new Set(data.map(d => d['Submitted By']))].sort();
+            select.innerHTML = '<option value="">-- Select an Agent --</option>';
+            uniqueAgents.forEach(ag => {
+                const opt = document.createElement('option');
+                opt.value = ag;
+                opt.textContent = formatAgentName(ag);
+                if (ag === currentVal) opt.selected = true;
+                select.appendChild(opt);
+            });
+
+            const selectedAgent = select.value;
+            const agentData = selectedAgent ? data.filter(d => d['Submitted By'] === selectedAgent) : [];
+
+            // KPIs
+            let total = agentData.length;
+            let saved = agentData.filter(d => d._isSaved).length;
+            let pending = agentData.filter(d => d._isPending).length;
+            let resolved = total - pending;
+            let rate = resolved > 0 ? ((saved / resolved) * 100).toFixed(1) : '0.0';
+
+            document.getElementById('focusKpiTotal').textContent = total.toLocaleString();
+            document.getElementById('focusKpiSaved').textContent = saved.toLocaleString();
+            document.getElementById('focusKpiPending').textContent = pending.toLocaleString();
+            document.getElementById('focusKpiRate').textContent = `${rate}%`;
+
+            // Setup Data Maps for Charts
+            const timelineMap = {};
+            const statusMap = {};
+            const reasonMap = {};
+            const prevMap = {};
+
+            agentData.forEach(row => {
+                // Timeline
+                const dayKey = row._parsedDate.toISOString().split('T')[0];
+                if(!timelineMap[dayKey]) timelineMap[dayKey] = { total: 0, saved: 0 };
+                timelineMap[dayKey].total++;
+                if(row._isSaved) timelineMap[dayKey].saved++;
+
+                // Status
+                let stat = (row['Status'] || 'Unknown').trim();
+                if (stat.toLowerCase() === 'closed' || stat.toLowerCase() === 'resolved') stat = 'Resolved / Closed';
+                statusMap[stat] = (statusMap[stat] || 0) + 1;
+
+                // Reasons
+                const r = row._cleanReason;
+                if(!reasonMap[r]) reasonMap[r] = {total: 0, saved: 0, pending: 0};
+                reasonMap[r].total++;
+                if(row._isSaved) reasonMap[r].saved++;
+                if(row._isPending) reasonMap[r].pending++;
+
+                // Prevention (Saved Only)
+                if(row._isSaved) {
+                    const pr = row._preventionReason || 'Not Specified';
+                    prevMap[pr] = (prevMap[pr] || 0) + 1;
+                }
+            });
+
+            // 1. Trend Chart
+            const sortedDays = Object.keys(timelineMap).sort();
+            if(charts.focusTrend) charts.focusTrend.destroy();
+            const ftCtx = document.getElementById('focusTrendChart')?.getContext('2d');
+            if (ftCtx) {
+                charts.focusTrend = new Chart(ftCtx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [
+                            { label: 'Total Cases', data: sortedDays.map(d => timelineMap[d].total), borderColor: '#94a3b8', backgroundColor: 'transparent', borderDash: [5,5], tension: 0.3 },
+                            { label: 'Saved Cases', data: sortedDays.map(d => timelineMap[d].saved), borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false } }
+                });
+            }
+
+            // 2. Status Chart
+            if(charts.focusStatus) charts.focusStatus.destroy();
+            const fsCtx = document.getElementById('focusStatusChart')?.getContext('2d');
+            if (fsCtx) {
+                charts.focusStatus = new Chart(fsCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: Object.keys(statusMap),
+                        datasets: [{ data: Object.values(statusMap), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels:{boxWidth:12, font:{size:10}} } } }
+                });
+            }
+
+            // 3. Reasons Chart
+            const sortedReasons = Object.keys(reasonMap).map(k => ({reason: k, ...reasonMap[k]})).sort((a,b) => b.total - a.total).slice(0, 10);
+            if(charts.focusReasons) charts.focusReasons.destroy();
+            const frCtx = document.getElementById('focusReasonsChart')?.getContext('2d');
+            if (frCtx) {
+                charts.focusReasons = new Chart(frCtx, {
                     type: 'bar',
                     data: {
-                        labels: reasonsArr.map(r => r.reason.length > 25 ? r.reason.substring(0,25)+'...' : r.reason),
-                        datasets: [{ label: 'Cases', data: reasonsArr.map(r => r.count), backgroundColor: '#8b5cf6', borderRadius: 4 }]
+                        labels: sortedReasons.map(s => s.reason.length > 25 ? s.reason.substring(0,25)+'...' : s.reason),
+                        datasets: [
+                            { label: 'Unsaved', data: sortedReasons.map(s => s.total - s.saved - s.pending), backgroundColor: '#cbd5e1', stacked: true },
+                            { label: 'Saved', data: sortedReasons.map(s => s.saved), backgroundColor: '#3b82f6', stacked: true },
+                            { label: 'Pending', data: sortedReasons.map(s => s.pending), backgroundColor: '#facc15', stacked: true }
+                        ]
                     },
                     options: {
                         indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { display: false } },
-                        scales: { x: { beginAtZero: true, ticks:{stepSize:1} } }
+                        plugins: { tooltip: { mode: 'index', intersect: false } },
+                        scales: { x: { stacked: true, beginAtZero: true }, y: { stacked: true } }
                     }
                 });
             }
 
-            currentAgentSpecificTickets = allFilteredData.filter(d => d['Submitted By'] === agentData.agent);
-            window.renderAgentTicketsList();
+            // 4. Preventions Chart
+            const sortedPrev = Object.keys(prevMap).map(k => ({reason: k, count: prevMap[k]})).sort((a,b) => b.count - a.count).slice(0, 10);
+            if(charts.focusPrev) charts.focusPrev.destroy();
+            const fpCtx = document.getElementById('focusPrevChart')?.getContext('2d');
+            if (fpCtx) {
+                charts.focusPrev = new Chart(fpCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: sortedPrev.map(s => s.reason.length > 25 ? s.reason.substring(0,25)+'...' : s.reason),
+                        datasets: [{ label: 'Times Saved', data: sortedPrev.map(s => s.count), backgroundColor: '#10b981', borderRadius: 4 }]
+                    },
+                    options: {
+                        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: { x: { beginAtZero: true } }
+                    }
+                });
+            }
         }
 
         // --- TAB 3: Insights & Channels Render ---
