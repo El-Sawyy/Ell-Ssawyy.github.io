@@ -696,6 +696,7 @@
             'santos.nyikang@tempo.fit',
             'youkabed.farid@tempo.fit',
             'ahmed.elsawy@tempo.fit',
+            'salma.ahmed@tempo.fit',
         ];
         
         const TEAM_MENTORS = [
@@ -1743,7 +1744,12 @@
             const statusMap = {};
 
             data.forEach(row => {
-                const dayKey = row._parsedDate.toISOString().split('T')[0];
+                // Fix timezone issue by formatting local date instead of UTC ISO string
+                const y = row._parsedDate.getFullYear();
+                const m = String(row._parsedDate.getMonth() + 1).padStart(2, '0');
+                const d = String(row._parsedDate.getDate()).padStart(2, '0');
+                const dayKey = `${y}-${m}-${d}`;
+
                 if(!timelineMap[dayKey]) timelineMap[dayKey] = { total: 0, saved: 0, pending: 0 };
                 timelineMap[dayKey].total++;
                 if(row._isSaved) timelineMap[dayKey].saved++;
