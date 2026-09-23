@@ -7,17 +7,15 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .tab-active { @apply bg-white shadow-sm text-indigo-700; }
-        .tab-inactive { @apply text-slate-500 hover:text-slate-700 hover:bg-slate-200/50; }
+        .tab-active { @apply bg-white shadow-sm text-indigo-700 border-slate-200; }
+        .tab-inactive { @apply text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 border-transparent; }
         
         /* Custom scrollbar for tables */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -43,11 +41,11 @@
                 <i data-lucide="refresh-cw" class="w-3 h-3 mr-1.5 animate-spin"></i> Syncing...
             </div>
             <div class="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-active border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
                     <i data-lucide="layout-dashboard" class="w-4 h-4 mr-2"></i>
                     Orders Dashboard
                 </button>
-                <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-inactive px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
+                <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-inactive border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center">
                     <i data-lucide="calendar-days" class="w-4 h-4 mr-2"></i>
                     Resource Planner
                 </button>
@@ -62,12 +60,6 @@
             
             <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6" id="kpi-container">
                 <!-- Populated dynamically via JS -->
-            </div>
-
-            <!-- Error Toast -->
-            <div id="error-toast" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
-                <strong class="font-bold">Sync Error: </strong>
-                <span class="block sm:inline" id="error-message"></span>
             </div>
 
             <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6 flex flex-col lg:flex-row gap-4 items-center justify-between">
@@ -111,29 +103,26 @@
                 </div>
             </div>
 
-        <!-- Tables Container -->
-        <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 flex flex-col">
-            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky left-0">
-                <h2 class="text-lg font-semibold text-slate-800 flex items-center">
-                    <div class="w-8 h-8 rounded bg-indigo-100 flex items-center justify-center mr-3">
-                        <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i>
-                    </div>
-                    Today's Orders
-                    <span id="today-count" class="ml-3 bg-slate-200 text-slate-700 py-0.5 px-2.5 rounded-full text-sm font-medium">0</span>
-                </h2>
-                <span id="today-date-display" class="text-sm font-medium text-slate-500"></span>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-slate-600">
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8 flex flex-col">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky left-0">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+                        <div class="w-8 h-8 rounded bg-indigo-100 flex items-center justify-center mr-3">
+                            <i data-lucide="calendar" class="w-4 h-4 text-indigo-600"></i>
+                        </div>
+                        Today's Orders
+                        <span id="today-count" class="ml-3 bg-slate-200 text-slate-700 py-0.5 px-2.5 rounded-full text-sm font-medium">0</span>
+                    </h2>
+                    <span id="today-date-display" class="text-sm font-medium text-slate-500"></span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
                         <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="px-5 py-4 font-semibold w-24">Time</th>
-                                <th class="px-5 py-4 font-semibold w-32">City</th>
-                                <th class="px-5 py-4 font-semibold min-w-[200px]">Client Info</th>
-                                <th class="px-5 py-4 font-semibold min-w-[180px]">Package</th>
-                                <th class="px-5 py-4 font-semibold w-40">Status</th>
-                                <th class="px-5 py-4 font-semibold min-w-[220px]">Nurse Assigned</th>
-                                <th class="px-5 py-4 font-semibold text-right w-16"></th>
+                                <th class="px-5 py-4 font-semibold w-32">Time & City</th>
+                                <th class="px-5 py-4 font-semibold w-48">Order IDs</th>
+                                <th class="px-5 py-4 font-semibold min-w-[180px]">Customer</th>
+                                <th class="px-5 py-4 font-semibold min-w-[200px]">Package</th>
+                                <th class="px-5 py-4 font-semibold min-w-[240px]">Status & Assignment</th>
                             </tr>
                         </thead>
                         <tbody id="today-table-body" class="divide-y divide-slate-100">
@@ -144,26 +133,24 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky left-0">
-                <h2 class="text-lg font-semibold text-slate-800 flex items-center">
-                    <div class="w-8 h-8 rounded bg-slate-200 flex items-center justify-center mr-3">
-                        <i data-lucide="calendar-days" class="w-4 h-4 text-slate-600"></i>
-                    </div>
-                    Future Orders (Up to 14 Days)
-                    <span id="future-count" class="ml-3 bg-slate-300 text-slate-800 py-0.5 px-2.5 rounded-full text-sm font-medium">0</span>
-                </h2>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm text-left text-slate-600">
+                <div class="px-6 py-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center sticky left-0">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center">
+                        <div class="w-8 h-8 rounded bg-slate-200 flex items-center justify-center mr-3">
+                            <i data-lucide="calendar-days" class="w-4 h-4 text-slate-600"></i>
+                        </div>
+                        Future Orders (Next 14 Days)
+                        <span id="future-count" class="ml-3 bg-slate-300 text-slate-800 py-0.5 px-2.5 rounded-full text-sm font-medium">0</span>
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-slate-600">
                         <thead class="text-xs text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
                             <tr>
-                                <th class="px-5 py-4 font-semibold w-32">Date & Time</th>
-                                <th class="px-5 py-4 font-semibold w-32">City</th>
-                                <th class="px-5 py-4 font-semibold min-w-[200px]">Client Info</th>
-                                <th class="px-5 py-4 font-semibold min-w-[180px]">Package</th>
-                                <th class="px-5 py-4 font-semibold w-40">Status</th>
-                                <th class="px-5 py-4 font-semibold min-w-[220px]">Nurse Assigned</th>
-                                <th class="px-5 py-4 font-semibold text-right w-16"></th>
+                                <th class="px-5 py-4 font-semibold w-32">Time & City</th>
+                                <th class="px-5 py-4 font-semibold w-48">Order IDs</th>
+                                <th class="px-5 py-4 font-semibold min-w-[180px]">Customer</th>
+                                <th class="px-5 py-4 font-semibold min-w-[200px]">Package</th>
+                                <th class="px-5 py-4 font-semibold min-w-[240px]">Status & Assignment</th>
                             </tr>
                         </thead>
                         <tbody id="future-table-body" class="divide-y divide-slate-100">
@@ -209,7 +196,7 @@
         // ============================================================================
         // CONFIGURATION
         // ============================================================================
-        const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbz38djs0b266zhZGOBDbMyzH1roeGokMoOC5x4NTmGgJFvJOVh3U0J7lvN5C6nd_2q7/exec'; 
+        const GOOGLE_SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbwgw0YZrwNV7uYIccjQN7RsbXZjd4AsHjzBQqhsrMX3mc2wEPnAIHikqK4XvdX46Mjq/exec'; 
 
         // Global State
         let state = {
@@ -225,7 +212,6 @@
             todayString: '' 
         };
 
-        // Standardized list of nurses for assignments
         const MASTER_NURSES = [
             { name: 'Jasmine Solano', city: 'Riyadh' },
             { name: 'Maria Clarissa', city: 'Riyadh' },
@@ -249,23 +235,23 @@
         function formatDisplayDate(dateStr) {
             if(!dateStr) return 'N/A';
             const d = new Date(dateStr);
-            if(isNaN(d.getTime())) return String(dateStr);
+            if(isNaN(d.getTime())) return dateStr;
             return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
         }
 
-        // Initialize today's string
+        // Initialize today's string on load
         state.todayString = getTodayDateString();
         document.getElementById('today-date-display').innerText = formatDisplayDate(state.todayString);
         document.getElementById('schedule-date-display').innerText = formatDisplayDate(state.todayString);
 
-        // NEW WAY: JSONP Strategy to bypass all browser blocks
+        // This completely bypasses CORS blocks by using a script tag injection
         window.handleGoogleData = function(data) {
             if (data && data.error) {
                 handleSyncError(data.error);
                 return;
             }
             
-            state.allData = data;
+            state.allData = data || [];
             state.isLoading = false;
             state.error = null;
             
@@ -273,7 +259,6 @@
             document.getElementById('sync-status').classList.remove('flex');
             
             updateUI();
-            lucide.createIcons();
         };
 
         function handleSyncError(displayError) {
@@ -299,27 +284,23 @@
             syncIcon.classList.add('flex');
 
             if (state.isLoading) {
-                const loadingHtml = `<tr><td colSpan="7" class="px-6 py-12 text-center">
+                const loadingHtml = `<tr><td colSpan="5" class="px-6 py-12 text-center">
                     <i data-lucide="loader-2" class="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-3"></i>
-                    <p class="text-slate-500 font-medium">Connecting securely via JSONP...</p>
+                    <p class="text-slate-500 font-medium">Fetching secure data from Daily Dump...</p>
                 </td></tr>`;
                 document.getElementById('today-table-body').innerHTML = loadingHtml;
                 document.getElementById('future-table-body').innerHTML = loadingHtml;
             }
             
-            // Create a temporary script tag to bypass CORS
+            // Generate dynamic script tag for JSONP
             const script = document.createElement('script');
-            // Append callback parameter and a timestamp to prevent caching
             script.src = `${GOOGLE_SHEET_API_URL}?callback=handleGoogleData&t=${new Date().getTime()}`;
-            
             script.onerror = function() {
-                handleSyncError("Network blocked the script request. Check antivirus or corporate firewall.");
+                handleSyncError("Network blocked the request. Check internet connection.");
             };
-
-            // Add to document to trigger the request
             document.body.appendChild(script);
             
-            // Clean up tag after load
+            // Clean up after load
             script.onload = function() {
                 document.body.removeChild(script);
             };
@@ -335,8 +316,8 @@
             else if (s.includes('BROADCAST')) { color = 'bg-amber-100 text-amber-800 border-amber-200'; icon = 'radio'; }
             else if (s.includes('COMPLETED')) { color = 'bg-blue-100 text-blue-800 border-blue-200'; icon = 'check-check'; }
 
-            return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${color} shadow-sm">
-                <i data-lucide="${icon}" class="w-3.5 h-3.5 mr-1.5"></i>${s || 'UNKNOWN'}
+            return `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${color} shadow-sm uppercase tracking-wide">
+                <i data-lucide="${icon}" class="w-3 h-3 mr-1.5"></i>${s || 'UNKNOWN'}
             </span>`;
         }
 
@@ -346,119 +327,99 @@
             if (t.includes('daily')) color = 'bg-sky-50 text-sky-700 border border-sky-200';
             if (t.includes('monthly')) color = 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200';
             if (t.includes('weekly')) color = 'bg-teal-50 text-teal-700 border border-teal-200';
-            return `<span class="px-2 py-0.5 rounded text-[11px] font-bold tracking-wide uppercase ${color}">${String(type) || 'N/A'}</span>`;
+            return `<span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${color}">${String(type) || 'N/A'}</span>`;
         }
 
         function buildTableRow(order, isTodayView) {
-            const isExpanded = state.expandedRows.has(order.id);
             const s = String(order.order_status || '').toUpperCase();
             const needsAssign = s.includes('UNASSIGNED') || s.includes('BROADCAST');
             const bgClass = needsAssign ? 'bg-rose-50/40 hover:bg-rose-50/70' : 'hover:bg-slate-50';
             
+            // Nurse Cell Logic
             let nurseCell = '';
             if (s.includes('NURSE ASSIGNED') && order.nurse_name) {
                 nurseCell = `
-                    <div class="flex items-center text-slate-800 font-medium bg-white px-3 py-1.5 rounded border border-slate-200 shadow-sm w-fit">
-                        <div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-2 text-[10px] font-bold">
+                    <div class="flex items-center text-slate-800 text-xs font-medium bg-white px-2.5 py-1.5 rounded border border-slate-200 shadow-sm w-fit mt-2">
+                        <div class="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center mr-2 text-[10px] font-bold">
                             ${String(order.nurse_name).charAt(0)}
                         </div>
-                        ${order.nurse_name}
+                        <span class="truncate max-w-[150px]">${order.nurse_name}</span>
                     </div>`;
             } else {
                 const cityNurses = MASTER_NURSES.filter(n => n.city.toLowerCase() === String(order.city||'').toLowerCase());
                 const options = cityNurses.map(n => `<option value="${n.name}">${n.name}</option>`).join('');
-                
                 nurseCell = `
-                    <select onchange="assignNurseLocal(${order.id}, this.value)" class="bg-white border-2 border-indigo-200 text-slate-900 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2 font-medium shadow-sm cursor-pointer hover:border-indigo-300 transition-colors">
-                        <option value="" selected disabled>+ Assign Nurse Now...</option>
+                    <select onchange="assignNurseLocal(${order.id}, this.value)" class="mt-2 bg-white border-2 border-indigo-200 text-slate-900 text-[11px] rounded focus:ring-indigo-500 focus:border-indigo-500 block w-full p-1.5 font-medium shadow-sm cursor-pointer hover:border-indigo-300 transition-colors">
+                        <option value="" selected disabled>+ Assign Nurse...</option>
                         ${options}
-                        <option disabled>──────────</option>
-                        <option value="custom">Other (Manual Entry)...</option>
+                        <option disabled>────────</option>
+                        <option value="custom">Manual Entry...</option>
                     </select>`;
             }
 
-            let timeCol = `
-                <div class="font-bold text-slate-900 text-base">${order.confirmed_hour || '--:--'}</div>
-                ${!isTodayView ? `<div class="text-[11px] text-slate-500 font-medium uppercase mt-0.5">${formatDisplayDate(order.confirmed_date)}</div>` : ''}
+            // New Layout Columns
+            let timeCityCol = `
+                <div class="font-bold text-slate-900 text-sm">${order.confirmed_hour || '--:--'}</div>
+                ${!isTodayView ? `<div class="text-[10px] text-slate-500 font-medium uppercase mt-0.5">${formatDisplayDate(order.confirmed_date)}</div>` : ''}
+                <div class="flex items-center font-medium text-slate-600 mt-1 text-[11px]">
+                    <i data-lucide="map-pin" class="w-3 h-3 mr-1 text-slate-400"></i>${order.city || '-'}
+                </div>
+            `;
+
+            let idsCol = `
+                <div class="font-mono text-[10px] text-slate-700 mb-1 leading-tight break-all">
+                    <span class="text-slate-400 font-sans mr-1">UUID:</span><br>${order.order_uuid}
+                </div>
+                ${order.child_order_id ? `<div class="font-mono text-[10px] text-slate-500 mt-1"><span class="text-slate-400 font-sans mr-1">Child:</span>${order.child_order_id}</div>` : ''}
             `;
 
             let rowHtml = `
-                <tr class="transition-colors border-b border-slate-100 ${bgClass} ${isExpanded ? 'row-expanded' : ''}">
-                    <td class="px-5 py-4 whitespace-nowrap align-top">${timeCol}</td>
-                    <td class="px-5 py-4 whitespace-nowrap align-top">
-                        <span class="flex items-center font-medium text-slate-700">
-                            <i data-lucide="map-pin" class="w-3.5 h-3.5 mr-1.5 text-slate-400"></i>${order.city || '-'}
-                        </span>
-                    </td>
+                <tr class="transition-colors border-b border-slate-100 ${bgClass}">
+                    <td class="px-5 py-4 whitespace-nowrap align-top">${timeCityCol}</td>
+                    <td class="px-5 py-4 align-top w-48">${idsCol}</td>
                     <td class="px-5 py-4 align-top">
-                        <div class="font-bold text-slate-900 mb-1">${order.user_name || 'No Name'}</div>
-                        <div class="text-xs text-slate-500 flex items-center font-medium">
-                            <i data-lucide="phone" class="w-3 h-3 mr-1.5 text-slate-400"></i>${order.phone_number || 'No Phone'}
+                        <div class="font-bold text-slate-900 text-sm mb-1 line-clamp-1" title="${order.user_name}">${order.user_name || 'No Name'}</div>
+                        <div class="text-[11px] text-slate-500 flex items-center font-medium mb-1.5">
+                            <i data-lucide="phone" class="w-2.5 h-2.5 mr-1 text-slate-400"></i>${order.phone_number || 'No Phone'}
                         </div>
+                        ${getBookingBadge(order.booking_type)}
                     </td>
                     <td class="px-5 py-4 align-top">
-                        <div class="mb-2">${getBookingBadge(order.booking_type)}</div>
-                        <div class="text-[12px] text-slate-600 font-medium leading-snug line-clamp-2" title="${order.package_name}">${order.package_name || '-'}</div>
+                        <div class="text-[12px] text-slate-700 font-medium leading-relaxed line-clamp-3" title="${order.package_name}">${order.package_name || '-'}</div>
                     </td>
-                    <td class="px-5 py-4 whitespace-nowrap align-top">
-                        <div class="mb-2">${getStatusBadge(order.order_status)}</div>
-                        ${parseInt(order.delay_mins) > 0 ? `<div class="text-[11px] text-rose-600 font-bold bg-rose-100/50 px-2 py-0.5 rounded inline-block">Delayed: ${order.delay_mins}m</div>` : ''}
-                    </td>
-                    <td class="px-5 py-4 align-top min-w-[200px]">${nurseCell}</td>
-                    <td class="px-5 py-4 text-right align-top">
-                        <button onclick="toggleRow(${order.id})" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100">
-                            <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-5 h-5"></i>
-                        </button>
+                    <td class="px-5 py-4 align-top">
+                        <div class="flex items-center space-x-2 flex-wrap gap-y-2">
+                            ${getStatusBadge(order.order_status)}
+                            ${parseInt(order.delay_mins) > 0 ? `<div class="text-[10px] text-rose-600 font-bold bg-rose-100/50 px-2 py-0.5 rounded inline-block whitespace-nowrap">Delayed: ${order.delay_mins}m</div>` : ''}
+                        </div>
+                        ${nurseCell}
+                        ${order.b2b_partner ? `<div class="text-[10px] text-slate-400 mt-2 flex items-center uppercase tracking-wide"><svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>${order.b2b_partner}</div>` : ''}
                     </td>
                 </tr>
             `;
-
-            if (isExpanded) {
-                rowHtml += `
-                    <tr class="bg-slate-50/80 border-b border-slate-200 shadow-inner">
-                        <td colSpan="7" class="px-6 py-5">
-                            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                                <div class="space-y-2">
-                                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">System IDs</h4>
-                                    <p class="flex justify-between items-center"><span class="text-slate-500">Parent UUID:</span> <span class="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-1.5 rounded">${order.order_uuid}</span></p>
-                                    <p class="flex justify-between items-center"><span class="text-slate-500">Child ID:</span> <span class="font-mono text-xs font-semibold text-slate-700 bg-slate-100 px-1.5 rounded">${order.child_order_id}</span></p>
-                                </div>
-                                <div class="space-y-2">
-                                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Partnerships</h4>
-                                    <p class="flex justify-between"><span class="text-slate-500">Homecare:</span> <span class="font-medium text-slate-800">${order.homecare || '--'}</span></p>
-                                    <p class="flex justify-between"><span class="text-slate-500">B2B Partner:</span> <span class="font-medium text-slate-800">${order.b2b_partner || '--'}</span></p>
-                                </div>
-                                <div class="space-y-2 col-span-1 md:col-span-2 flex flex-col items-end justify-end border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6">
-                                    <button class="w-full sm:w-auto bg-slate-900 text-white px-4 py-2.5 rounded-lg hover:bg-slate-800 transition-colors font-medium flex items-center justify-center shadow-md">
-                                        <i data-lucide="external-link" class="w-4 h-4 mr-2"></i> Open in CRM
-                                    </button>
-                                    <p class="text-[10px] text-slate-400 mt-2 text-center sm:text-right w-full">Data synced locally. To save assignments permanently, update Google Sheet.</p>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }
             return rowHtml;
         }
 
         function updateUI() {
             if (state.isLoading) return;
 
+            // 1. Apply Filters
             const searchLower = String(state.searchQuery).toLowerCase();
             let filtered = state.allData.filter(order => {
                 const mSearch = String(order.user_name || '').toLowerCase().includes(searchLower) || 
                                 String(order.order_uuid || '').toLowerCase().includes(searchLower) ||
+                                String(order.child_order_id || '').toLowerCase().includes(searchLower) ||
                                 String(order.nurse_name || '').toLowerCase().includes(searchLower);
                 const mCity = state.filterCity === 'All' || String(order.city) === state.filterCity;
                 const mStat = state.filterStatus === 'All' || String(order.order_status||'').includes(state.filterStatus);
                 return mSearch && mCity && mStat;
             });
 
-            // Changed logic to include ALL past and future data in the second table instead of strictly > today
+            // 2. Split Arrays
             const todaysOrders = filtered.filter(o => String(o.confirmed_date) === state.todayString);
             const futureOrders = filtered.filter(o => String(o.confirmed_date) !== state.todayString);
 
+            // 3. Sorting
             const sortByTime = (a, b) => String(a.confirmed_hour || '').localeCompare(String(b.confirmed_hour || ''));
             todaysOrders.sort(sortByTime);
             
@@ -469,6 +430,7 @@
             };
             futureOrders.sort(sortByDateTime);
 
+            // 4. Update KPI metrics
             const unassignedCount = todaysOrders.filter(o => {
                 const s = String(o.order_status||'').toUpperCase();
                 return s.includes('UNASSIGNED') || s.includes('BROADCAST');
@@ -480,19 +442,19 @@
             document.getElementById('kpi-container').innerHTML = `
                 <div class="bg-white rounded-xl p-5 border-l-4 border-l-blue-500 border-y border-r border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Today's Volume</p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Today's Volume</p>
                         <p class="text-3xl font-black text-slate-800 mt-1">${todaysOrders.length}</p>
                     </div>
                     <div class="rounded-full bg-blue-50 p-3"><i data-lucide="bar-chart-2" class="w-6 h-6 text-blue-500"></i></div>
                 </div>
                 
                 <div class="bg-white rounded-xl p-5 border-l-4 border-l-rose-500 border-y border-r border-slate-200 shadow-sm flex items-center justify-between relative overflow-hidden">
-                    ${unassignedCount > 0 ? '<div class="absolute top-0 right-0 w-12 h-12 bg-rose-100 rounded-bl-full flex items-start justify-end pr-2 pt-2"><span class="flex h-2.5 w-2.5 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span></span></div>' : ''}
+                    ${unassignedCount > 0 ? '<div class="absolute top-0 right-0 w-10 h-10 bg-rose-100 rounded-bl-full flex items-start justify-end pr-2 pt-2"><span class="flex h-2.5 w-2.5 relative"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span><span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500"></span></span></div>' : ''}
                     <div>
-                        <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Action Needed</p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Action Needed</p>
                         <div class="flex items-baseline space-x-2 mt-1">
                             <p class="text-3xl font-black ${unassignedCount > 0 ? 'text-rose-600' : 'text-slate-800'}">${unassignedCount}</p>
-                            <p class="text-xs font-bold text-slate-400">UNASSIGNED</p>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase">Unassigned</p>
                         </div>
                     </div>
                     <div class="rounded-full bg-rose-50 p-3"><i data-lucide="alert-triangle" class="w-6 h-6 text-rose-500"></i></div>
@@ -500,7 +462,7 @@
 
                 <div class="bg-white rounded-xl p-5 border-l-4 border-l-amber-500 border-y border-r border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Delayed (>30m)</p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Delayed (>30m)</p>
                         <p class="text-3xl font-black ${delayedCount > 0 ? 'text-amber-600' : 'text-slate-800'} mt-1">${delayedCount}</p>
                     </div>
                     <div class="rounded-full bg-amber-50 p-3"><i data-lucide="clock-8" class="w-6 h-6 text-amber-500"></i></div>
@@ -508,17 +470,18 @@
 
                 <div class="bg-white rounded-xl p-5 border-l-4 border-l-emerald-500 border-y border-r border-slate-200 shadow-sm flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Deployed Nurses</p>
+                        <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Deployed Nurses</p>
                         <p class="text-3xl font-black text-slate-800 mt-1">${activeNurses}</p>
                     </div>
                     <div class="rounded-full bg-emerald-50 p-3"><i data-lucide="user-check" class="w-6 h-6 text-emerald-500"></i></div>
                 </div>
             `;
 
+            // 5. Render Tables
             const renderTable = (dataArr, tableId, isToday) => {
                 const tbody = document.getElementById(tableId);
                 if(dataArr.length === 0) {
-                    tbody.innerHTML = `<tr><td colSpan="7" class="px-6 py-12 text-center text-slate-400 font-medium bg-slate-50/50">No orders found for this view.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colSpan="5" class="px-6 py-12 text-center text-slate-400 font-medium bg-slate-50/50">No orders found matching criteria.</td></tr>`;
                 } else {
                     tbody.innerHTML = dataArr.map(o => buildTableRow(o, isToday)).join('');
                 }
@@ -561,6 +524,7 @@
 
             let html = '';
             
+            // Sort nurses: Occupied first
             nursesList.sort((a, b) => {
                 const aOrders = todaysOrders.filter(o => String(o.nurse_name) === a.name).length;
                 const bOrders = todaysOrders.filter(o => String(o.nurse_name) === b.name).length;
@@ -582,15 +546,15 @@
                                     ${getBookingBadge(o.booking_type)}
                                 </div>
                                 <div class="pl-2">
-                                    <div class="font-bold text-slate-800 truncate">${o.user_name}</div>
-                                    <div class="text-xs text-slate-500 mt-1 truncate font-medium" title="${o.package_name}">${o.package_name}</div>
+                                    <div class="font-bold text-slate-800 text-xs truncate">${o.user_name}</div>
+                                    <div class="text-[10px] text-slate-500 mt-1 truncate font-medium" title="${o.package_name}">${o.package_name}</div>
                                 </div>
                             </div>
                         `;
                     });
                 } else {
                     orderCards = `
-                        <div class="flex items-center text-emerald-600 bg-emerald-50 px-4 py-3 rounded-lg border border-emerald-100 border-dashed w-full">
+                        <div class="flex items-center justify-center text-emerald-600 bg-emerald-50/50 px-4 py-3 rounded-lg border border-emerald-200 border-dashed w-full h-full min-h-[80px]">
                             <i data-lucide="check-circle-2" class="w-4 h-4 mr-2"></i>
                             <span class="text-sm font-semibold">Available for Dispatch Today</span>
                         </div>
@@ -599,26 +563,24 @@
 
                 html += `
                     <div class="flex flex-col lg:flex-row gap-6 p-5 border border-slate-200 rounded-xl bg-white hover:border-indigo-200 transition-colors shadow-sm">
-                        
                         <div class="w-full lg:w-64 shrink-0 flex items-center lg:items-start lg:border-r border-slate-100 pr-4">
-                            <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-xl mr-4 shadow-md">
+                            <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-black text-lg mr-4 shadow-md shrink-0">
                                 ${nurse.name.charAt(0)}
                             </div>
                             <div>
-                                <h3 class="font-bold text-slate-900 text-base">${nurse.name}</h3>
-                                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wide mt-1 flex items-center">
-                                    <i data-lucide="map-pin" class="w-3 h-3 mr-1"></i> ${nurse.city}
+                                <h3 class="font-bold text-slate-900 text-sm">${nurse.name}</h3>
+                                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mt-0.5 flex items-center">
+                                    <i data-lucide="map-pin" class="w-2.5 h-2.5 mr-1"></i> ${nurse.city}
                                 </p>
                                 <div class="mt-2">
                                     ${isOccupied 
-                                        ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 uppercase tracking-wide"><i data-lucide="clock" class="w-3 h-3 mr-1"></i> ${nurseOrders.length} Shift(s)</span>`
+                                        ? `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 uppercase tracking-wide"><i data-lucide="clock" class="w-2.5 h-2.5 mr-1"></i> ${nurseOrders.length} Shift(s)</span>`
                                         : `<span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase tracking-wide">Ready</span>`
                                     }
                                 </div>
                             </div>
                         </div>
-
-                        <div class="w-full flex flex-wrap gap-3 items-start content-start">
+                        <div class="w-full flex flex-wrap gap-3 items-stretch content-start">
                             ${orderCards}
                         </div>
                     </div>
@@ -638,19 +600,12 @@
             const tSched = document.getElementById('tab-schedule');
             
             if(tabName === 'dashboard') {
-                tDash.className = "tab-active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center border border-slate-200";
-                tSched.className = "tab-inactive px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
+                tDash.className = "tab-active border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
+                tSched.className = "tab-inactive border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
             } else {
-                tDash.className = "tab-inactive px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
-                tSched.className = "tab-active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center border border-slate-200";
+                tDash.className = "tab-inactive border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
+                tSched.className = "tab-active border px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center";
             }
-            
-            updateUI();
-        };
-
-        window.toggleRow = function(id) {
-            if (state.expandedRows.has(id)) state.expandedRows.delete(id);
-            else state.expandedRows.add(id);
             updateUI();
         };
 
@@ -683,15 +638,15 @@
             
             const toast = document.createElement('div');
             toast.className = "fixed bottom-6 right-6 bg-slate-900 text-white px-4 py-3 rounded-lg shadow-xl flex items-center z-50 transition-opacity duration-300";
-            toast.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400 mr-3"></i> <div><p class="font-bold text-sm">Assigned Successfully</p><p class="text-xs text-slate-300">Local update only. Update GS to save.</p></div>`;
+            toast.innerHTML = `<i data-lucide="check-circle" class="w-5 h-5 text-emerald-400 mr-3"></i> <div><p class="font-bold text-sm">Assigned Locally</p><p class="text-xs text-slate-300">Update Google Sheet to save permanently.</p></div>`;
             document.body.appendChild(toast);
             lucide.createIcons();
             
             setTimeout(() => { toast.style.opacity = '0'; setTimeout(()=>toast.remove(), 300); }, 4000);
-
             updateUI();
         };
 
+        // UI Listeners
         document.getElementById('searchInput').addEventListener('input', (e) => {
             state.searchQuery = e.target.value;
             updateUI();
@@ -705,12 +660,12 @@
             updateUI();
         });
 
-        // Init
+        // Initialize App
         lucide.createIcons();
         fetchLiveOrders(); 
         
-        // Auto-refresh every 5 minutes
-        setInterval(fetchLiveOrders, 300000);
+        // Auto-refresh every 3 minutes to keep up with incoming dump orders
+        setInterval(fetchLiveOrders, 180000);
 
     </script>
 </body>
