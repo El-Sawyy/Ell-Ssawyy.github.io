@@ -467,7 +467,7 @@
                         <div class="flex items-center gap-3">
                             <div class="relative">
                                 <i class="ph ph-magnifying-glass absolute left-2.5 top-1.5 text-gray-400 text-sm"></i>
-                                <input type="text" id="dataManagerSearch" placeholder="Search Order ID or Ticket ID..." class="text-xs border border-gray-300 rounded pl-7 pr-2 py-1.5 outline-none bg-white w-52 focus:border-blue-500 transition-colors">
+                                <input type="text" id="dataManagerSearch" placeholder="Search Order ID or Ticket ID..." class="text-xs border border-gray-300 rounded pl-7 pr-2 py-1.5 outline-none bg-white w-52 focus:border-blue-50 transition-colors">
                             </div>
                             <select id="dataManagerStatusFilter" class="text-xs border border-gray-300 rounded px-2 py-1.5 outline-none bg-white cursor-pointer">
                                 <option value="all">All Statuses</option>
@@ -697,6 +697,8 @@
             'youkabed.farid@tempo.fit',
             'ahmed.elsawy@tempo.fit',
             'salma.ahmed@tempo.fit',
+            'shahd.emad@tempo.fit',
+            'marwan.hassan@tempo.fit'
         ];
         
         const TEAM_MENTORS = [
@@ -868,6 +870,7 @@
             document.getElementById('startDateFilter')?.addEventListener('change', refreshDashboard);
             document.getElementById('endDateFilter')?.addEventListener('change', refreshDashboard);
             
+            // Multi-Select Team Filter Event Listeners
             document.querySelectorAll('.team-filter-cb').forEach(cb => {
                 cb.addEventListener('change', refreshDashboard);
             });
@@ -879,6 +882,7 @@
                 refreshDashboard();
             };
 
+            // Multi-Select Channel Filter Event Listeners
             document.querySelectorAll('.channel-filter-cb').forEach(cb => {
                 cb.addEventListener('change', refreshDashboard);
             });
@@ -890,6 +894,7 @@
                 refreshDashboard();
             };
             
+            // Search Input for Reasons Filter
             document.getElementById('reasonSearchInput')?.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase();
                 const items = document.querySelectorAll('.reason-item');
@@ -935,10 +940,12 @@
 
                 let filteredData = baseData;
                 
+                // Apply Status Filter
                 if (filterVal === 'true') filteredData = filteredData.filter(t => t._isSaved && !t._isPending);
                 else if (filterVal === 'false') filteredData = filteredData.filter(t => !t._isSaved && !t._isPending);
                 else if (filterVal === 'pending') filteredData = filteredData.filter(t => t._isPending);
                 
+                // Apply Search Filter
                 if (searchVal) {
                     filteredData = filteredData.filter(t => {
                         const orderId = String(t['Order ID'] || '').toLowerCase();
@@ -952,6 +959,7 @@
                     return;
                 }
 
+                // Map exactly what needs to be downloaded
                 const exportArray = filteredData.map(row => {
                     const formatDateTime = (dateStrOrMs) => {
                         if (!dateStrOrMs) return '';
@@ -976,6 +984,7 @@
                     };
                 });
 
+                // Use SheetJS to create Excel File
                 const worksheet = XLSX.utils.json_to_sheet(exportArray);
                 const workbook = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered_Data");
@@ -1090,6 +1099,7 @@
                      btn.className = "bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors w-full mt-4 flex justify-center items-center gap-2";
                      btn.innerHTML = `<i class="ph ph-cloud-arrow-up text-xl"></i> Upload Data to Start`;
                      btn.onclick = () => document.getElementById('csvFileInput').click();
+                     // Only show if Admin
                      if (!isAdmin) btn.style.display = 'none';
                      document.getElementById('emptyStateBox')?.appendChild(btn);
                  } else {
@@ -1148,6 +1158,7 @@
             const batchId = 'BATCH_' + Date.now();
             const batchDate = new Date().toISOString();
             
+            // Build Map for Order IDs mapping to their existing Ticket IDs for DB conflict checks
             const existingOrderMap = new Map();
             globalDataMap.forEach(row => {
                 if(row['Order ID'] && row['Order ID'].trim() !== '') {
@@ -1171,16 +1182,17 @@
                 const isPending = (pStr === 'pending');
                 const isSaved = (pStr === 'true' || pStr === 'yes' || pStr === '1');
 
+                // DYNAMIC EFFECTIVE DATE LOGIC
                 let rawCreated = rawRow['Created date'] || rawRow['created_date'] || '';
-                let rawPrevention = rawRow['Prevention Status At'] || rawRow['prevention_status_at'] || '';
+                let parsedDate = new Date(rawCreated);
+                if (isNaN(parsedDate.getTime())) parsedDate = new Date();
                 
-                let parsedDate;
-                if (rawPrevention && !isNaN(new Date(rawPrevention).getTime())) {
-                    parsedDate = new Date(rawPrevention);
-                } else if (rawCreated && !isNaN(new Date(rawCreated).getTime())) {
-                    parsedDate = new Date(rawCreated);
-                } else {
-                    parsedDate = new Date();
+                let rawPrevention = rawRow['Prevention Status At'] || rawRow['prevention_status_at'] || '';
+                if (rawPrevention) {
+                    let prevDate = new Date(rawPrevention);
+                    if (!isNaN(prevDate.getTime())) {
+                        parsedDate = prevDate;
+                    }
                 }
                 
                 let cleanReason = (rawRow['Cancellation & Return Reason'] || 'Unspecified').trim();
@@ -1226,6 +1238,7 @@
                 let hasConflict = false;
                 let conflictObj = { incoming: inRow, type: null, existing: null };
 
+                // 1. Check against LIVE database
                 if (globalDataMap.has(tId)) {
                     hasConflict = true;
                     conflictObj.type = 'Ticket ID';
@@ -1234,7 +1247,9 @@
                     hasConflict = true;
                     conflictObj.type = 'Order ID';
                     conflictObj.existing = existingOrderMap.get(orderId);
-                } else if (uploadReadyMap.has(tId)) {
+                }
+                // 2. Check against THIS SAME UPLOAD BATCH (INTRA-FILE DUPLICATES)
+                else if (uploadReadyMap.has(tId)) {
                     hasConflict = true;
                     conflictObj.type = 'Ticket ID (Same File)';
                     conflictObj.existing = uploadReadyMap.get(tId);
@@ -1247,8 +1262,12 @@
                 if (hasConflict) {
                     const exRow = conflictObj.existing;
                     
-                    const inDate = new Date(inRow['_timestamp']).toISOString().split('T')[0];
-                    const exDate = new Date(exRow['_timestamp']).toISOString().split('T')[0];
+                    // Format dates to local timezone string (YYYY-MM-DD) to compare ONLY the date, ignoring exact time
+                    const inDateObj = new Date(inRow['_timestamp']);
+                    const exDateObj = new Date(exRow['_timestamp']);
+                    
+                    const inDateStr = `${inDateObj.getFullYear()}-${inDateObj.getMonth()}-${inDateObj.getDate()}`;
+                    const exDateStr = `${exDateObj.getFullYear()}-${exDateObj.getMonth()}-${exDateObj.getDate()}`;
 
                     const inStatusRaw = (inRow['Status'] || '').trim().toLowerCase();
                     const exStatusRaw = (exRow['Status'] || '').trim().toLowerCase();
@@ -1266,11 +1285,11 @@
                         inRow['_requestType'] === (exRow['_requestType'] || '') &&
                         inRow['_isSaved'] === exRow['_isSaved'] &&
                         inRow['_isPending'] === exRow['_isPending'] &&
-                        inDate === exDate
+                        inDateStr === exDateStr
                     );
 
                     if (isIdentical) {
-                        return; 
+                        return; // Skip perfectly identical duplicates (even within same file)
                     } else {
                         uploadConflicts.push(conflictObj); 
                     }
