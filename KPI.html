@@ -772,94 +772,101 @@
         }
 
         function processComplexExcelData(rawData, monthStr) {
-            let headerRowIdx = -1;
+            const processedData = [];
+            let currentHeaders = null;
             let agentColIdx = -1;
+            let hasSubHeaders = false;
 
-            // 1. Find the row containing 'Agent Name'
-            for (let r = 0; r < Math.min(20, rawData.length); r++) {
-                for (let c = 0; c < rawData[r].length; c++) {
-                    const cellValue = String(rawData[r][c]).toLowerCase().trim();
-                    if (cellValue.includes('agent name') || cellValue === 'agent' || cellValue === 'name') {
-                        headerRowIdx = r;
+            // Iterate through every row to handle multiple stacked teams dynamically
+            for (let r = 0; r < rawData.length; r++) {
+                const row = rawData[r];
+                if (!row || !row.length) continue;
+
+                // 1. Check if this row is a new header row for a team
+                let isHeaderRow = false;
+                for (let c = 0; c < row.length; c++) {
+                    const cellValue = String(row[c] || "").toLowerCase().trim();
+                    // Match "Agent Name" or exactly "Name" (like the SME team uses)
+                    if (cellValue === 'agent name' || cellValue === 'agent' || cellValue === 'name') {
+                        isHeaderRow = true;
                         agentColIdx = c;
                         break;
                     }
                 }
-                if (headerRowIdx !== -1) break;
-            }
 
-            if (headerRowIdx === -1) {
-                throw new Error("Could not find an 'Agent Name' column. Please ensure one column header is labeled 'Agent Name'.");
-            }
-
-            // 2. Determine if there are sub-headers (like Score/Weight underneath Quality)
-            let hasSubHeaders = false;
-            let dataStartRow = headerRowIdx + 1;
-            
-            if (headerRowIdx + 1 < rawData.length) {
-                const nextRow = rawData[headerRowIdx + 1];
-                const agentCellNextRow = String(nextRow[agentColIdx] || "").trim();
-                
-                // If the cell directly below 'Agent Name' is empty, it's highly likely a sub-header row caused by vertical merging
-                if (!agentCellNextRow) {
-                     hasSubHeaders = true;
-                     dataStartRow = headerRowIdx + 2;
-                }
-            }
-
-            // 3. Build flat headers
-            let finalHeaders = [];
-            let currentMainHeader = "";
-            const maxCols = Math.max(rawData[headerRowIdx].length, hasSubHeaders ? rawData[headerRowIdx+1].length : 0);
-
-            for (let c = 0; c < maxCols; c++) {
-                let h1 = String(rawData[headerRowIdx][c] || "").trim();
-                let h2 = hasSubHeaders ? String(rawData[headerRowIdx+1][c] || "").trim() : "";
-
-                // If the top header cell is merged across columns, SheetJS puts the value in the first column and leaves the rest empty.
-                // We keep track of the last seen main header to fill those in.
-                if (h1) {
-                    currentMainHeader = h1;
-                }
-
-                if (hasSubHeaders) {
-                    if (h2) {
-                        finalHeaders[c] = `${currentMainHeader} - ${h2}`;
-                    } else {
-                        finalHeaders[c] = currentMainHeader;
+                if (isHeaderRow) {
+                    // 2. Determine if this specific team's headers have sub-headers (like Score/Weight)
+                    hasSubHeaders = false;
+                    if (r + 1 < rawData.length) {
+                        const nextRow = rawData[r + 1] || [];
+                        const agentCellNextRow = String(nextRow[agentColIdx] || "").trim();
+                        
+                        // If the cell below 'Agent Name' is empty, but there are other values (like 'Score', 'Weight') in that row, it's a sub-header row.
+                        if (!agentCellNextRow && nextRow.some(cell => String(cell).trim() !== "")) {
+                            hasSubHeaders = true;
+                        }
                     }
-                } else {
-                    finalHeaders[c] = currentMainHeader;
+
+                    // 3. Build flat headers for THIS specific team
+                    currentHeaders = [];
+                    let currentMainHeader = "";
+                    const maxCols = Math.max(row.length, hasSubHeaders ? (rawData[r+1] ? rawData[r+1].length : 0) : 0);
+
+                    for (let c = 0; c < maxCols; c++) {
+                        let h1 = String(row[c] || "").trim();
+                        let h2 = hasSubHeaders ? String((rawData[r+1] || [])[c] || "").trim() : "";
+
+                        if (h1) {
+                            currentMainHeader = h1;
+                        }
+
+                        if (hasSubHeaders) {
+                            if (h2) {
+                                currentHeaders[c] = `${currentMainHeader} - ${h2}`;
+                            } else {
+                                currentHeaders[c] = currentMainHeader;
+                            }
+                        } else {
+                            currentHeaders[c] = currentMainHeader; // For SME and Social Media teams without subheaders
+                        }
+                    }
+
+                    // Ensure unique non-empty header keys
+                    currentHeaders = currentHeaders.map((h, i) => h || `Column_${i}`);
+                    
+                    if (hasSubHeaders) {
+                        r++; // Skip the sub-header row so we don't process it as agent data
+                    }
+                    continue; // Move to the next row (which will be agent data)
+                }
+
+                // 4. Extract data if we have active headers for the current team
+                if (currentHeaders && agentColIdx !== -1) {
+                    const agentName = String(row[agentColIdx] || "").trim();
+
+                    // Skip empty rows, summary rows like "Target", or section breaks
+                    if (!agentName || agentName.toLowerCase().includes('target') || agentName.toLowerCase().includes('average')) {
+                        continue;
+                    }
+
+                    let rowData = { _extracted_name: agentName };
+                    let hasAnyData = false;
+
+                    for (let c = 0; c < currentHeaders.length; c++) {
+                        const val = row[c] !== undefined ? String(row[c]).trim() : "";
+                        rowData[currentHeaders[c]] = val;
+                        // Ignore the agent name column itself when checking if row is empty
+                        if (c !== agentColIdx && val !== "") hasAnyData = true;
+                    }
+                    
+                    if (hasAnyData) {
+                        processedData.push(rowData);
+                    }
                 }
             }
 
-            // Ensure no duplicate or empty header keys
-            finalHeaders = finalHeaders.map((h, i) => h || `Column_${i}`);
-
-            // 4. Extract the actual data rows
-            const processedData = [];
-            for (let r = dataStartRow; r < rawData.length; r++) {
-                const row = rawData[r];
-                const agentName = String(row[agentColIdx] || "").trim();
-
-                // Skip empty rows, or summary rows usually found at the bottom like "Target / Weight" or "Average"
-                if (!agentName || agentName.toLowerCase().includes('target') || agentName.toLowerCase().includes('average')) {
-                    continue;
-                }
-
-                let rowData = { _extracted_name: agentName };
-                let hasAnyData = false;
-
-                for (let c = 0; c < finalHeaders.length; c++) {
-                    const val = row[c] !== undefined ? String(row[c]).trim() : "";
-                    rowData[finalHeaders[c]] = val;
-                    if (c !== agentColIdx && val !== "") hasAnyData = true;
-                }
-                
-                // Only add if the row has some actual data besides the name
-                if (hasAnyData) {
-                    processedData.push(rowData);
-                }
+            if (processedData.length === 0) {
+                throw new Error("Could not find any 'Agent Name' or 'Name' columns. Please check the Excel format.");
             }
 
             appState.kpiHistory[monthStr] = processedData;
@@ -1137,13 +1144,28 @@
             const kpiKeys = Object.keys(kpis).filter(k => !k.startsWith('_'));
             const grouped = {};
             let totalKpiRow = null;
+            let extraRows = [];
 
             // Group complex headers back together
             kpiKeys.forEach(k => {
-                // Detect summary/point rows
-                if (k.toLowerCase().includes('total') || k.toLowerCase().includes('kpis') || k.toLowerCase() === 'points' || k.toLowerCase().includes('bonus')) {
-                    if(!totalKpiRow) totalKpiRow = { name: k, val: kpis[k] };
-                    return; 
+                const lower = k.toLowerCase().trim();
+                
+                // 1. Completely ignore the "Agent Name" duplication
+                if (lower === 'agent name' || lower === 'name') return;
+
+                // 2. Identify the MAIN Total KPI column (e.g. "Sep 26 Kpis", "August 26 Kpis", "total called")
+                if (lower.includes('kpis') || lower.includes('total called')) {
+                    if (!totalKpiRow) {
+                        // Force it to be called "Total KPIs" to match your desired format perfectly
+                        totalKpiRow = { name: 'Total KPIs', val: kpis[k] };
+                    }
+                    return;
+                }
+                
+                // 3. Identify extra standalone metrics (Points, Bonuses)
+                if (lower === 'points' || lower.includes('bonus') || lower === 'total') {
+                    extraRows.push({ name: k, val: kpis[k] });
+                    return;
                 }
 
                 let main = k;
@@ -1155,7 +1177,7 @@
                     sub = parts[1].trim();
                 }
 
-                // Adjust for common Hold Count variations to split them into separate rows like the image
+                // Adjust for common Hold Count variations to split them into separate rows
                 if (main.toLowerCase() === 'hold count' && sub.toLowerCase().includes('dur')) {
                     main = 'Hold Duration'; sub = 'Score';
                 }
@@ -1174,13 +1196,19 @@
                 }
             });
 
+            // Extract just the First Name for the email greeting
+            const firstName = agent.name.split(' ')[0];
+
             // Build the HTML Table
             let tableHtml = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; color: #000;">
-                <p>Hi ${agent.name},</p>
-                <p>Here is your KPI performance report for ${formattedMonth}:</p>
+                <p>Hi ${firstName},</p>
+                <br>
+                <p>Included in this email is your score for ${formattedMonth} KPI's.</p>
+                <br>
+                <p>Please note that for you to be eligible for the KPI you will need to achieve above 80% of the total score, and also please note that more than 2 days unplanned or 2 red flags will exclude the full amount of the KPIs even if achieved above 80%.</p>
                 
-                <table style="border-collapse: collapse; width: 100%; border: 2px solid #000; text-align: center; margin-top: 15px; margin-bottom: 15px;">
+                <table style="border-collapse: collapse; width: 100%; border: 2px solid #000; text-align: center; margin-top: 25px; margin-bottom: 15px;">
                     <thead>
                         <tr>
                             <th style="background-color: #4a86e8; color: white; border: 1px solid #000; padding: 10px; width: 40%;">Attribute</th>
@@ -1196,8 +1224,8 @@
             `;
 
             for (const [attr, vals] of Object.entries(grouped)) {
-                let score = vals['Score'] !== undefined ? vals['Score'] : (vals['Value'] !== undefined ? vals['Value'] : '-');
-                let weight = vals['Weight'] !== undefined ? vals['Weight'] : '-';
+                let score = vals['Score'] !== undefined && vals['Score'] !== '' ? vals['Score'] : (vals['Value'] !== undefined && vals['Value'] !== '' ? vals['Value'] : '-');
+                let weight = vals['Weight'] !== undefined && vals['Weight'] !== '' ? vals['Weight'] : '-';
                 
                 tableHtml += `
                     <tr>
@@ -1208,18 +1236,32 @@
                 `;
             }
 
+            // Append the Main Total KPI Row
             if (totalKpiRow) {
+                let totalVal = totalKpiRow.val !== undefined && totalKpiRow.val !== '' ? totalKpiRow.val : '-';
                 tableHtml += `
                     <tr>
                         <td style="background-color: #fbbc04; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; text-align: center;">${totalKpiRow.name}</td>
-                        <td colspan="2" style="background-color: #fce5cd; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; font-size: 16px;">${totalKpiRow.val}</td>
+                        <td colspan="2" style="background-color: #fce5cd; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; font-size: 16px;">${totalVal}</td>
                     </tr>
                 `;
             }
 
+            // Append Extra Rows (Points, Bonus) below the Total
+            extraRows.forEach(row => {
+                let rowVal = row.val !== undefined && row.val !== '' ? row.val : '-';
+                tableHtml += `
+                    <tr>
+                        <td style="background-color: #fbbc04; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; text-align: center;">${row.name}</td>
+                        <td colspan="2" style="background-color: #fce5cd; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; font-size: 16px;">${rowVal}</td>
+                    </tr>
+                `;
+            });
+
             tableHtml += `
                     </tbody>
                 </table>
+                <br>
                 <p>Please review these metrics. If you have any questions or need clarification, feel free to reach out.</p>
                 <br>
                 <p>Best regards,<br>Management Team</p>
