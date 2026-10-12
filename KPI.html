@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent KPI Manager & Emailer</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel Parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#1e40af',
+                        surface: '#ffffff',
+                        background: '#f3f4f6',
+                        textMain: '#111827',
+                        textMuted: '#6b7280'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        
+        /* Custom scrollbar for better look */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        .fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .tab-active { border-bottom: 2px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+        .tab-inactive { color: #6b7280; }
+        .tab-inactive:hover { color: #111827; }
+    </style>
+</head>
+<body class="text-textMain h-screen flex overflow-hidden">
+
+    <aside class="w-64 bg-white shadow-lg h-full flex flex-col flex-shrink-0 z-10">
+        <div class="p-6 border-b border-gray-100 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white font-bold text-xl shadow-md">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div>
+                <h1 class="text-lg font-bold leading-tight">KPI Manager</h1>
+                <p class="text-xs text-textMuted">Agent Performance</p>
+            </div>
+        </div>
+        
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <button onclick="switchTab('dashboard')" id="nav-dashboard" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg bg-blue-50 text-primary font-medium transition-colors">
+                <i class="fa-solid fa-house w-5"></i> Dashboard
+            </button>
+            <button onclick="switchTab('upload')" id="nav-upload" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-textMuted hover:bg-gray-50 hover:text-textMain transition-colors">
+                <i class="fa-solid fa-file-arrow-up w-5"></i> Upload Data
+            </button>
+            <button onclick="switchTab('teams')" id="nav-teams" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-textMuted hover:bg-gray-50 hover:text-textMain transition-colors">
+                <i class="fa-solid fa-users w-5"></i> Manage Teams
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-textMuted hover:bg-gray-50 hover:text-textMain transition-colors">
+                <i class="fa-solid fa-clock-rotate-left w-5"></i> History
+            </button>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-100">
+            <button onclick="clearAllData()" class="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm text-red-500 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-200">
+                <i class="fa-solid fa-trash-can"></i> Clear All Data
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 h-full overflow-y-auto bg-background relative">
+        
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard" class="p-8 max-w-7xl mx-auto fade-in block">
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Current Month Overview</h2>
+                    <p class="text-gray-500 mt-1" id="dashboard-date">Select a month to view data.</p>
+                </div>
+                <div class="flex gap-4">
+                    <select id="month-selector" onchange="loadDashboardData()" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 shadow-sm">
+                        <option value="">Select Month</option>
+                    </select>
+                </div>
+            </header>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Total Agents</p>
+                        <h3 class="text-2xl font-bold" id="stat-total-agents">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-layer-group"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">Total Teams</p>
+                        <h3 class="text-2xl font-bold" id="stat-total-teams">0</h3>
+                    </div>
+                </div>
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-gray-100 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-envelope-circle-check"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-500 font-medium">KPI Data Points</p>
+                        <h3 class="text-2xl font-bold" id="stat-total-kpis">0</h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Team & Agent Accordion List -->
+            <div id="dashboard-content" class="space-y-6">
+                <div class="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                    <i class="fa-solid fa-inbox text-4xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-500">No data loaded for the selected month.</p>
+                    <button onclick="switchTab('upload')" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition text-sm">Upload Data</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-upload" class="p-8 max-w-4xl mx-auto fade-in hidden">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">Upload KPI Data</h2>
+                <p class="text-gray-500 mt-1">Upload your "KPI's.xlsx" file to update agent metrics.</p>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                <div class="mb-6 flex gap-4">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Month for this Data</label>
+                        <input type="month" id="upload-month" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center w-full">
+                    <label for="excel-file-upload" class="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed rounded-xl cursor-pointer bg-gray-50 hover:bg-gray-100 border-gray-300 hover:border-primary transition-colors group">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <i class="fa-solid fa-file-excel text-5xl text-gray-400 group-hover:text-green-500 mb-4 transition-colors"></i>
+                            <p class="mb-2 text-sm text-gray-500"><span class="font-semibold text-gray-700">Click to upload</span> or drag and drop</p>
+                            <p class="text-xs text-gray-500">Select <span class="font-bold">KPI's.xlsx</span> or any .xls/.xlsx file</p>
+                        </div>
+                        <input id="excel-file-upload" type="file" class="hidden" accept=".xlsx, .xls, .csv" onchange="handleFileUpload(event)" />
+                    </label>
+                </div>
+                
+                <div id="upload-status" class="mt-6 hidden rounded-lg p-4 text-sm flex items-start gap-3">
+                    <i id="upload-status-icon" class="fa-solid mt-0.5"></i>
+                    <div id="upload-status-text"></div>
+                </div>
+            </div>
+            
+            <div class="mt-8 bg-blue-50 text-blue-800 p-4 rounded-lg text-sm border border-blue-100 flex items-start gap-3">
+                <i class="fa-solid fa-circle-info mt-0.5 text-blue-500"></i>
+                <div>
+                    <strong>Expected File Format:</strong> The Excel file should have a header row. Ensure it contains at least an 'Agent Name' or similar column to identify the agent. The system will attempt to match existing agents or prompt you to review new ones.
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-teams" class="p-8 max-w-5xl mx-auto fade-in hidden">
+            <header class="mb-8 flex justify-between items-center">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-800">Manage Teams & Agents</h2>
+                    <p class="text-gray-500 mt-1">Add, edit, or remove agents and assign them to teams.</p>
+                </div>
+                <button onclick="openAddTeamModal()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition flex items-center gap-2 shadow-sm">
+                    <i class="fa-solid fa-plus"></i> New Team
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Team List -->
+                <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden flex flex-col h-[600px]">
+                    <div class="p-4 border-b border-gray-100 bg-gray-50 font-medium text-gray-700">
+                        Teams
+                    </div>
+                    <ul id="team-list" class="flex-1 overflow-y-auto divide-y divide-gray-100">
+                        <!-- Populated by JS -->
+                    </ul>
+                </div>
+
+                <!-- Agent List for Selected Team -->
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[600px]">
+                    <div class="p-4 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                        <h3 class="font-medium text-gray-700" id="selected-team-name">Select a Team</h3>
+                        <button onclick="openAddAgentModal()" id="btn-add-agent" class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition text-sm flex items-center gap-2 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                            <i class="fa-solid fa-user-plus"></i> Add Agent
+                        </button>
+                    </div>
+                    
+                    <div class="p-4 border-b border-gray-100 flex gap-2">
+                         <div class="relative flex-1">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fa-solid fa-magnifying-glass text-gray-400"></i>
+                            </div>
+                            <input type="text" id="agent-search" placeholder="Search agents..." onkeyup="filterAgents()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full pl-10 p-2">
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-2" id="agent-list-container">
+                        <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                            <i class="fa-solid fa-users text-4xl mb-2"></i>
+                            <p>Select a team from the left to view agents.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-history" class="p-8 max-w-5xl mx-auto fade-in hidden">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-gray-800">Historical Data</h2>
+                <p class="text-gray-500 mt-1">Review previously uploaded KPI data across different months.</p>
+            </header>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-end gap-4 mb-6">
+                    <div class="flex-1">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Select Month to View</label>
+                        <select id="history-month-selector" onchange="renderHistoryData()" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                            <option value="">Choose a month...</option>
+                        </select>
+                    </div>
+                    <div>
+                        <button onclick="deleteHistoryMonth()" class="px-4 py-2.5 bg-white border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition flex items-center gap-2 shadow-sm text-sm">
+                            <i class="fa-solid fa-trash-can"></i> Delete Data for Month
+                        </button>
+                    </div>
+                </div>
+
+                <div id="history-content" class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="text-center py-12 bg-gray-50">
+                        <i class="fa-solid fa-calendar-days text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">Select a month to view historical KPI data.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    
+    <!-- Email Draft Modal -->
+    <div id="email-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-gray-200 flex justify-between items-center bg-gray-50 rounded-t-xl">
+                <h3 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                    <i class="fa-solid fa-envelope text-primary"></i> Prepare Email
+                </h3>
+                <button onclick="closeModal('email-modal')" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 flex-1 overflow-y-auto">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Agent Name</label>
+                        <input type="text" id="email-agent-name" readonly class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 cursor-not-allowed">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Agent Email <span class="text-xs font-normal text-gray-500">(Edit if needed)</span></label>
+                        <input type="email" id="email-agent-address" placeholder="agent@example.com" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+                        <input type="text" id="email-subject" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                    </div>
+                    <div>
+                        <div class="flex justify-between items-end mb-2">
+                            <label class="block text-sm font-medium text-gray-700">Email Draft <span class="text-xs font-normal text-gray-500">(You can edit text directly below)</span></label>
+                            <button onclick="regenerateEmailTemplate()" class="text-xs text-primary hover:underline"><i class="fa-solid fa-rotate"></i> Reset Table</button>
+                        </div>
+                        <!-- Replaced textarea with a contenteditable rich text area -->
+                        <div id="email-preview-container" contenteditable="true" class="bg-white border border-gray-300 rounded-lg p-4 max-h-[400px] overflow-y-auto focus:ring-primary focus:border-primary block w-full text-sm">
+                            <!-- Table injected here via JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-5 border-t border-gray-200 bg-gray-50 rounded-b-xl flex justify-between items-center">
+                <p class="text-xs text-gray-500"><i class="fa-solid fa-circle-info"></i> This will copy the table to your clipboard and open your email.</p>
+                <div class="flex gap-3">
+                    <button onclick="closeModal('email-modal')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                    <button onclick="sendEmail()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition shadow-md flex items-center gap-2">
+                        <i class="fa-solid fa-copy"></i> Copy Table & Open Email
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Team Modal -->
+    <div id="team-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-5 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800" id="team-modal-title">Add New Team</h3>
+                <button onclick="closeModal('team-modal')" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6">
+                <input type="hidden" id="team-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Team Name</label>
+                    <input type="text" id="team-name-input" placeholder="e.g., Sales Team Alpha" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
+                <button onclick="closeModal('team-modal')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="saveTeam()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition">Save Team</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Agent Modal -->
+    <div id="agent-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+            <div class="p-5 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-gray-800" id="agent-modal-title">Add New Agent</h3>
+                <button onclick="closeModal('agent-modal')" class="text-gray-400 hover:text-gray-700 transition">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="agent-id">
+                <input type="hidden" id="agent-team-id">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Agent Full Name</label>
+                    <input type="text" id="agent-name-input" placeholder="John Doe" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                    <p class="text-xs text-gray-500 mt-1">This name should match the name in the KPI's.xlsx file to link data automatically.</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Agent Email (Optional)</label>
+                    <input type="email" id="agent-email-input" placeholder="john.doe@company.com" class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary focus:border-primary block w-full p-2.5">
+                </div>
+            </div>
+            <div class="p-5 border-t border-gray-200 flex justify-end gap-3 bg-gray-50 rounded-b-xl">
+                <button onclick="closeModal('agent-modal')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition">Cancel</button>
+                <button onclick="saveAgent()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition">Save Agent</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Modal (replaces window.alert) -->
+    <div id="alert-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[60] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div id="alert-header" class="p-4 text-white text-center font-bold">
+                Message
+            </div>
+            <div class="p-6 text-center text-gray-700" id="alert-message">
+                Alert content here.
+            </div>
+            <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-center">
+                <button onclick="closeAlert()" class="px-6 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition font-medium">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        let appState = {
+            teams: [], // Array of objects: { id, name }
+            agents: [], // Array of objects: { id, name, email, teamId }
+            kpiHistory: {}, // Object keyed by month "YYYY-MM", containing parsed Excel data
+            currentSelectedTeamId: null,
+            currentEmailAgentData: null,
+            currentEmailKpiData: null
+        };
+
+        // Initialize state from LocalStorage
+        function initApp() {
+            const savedState = localStorage.getItem('kpiApp_state');
+            if (savedState) {
+                try {
+                    appState = JSON.parse(savedState);
+                } catch (e) {
+                    console.error("Could not parse saved state, starting fresh.");
+                }
+            }
+
+            // Set default month in upload to current month
+            const now = new Date();
+            const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+            document.getElementById('upload-month').value = monthStr;
+
+            updateMonthSelectors();
+            renderTeamList();
+            
+            // Default to current month in dashboard if data exists
+            if (Object.keys(appState.kpiHistory).length > 0) {
+                const months = Object.keys(appState.kpiHistory).sort().reverse();
+                document.getElementById('month-selector').value = months[0];
+            }
+            
+            loadDashboardData();
+        }
+
+        function saveState() {
+            localStorage.setItem('kpiApp_state', JSON.stringify(appState));
+        }
+
+        // --- Custom Alert System ---
+        function showAlert(message, type = 'info') {
+            const modal = document.getElementById('alert-modal');
+            const header = document.getElementById('alert-header');
+            document.getElementById('alert-message').innerText = message;
+            
+            header.className = 'p-4 text-white text-center font-bold text-lg flex items-center justify-center gap-2 ';
+            if (type === 'error') {
+                header.className += 'bg-red-500';
+                header.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Error';
+            } else if (type === 'success') {
+                header.className += 'bg-green-500';
+                header.innerHTML = '<i class="fa-solid fa-circle-check"></i> Success';
+            } else {
+                header.className += 'bg-blue-500';
+                header.innerHTML = '<i class="fa-solid fa-circle-info"></i> Information';
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('alert-modal').classList.add('hidden');
+        }
+
+        // --- UI Navigation ---
+        function switchTab(tabId) {
+            // Hide all tabs
+            ['dashboard', 'upload', 'teams', 'history'].forEach(id => {
+                document.getElementById('tab-' + id).classList.add('hidden');
+                document.getElementById('tab-' + id).classList.remove('block');
+                
+                // Update nav styling
+                const navBtn = document.getElementById('nav-' + id);
+                navBtn.className = 'w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors text-textMuted hover:bg-gray-50 hover:text-textMain';
+            });
+
+            // Show selected tab
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('block');
+            
+            // Highlight active nav
+            const activeNavBtn = document.getElementById('nav-' + tabId);
+            activeNavBtn.className = 'w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg transition-colors bg-blue-50 text-primary font-medium';
+
+            // Specific logic per tab
+            if (tabId === 'dashboard') loadDashboardData();
+            if (tabId === 'history') updateMonthSelectors();
+        }
+
+        // --- STREAMING_CHUNK:Team and Agent Management... ---
+        
+        function generateId() {
+            return Math.random().toString(36).substr(2, 9);
+        }
+
+        function renderTeamList() {
+            const list = document.getElementById('team-list');
+            list.innerHTML = '';
+            
+            if (appState.teams.length === 0) {
+                list.innerHTML = '<div class="p-6 text-center text-gray-500 text-sm">No teams created yet.</div>';
+                document.getElementById('selected-team-name').innerText = 'Select a Team';
+                document.getElementById('btn-add-agent').disabled = true;
+                return;
+            }
+
+            appState.teams.forEach(team => {
+                const li = document.createElement('li');
+                const isSelected = appState.currentSelectedTeamId === team.id;
+                li.className = `p-3 flex justify-between items-center cursor-pointer hover:bg-blue-50 transition-colors border-l-4 ${isSelected ? 'border-primary bg-blue-50' : 'border-transparent'}`;
+                li.onclick = () => selectTeam(team.id);
+                
+                li.innerHTML = `
+                    <div class="flex items-center gap-3 font-medium ${isSelected ? 'text-primary' : 'text-gray-700'}">
+                        <i class="fa-solid fa-users text-gray-400"></i> ${team.name}
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="editTeam('${team.id}', event)" class="p-1.5 text-gray-400 hover:text-blue-500 rounded"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteTeam('${team.id}', event)" class="p-1.5 text-gray-400 hover:text-red-500 rounded"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(li);
+            });
+            
+            // Re-render agents if a team is selected
+            if (appState.currentSelectedTeamId) {
+                selectTeam(appState.currentSelectedTeamId);
+            }
+        }
+
+        function selectTeam(teamId) {
+            appState.currentSelectedTeamId = teamId;
+            renderTeamList(); // to update selection styling
+            
+            const team = appState.teams.find(t => t.id === teamId);
+            document.getElementById('selected-team-name').innerText = team ? team.name : 'Select a Team';
+            document.getElementById('btn-add-agent').disabled = false;
+            
+            renderAgentList();
+        }
+
+        function renderAgentList(searchTerm = '') {
+            const container = document.getElementById('agent-list-container');
+            container.innerHTML = '';
+            
+            if (!appState.currentSelectedTeamId) return;
+
+            let teamAgents = appState.agents.filter(a => a.teamId === appState.currentSelectedTeamId);
+            
+            if (searchTerm) {
+                teamAgents = teamAgents.filter(a => a.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            }
+
+            if (teamAgents.length === 0) {
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400 py-12">
+                        <i class="fa-regular fa-face-frown-open text-4xl mb-2"></i>
+                        <p>${searchTerm ? 'No agents match your search.' : 'No agents in this team yet.'}</p>
+                    </div>`;
+                return;
+            }
+
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-2';
+            
+            teamAgents.forEach(agent => {
+                const li = document.createElement('li');
+                li.className = 'bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center hover:shadow-sm transition-shadow';
+                li.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-xs uppercase">
+                            ${agent.name.substring(0, 2)}
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-800 text-sm">${agent.name}</div>
+                            <div class="text-xs text-gray-500">${agent.email || 'No email set'}</div>
+                        </div>
+                    </div>
+                    <div class="flex gap-1">
+                        <button onclick="editAgent('${agent.id}')" class="p-2 text-gray-400 hover:text-blue-500 rounded-md hover:bg-blue-50"><i class="fa-solid fa-pen-to-square"></i></button>
+                        <button onclick="deleteAgent('${agent.id}')" class="p-2 text-gray-400 hover:text-red-500 rounded-md hover:bg-red-50"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                ul.appendChild(li);
+            });
+            
+            container.appendChild(ul);
+        }
+
+        function filterAgents() {
+            const term = document.getElementById('agent-search').value;
+            renderAgentList(term);
+        }
+
+        // Modals for Teams
+        function openAddTeamModal() {
+            document.getElementById('team-modal-title').innerText = 'Add New Team';
+            document.getElementById('team-id').value = '';
+            document.getElementById('team-name-input').value = '';
+            document.getElementById('team-modal').classList.remove('hidden');
+        }
+
+        function editTeam(id, event) {
+            event.stopPropagation(); // prevent team selection
+            const team = appState.teams.find(t => t.id === id);
+            if (team) {
+                document.getElementById('team-modal-title').innerText = 'Edit Team';
+                document.getElementById('team-id').value = team.id;
+                document.getElementById('team-name-input').value = team.name;
+                document.getElementById('team-modal').classList.remove('hidden');
+            }
+        }
+
+        function saveTeam() {
+            const id = document.getElementById('team-id').value;
+            const name = document.getElementById('team-name-input').value.trim();
+            
+            if (!name) {
+                showAlert('Team name cannot be empty.', 'error');
+                return;
+            }
+
+            if (id) {
+                // Edit
+                const index = appState.teams.findIndex(t => t.id === id);
+                if (index !== -1) appState.teams[index].name = name;
+            } else {
+                // Add
+                appState.teams.push({ id: generateId(), name: name });
+            }
+            
+            saveState();
+            renderTeamList();
+            closeModal('team-modal');
+        }
+
+        function deleteTeam(id, event) {
+            event.stopPropagation();
+            // In a real app, confirm dialog here (can't use confirm/alert)
+            // For this immersive, we'll implement a custom pseudo-confirm if needed, or just delete. Let's just delete for simplicity but usually you'd want confirmation.
+            
+            // Check if agents exist in team
+            const hasAgents = appState.agents.some(a => a.teamId === id);
+            if (hasAgents) {
+                 showAlert('Cannot delete team. Please move or remove all agents from this team first.', 'error');
+                 return;
+            }
+
+            appState.teams = appState.teams.filter(t => t.id !== id);
+            if (appState.currentSelectedTeamId === id) {
+                appState.currentSelectedTeamId = null;
+            }
+            saveState();
+            renderTeamList();
+        }
+
+        // Modals for Agents
+        function openAddAgentModal() {
+            if (!appState.currentSelectedTeamId) return;
+            document.getElementById('agent-modal-title').innerText = 'Add New Agent';
+            document.getElementById('agent-id').value = '';
+            document.getElementById('agent-team-id').value = appState.currentSelectedTeamId;
+            document.getElementById('agent-name-input').value = '';
+            document.getElementById('agent-email-input').value = '';
+            document.getElementById('agent-modal').classList.remove('hidden');
+        }
+
+        function editAgent(id) {
+            const agent = appState.agents.find(a => a.id === id);
+            if (agent) {
+                document.getElementById('agent-modal-title').innerText = 'Edit Agent';
+                document.getElementById('agent-id').value = agent.id;
+                document.getElementById('agent-team-id').value = agent.teamId;
+                document.getElementById('agent-name-input').value = agent.name;
+                document.getElementById('agent-email-input').value = agent.email || '';
+                document.getElementById('agent-modal').classList.remove('hidden');
+            }
+        }
+
+        function saveAgent() {
+            const id = document.getElementById('agent-id').value;
+            const teamId = document.getElementById('agent-team-id').value;
+            const name = document.getElementById('agent-name-input').value.trim();
+            const email = document.getElementById('agent-email-input').value.trim();
+            
+            if (!name) {
+                showAlert('Agent name cannot be empty.', 'error');
+                return;
+            }
+
+            if (id) {
+                // Edit
+                const index = appState.agents.findIndex(a => a.id === id);
+                if (index !== -1) {
+                    appState.agents[index].name = name;
+                    appState.agents[index].email = email;
+                }
+            } else {
+                // Add
+                appState.agents.push({ id: generateId(), name: name, email: email, teamId: teamId });
+            }
+            
+            saveState();
+            renderAgentList();
+            closeModal('agent-modal');
+        }
+
+        function deleteAgent(id) {
+            appState.agents = appState.agents.filter(a => a.id !== id);
+            saveState();
+            renderAgentList();
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        // --- STREAMING_CHUNK:Excel Parsing Logic... ---
+        
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const month = document.getElementById('upload-month').value;
+            if (!month) {
+                showAlert('Please select a month for this data first.', 'error');
+                event.target.value = ''; // Reset input
+                return;
+            }
+
+            const statusEl = document.getElementById('upload-status');
+            const statusIcon = document.getElementById('upload-status-icon');
+            const statusText = document.getElementById('upload-status-text');
+            
+            statusEl.classList.remove('hidden', 'bg-green-50', 'text-green-800', 'bg-red-50', 'text-red-800');
+            statusEl.classList.add('bg-blue-50', 'text-blue-800');
+            statusIcon.className = 'fa-solid fa-spinner fa-spin mt-0.5 text-blue-500';
+            statusText.innerHTML = `<strong>Processing ${file.name}...</strong>`;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // Assume first sheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // We use {header: 1, raw: false} to get a 2D array grid and preserve Excel % formatting
+                    const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: false, defval: "" });
+                    
+                    if (rawData.length === 0) {
+                         throw new Error("The Excel sheet appears to be empty.");
+                    }
+
+                    // Process Complex Data
+                    processComplexExcelData(rawData, month);
+                    
+                    statusEl.classList.replace('bg-blue-50', 'bg-green-50');
+                    statusEl.classList.replace('text-blue-800', 'text-green-800');
+                    statusIcon.className = 'fa-solid fa-circle-check mt-0.5 text-green-500';
+                    statusText.innerHTML = `<strong>Success!</strong> Successfully parsed data for ${month}.<br><span class="text-xs">Data saved. Go to Dashboard to view.</span>`;
+                    
+                    // Update dropdowns
+                    updateMonthSelectors();
+                    saveState();
+                    
+                    // Auto switch to dashboard and load that month
+                    setTimeout(() => {
+                        document.getElementById('month-selector').value = month;
+                        switchTab('dashboard');
+                    }, 2000);
+
+                } catch (error) {
+                    console.error(error);
+                    statusEl.classList.replace('bg-blue-50', 'bg-red-50');
+                    statusEl.classList.replace('text-blue-800', 'text-red-800');
+                    statusIcon.className = 'fa-solid fa-triangle-exclamation mt-0.5 text-red-500';
+                    statusText.innerHTML = `<strong>Error processing file:</strong> ${error.message}`;
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+            event.target.value = ''; // Reset input to allow re-uploading same file if needed
+        }
+
+        function processComplexExcelData(rawData, monthStr) {
+            let headerRowIdx = -1;
+            let agentColIdx = -1;
+
+            // 1. Find the row containing 'Agent Name'
+            for (let r = 0; r < Math.min(20, rawData.length); r++) {
+                for (let c = 0; c < rawData[r].length; c++) {
+                    const cellValue = String(rawData[r][c]).toLowerCase().trim();
+                    if (cellValue.includes('agent name') || cellValue === 'agent' || cellValue === 'name') {
+                        headerRowIdx = r;
+                        agentColIdx = c;
+                        break;
+                    }
+                }
+                if (headerRowIdx !== -1) break;
+            }
+
+            if (headerRowIdx === -1) {
+                throw new Error("Could not find an 'Agent Name' column. Please ensure one column header is labeled 'Agent Name'.");
+            }
+
+            // 2. Determine if there are sub-headers (like Score/Weight underneath Quality)
+            let hasSubHeaders = false;
+            let dataStartRow = headerRowIdx + 1;
+            
+            if (headerRowIdx + 1 < rawData.length) {
+                const nextRow = rawData[headerRowIdx + 1];
+                const agentCellNextRow = String(nextRow[agentColIdx] || "").trim();
+                
+                // If the cell directly below 'Agent Name' is empty, it's highly likely a sub-header row caused by vertical merging
+                if (!agentCellNextRow) {
+                     hasSubHeaders = true;
+                     dataStartRow = headerRowIdx + 2;
+                }
+            }
+
+            // 3. Build flat headers
+            let finalHeaders = [];
+            let currentMainHeader = "";
+            const maxCols = Math.max(rawData[headerRowIdx].length, hasSubHeaders ? rawData[headerRowIdx+1].length : 0);
+
+            for (let c = 0; c < maxCols; c++) {
+                let h1 = String(rawData[headerRowIdx][c] || "").trim();
+                let h2 = hasSubHeaders ? String(rawData[headerRowIdx+1][c] || "").trim() : "";
+
+                // If the top header cell is merged across columns, SheetJS puts the value in the first column and leaves the rest empty.
+                // We keep track of the last seen main header to fill those in.
+                if (h1) {
+                    currentMainHeader = h1;
+                }
+
+                if (hasSubHeaders) {
+                    if (h2) {
+                        finalHeaders[c] = `${currentMainHeader} - ${h2}`;
+                    } else {
+                        finalHeaders[c] = currentMainHeader;
+                    }
+                } else {
+                    finalHeaders[c] = currentMainHeader;
+                }
+            }
+
+            // Ensure no duplicate or empty header keys
+            finalHeaders = finalHeaders.map((h, i) => h || `Column_${i}`);
+
+            // 4. Extract the actual data rows
+            const processedData = [];
+            for (let r = dataStartRow; r < rawData.length; r++) {
+                const row = rawData[r];
+                const agentName = String(row[agentColIdx] || "").trim();
+
+                // Skip empty rows, or summary rows usually found at the bottom like "Target / Weight" or "Average"
+                if (!agentName || agentName.toLowerCase().includes('target') || agentName.toLowerCase().includes('average')) {
+                    continue;
+                }
+
+                let rowData = { _extracted_name: agentName };
+                let hasAnyData = false;
+
+                for (let c = 0; c < finalHeaders.length; c++) {
+                    const val = row[c] !== undefined ? String(row[c]).trim() : "";
+                    rowData[finalHeaders[c]] = val;
+                    if (c !== agentColIdx && val !== "") hasAnyData = true;
+                }
+                
+                // Only add if the row has some actual data besides the name
+                if (hasAnyData) {
+                    processedData.push(rowData);
+                }
+            }
+
+            appState.kpiHistory[monthStr] = processedData;
+            autoCreateMissingAgents(processedData);
+        }
+
+        function autoCreateMissingAgents(data) {
+            let unassignedTeam = appState.teams.find(t => t.name === 'Unassigned');
+            
+            let addedCount = 0;
+            data.forEach(row => {
+                const name = row['_extracted_name'];
+                if (name && name !== 'Unknown') {
+                    // Check if agent exists (case insensitive)
+                    const exists = appState.agents.some(a => a.name.toLowerCase() === name.toLowerCase());
+                    
+                    if (!exists) {
+                        // Create unassigned team if it doesn't exist and we need it
+                        if (!unassignedTeam) {
+                            unassignedTeam = { id: generateId(), name: 'Unassigned' };
+                            appState.teams.push(unassignedTeam);
+                        }
+                        
+                        appState.agents.push({
+                            id: generateId(),
+                            name: name,
+                            email: '',
+                            teamId: unassignedTeam.id
+                        });
+                        addedCount++;
+                    }
+                }
+            });
+            
+            if (addedCount > 0) {
+                console.log(`Auto-added ${addedCount} new agents to 'Unassigned' team.`);
+                renderTeamList();
+            }
+        }
+
+        // --- STREAMING_CHUNK:Dashboard & Data Display... ---
+
+        function updateMonthSelectors() {
+            const months = Object.keys(appState.kpiHistory).sort().reverse(); // Newest first
+            
+            const dashSelector = document.getElementById('month-selector');
+            const historySelector = document.getElementById('history-month-selector');
+            
+            dashSelector.innerHTML = '<option value="">Select Month</option>';
+            historySelector.innerHTML = '<option value="">Choose a month...</option>';
+            
+            months.forEach(month => {
+                const dateObj = new Date(month + '-01T00:00:00'); // Force UTC parsing basically
+                const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                
+                dashSelector.innerHTML += `<option value="${month}">${formattedDate}</option>`;
+                historySelector.innerHTML += `<option value="${month}">${formattedDate}</option>`;
+            });
+        }
+
+        function loadDashboardData() {
+            const month = document.getElementById('month-selector').value;
+            const content = document.getElementById('dashboard-content');
+            
+            // Update stats
+            document.getElementById('stat-total-agents').innerText = appState.agents.length;
+            document.getElementById('stat-total-teams').innerText = appState.teams.length;
+            
+            if (!month || !appState.kpiHistory[month]) {
+                document.getElementById('dashboard-date').innerText = "Select a month to view data.";
+                document.getElementById('stat-total-kpis').innerText = "0";
+                content.innerHTML = `
+                    <div class="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
+                        <i class="fa-solid fa-inbox text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">No data loaded for the selected month.</p>
+                        <button onclick="switchTab('upload')" class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-secondary transition text-sm shadow-sm">Upload Data</button>
+                    </div>`;
+                return;
+            }
+
+            const rawData = appState.kpiHistory[month];
+            document.getElementById('stat-total-kpis').innerText = rawData.length;
+            
+            const dateObj = new Date(month + '-01');
+            document.getElementById('dashboard-date').innerText = "Data for " + dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+            // Group data by team, then match with agents
+            renderDashboardGroupedData(rawData, content);
+        }
+
+        function renderDashboardGroupedData(kpiData, container) {
+            container.innerHTML = '';
+            
+            if (appState.teams.length === 0) {
+                 container.innerHTML = `<div class="p-6 bg-yellow-50 text-yellow-800 rounded-lg border border-yellow-200">Please setup Teams and Agents first to properly organize this data.</div>`;
+                 // Fallback render raw list
+                 renderRawKpiList(kpiData, container);
+                 return;
+            }
+
+            // Organize KPI data by matching Agent names
+            const unmappedKpis = [...kpiData]; // copy
+            
+            appState.teams.forEach(team => {
+                const teamAgents = appState.agents.filter(a => a.teamId === team.id);
+                if (teamAgents.length === 0) return; // Skip empty teams
+
+                // Team Section
+                const teamCard = document.createElement('div');
+                teamCard.className = 'bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-6';
+                
+                const teamHeader = document.createElement('div');
+                teamHeader.className = 'p-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center cursor-pointer';
+                teamHeader.onclick = function() {
+                    const body = this.nextElementSibling;
+                    const icon = this.querySelector('.collapse-icon');
+                    if (body.classList.contains('hidden')) {
+                        body.classList.remove('hidden');
+                        icon.classList.replace('fa-chevron-down', 'fa-chevron-up');
+                    } else {
+                        body.classList.add('hidden');
+                        icon.classList.replace('fa-chevron-up', 'fa-chevron-down');
+                    }
+                };
+                
+                teamHeader.innerHTML = `
+                    <h3 class="font-bold text-lg text-gray-800 flex items-center gap-2"><i class="fa-solid fa-users text-primary"></i> ${team.name} <span class="text-xs font-normal text-gray-500 bg-white px-2 py-0.5 rounded-full border border-gray-200">${teamAgents.length} Agents</span></h3>
+                    <i class="fa-solid fa-chevron-up collapse-icon text-gray-400 transition-transform"></i>
+                `;
+                
+                const teamBody = document.createElement('div');
+                teamBody.className = 'divide-y divide-gray-100';
+
+                let foundDataForTeam = false;
+
+                teamAgents.forEach(agent => {
+                    // Find KPI data for this agent based on name (case insensitive)
+                    const kpiIndex = unmappedKpis.findIndex(k => k._extracted_name.toLowerCase() === agent.name.toLowerCase());
+                    let agentKpi = null;
+                    
+                    if (kpiIndex !== -1) {
+                        agentKpi = unmappedKpis[kpiIndex];
+                        unmappedKpis.splice(kpiIndex, 1); // Remove from unmapped
+                        foundDataForTeam = true;
+                    }
+
+                    const agentRow = document.createElement('div');
+                    agentRow.className = 'p-4 flex flex-col md:flex-row justify-between items-start md:items-center hover:bg-gray-50 transition-colors gap-4';
+                    
+                    let kpiSummaryHtml = '<span class="text-gray-400 italic text-sm">No KPI data found for this month</span>';
+                    let actionButton = '';
+
+                    if (agentKpi) {
+                        // Extract a few key metrics for summary (exclude internal _extracted_name)
+                        const keys = Object.keys(agentKpi).filter(k => !k.startsWith('_'));
+                        const previewKeys = keys.slice(0, 3); // Take first 3 for summary
+                        
+                        let summaryStr = previewKeys.map(k => `<span class="inline-block bg-blue-50 text-blue-700 text-xs px-2 py-1 rounded border border-blue-100 mr-2 mb-1 truncate max-w-[150px]" title="${k}: ${agentKpi[k]}"><strong>${k}:</strong> ${agentKpi[k]}</span>`).join('');
+                        if (keys.length > 3) summaryStr += `<span class="text-xs text-gray-500">+${keys.length - 3} more</span>`;
+                        
+                        kpiSummaryHtml = `<div class="flex flex-wrap items-center mt-2 md:mt-0">${summaryStr}</div>`;
+                        
+                        actionButton = `
+                            <button onclick='openEmailModal(${JSON.stringify(agent).replace(/'/g, "&#39;")}, ${JSON.stringify(agentKpi).replace(/'/g, "&#39;")})' class="shrink-0 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg hover:bg-green-600 transition flex items-center gap-2 shadow-sm">
+                                <i class="fa-solid fa-paper-plane"></i> Prepare Email
+                            </button>
+                        `;
+                    }
+
+                    agentRow.innerHTML = `
+                        <div class="flex-1 min-w-0 w-full">
+                            <div class="flex items-center gap-2">
+                                <div class="font-medium text-gray-900 truncate">${agent.name}</div>
+                                ${agent.email ? `<span class="text-xs text-gray-500 bg-gray-100 px-2 rounded-md"><i class="fa-regular fa-envelope"></i> ${agent.email}</span>` : ''}
+                            </div>
+                            ${kpiSummaryHtml}
+                        </div>
+                        <div class="flex gap-2 w-full md:w-auto justify-end">
+                            <button onclick='viewFullKpi(${JSON.stringify(agentKpi || {}).replace(/'/g, "&#39;")}, "${agent.name}")' class="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition" ${!agentKpi ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+                                <i class="fa-solid fa-eye"></i> View Details
+                            </button>
+                            ${actionButton}
+                        </div>
+                    `;
+                    teamBody.appendChild(agentRow);
+                });
+
+                if (!foundDataForTeam) {
+                    teamBody.innerHTML += `<div class="p-4 text-center text-sm text-gray-500 italic">No KPI data found for any agent in this team this month.</div>`;
+                }
+
+                teamCard.appendChild(teamHeader);
+                teamCard.appendChild(teamBody);
+                container.appendChild(teamCard);
+            });
+
+            // Show unmapped data if any (people in excel but not in our agents list)
+            if (unmappedKpis.length > 0) {
+                 const unmappedCard = document.createElement('div');
+                 unmappedCard.className = 'bg-yellow-50 rounded-xl shadow-sm border border-yellow-200 overflow-hidden mb-6';
+                 
+                 unmappedCard.innerHTML = `
+                    <div class="p-4 border-b border-yellow-200 flex justify-between items-center cursor-pointer" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                        <h3 class="font-bold text-lg text-yellow-800 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation text-yellow-600"></i> Unmapped KPI Data <span class="text-xs font-normal bg-white px-2 py-0.5 rounded-full text-yellow-800 border border-yellow-300">${unmappedKpis.length} rows</span></h3>
+                        <i class="fa-solid fa-chevron-down text-yellow-600 transition-transform"></i>
+                    </div>
+                    <div class="divide-y divide-yellow-100 hidden p-4">
+                        <p class="text-sm text-yellow-700 mb-4">The following rows from the Excel file could not be automatically matched to any Agent in your system. Please verify names match exactly, or add these agents.</p>
+                 `;
+                 
+                 const ul = document.createElement('ul');
+                 ul.className = 'space-y-2 max-h-60 overflow-y-auto';
+                 unmappedKpis.forEach(kpi => {
+                     ul.innerHTML += `<li class="text-sm bg-white p-2 border border-yellow-100 rounded"><strong>Extracted Name:</strong> ${kpi._extracted_name} <button class="ml-2 text-blue-600 hover:underline text-xs" onclick='viewFullKpi(${JSON.stringify(kpi).replace(/'/g, "&#39;")}, "${kpi._extracted_name}")'>View Data</button></li>`;
+                 });
+                 
+                 unmappedCard.lastElementChild.appendChild(ul);
+                 container.appendChild(unmappedCard);
+            }
+        }
+
+        function renderRawKpiList(kpiData, container) {
+             const div = document.createElement('div');
+             div.className = 'bg-white rounded-lg shadow border border-gray-200 overflow-hidden';
+             
+             let tableHtml = '<div class="overflow-x-auto"><table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50">';
+             
+             // Get all headers from first object
+             const headers = Object.keys(kpiData[0]).filter(k => !k.startsWith('_'));
+             
+             tableHtml += '<tr>';
+             headers.forEach(h => tableHtml += `<th scope="col" class="px-6 py-3">${h}</th>`);
+             tableHtml += '</tr></thead><tbody>';
+             
+             kpiData.forEach((row, i) => {
+                 tableHtml += `<tr class="bg-white border-b hover:bg-gray-50 ${i%2===0?'bg-white':'bg-gray-50'}">`;
+                 headers.forEach(h => tableHtml += `<td class="px-6 py-4 whitespace-nowrap">${row[h] || '-'}</td>`);
+                 tableHtml += '</tr>';
+             });
+             
+             tableHtml += '</tbody></table></div>';
+             div.innerHTML = tableHtml;
+             container.appendChild(div);
+        }
+
+        // --- STREAMING_CHUNK:Emailing Logic... ---
+        
+        function openEmailModal(agent, kpiData) {
+            appState.currentEmailAgentData = agent;
+            appState.currentEmailKpiData = kpiData;
+            
+            document.getElementById('email-agent-name').value = agent.name;
+            document.getElementById('email-agent-address').value = agent.email || '';
+            
+            const month = document.getElementById('month-selector').value;
+            const dateObj = new Date(month + '-01');
+            const formattedMonth = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            document.getElementById('email-subject').value = `Monthly KPI Report - ${formattedMonth}`;
+            
+            regenerateEmailTemplate();
+            
+            document.getElementById('email-modal').classList.remove('hidden');
+        }
+
+        function regenerateEmailTemplate() {
+            if (!appState.currentEmailAgentData || !appState.currentEmailKpiData) return;
+            
+            const agent = appState.currentEmailAgentData;
+            const kpis = appState.currentEmailKpiData;
+            const month = document.getElementById('month-selector').value;
+            const dateObj = new Date(month + '-01');
+            const formattedMonth = dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            const kpiKeys = Object.keys(kpis).filter(k => !k.startsWith('_'));
+            const grouped = {};
+            let totalKpiRow = null;
+
+            // Group complex headers back together
+            kpiKeys.forEach(k => {
+                // Detect summary/point rows
+                if (k.toLowerCase().includes('total') || k.toLowerCase().includes('kpis') || k.toLowerCase() === 'points' || k.toLowerCase().includes('bonus')) {
+                    if(!totalKpiRow) totalKpiRow = { name: k, val: kpis[k] };
+                    return; 
+                }
+
+                let main = k;
+                let sub = 'Value';
+
+                if (k.includes(' - ')) {
+                    const parts = k.split(' - ');
+                    main = parts[0].trim();
+                    sub = parts[1].trim();
+                }
+
+                // Adjust for common Hold Count variations to split them into separate rows like the image
+                if (main.toLowerCase() === 'hold count' && sub.toLowerCase().includes('dur')) {
+                    main = 'Hold Duration'; sub = 'Score';
+                }
+                if (main.toLowerCase() === 'hold count' && sub.toLowerCase().includes('count')) {
+                    main = 'Hold Count'; sub = 'Score';
+                }
+
+                if (!grouped[main]) grouped[main] = {};
+                
+                if (sub.toLowerCase().includes('score') || sub === 'Value') {
+                    grouped[main]['Score'] = kpis[k];
+                } else if (sub.toLowerCase().includes('weight')) {
+                    grouped[main]['Weight'] = kpis[k];
+                } else {
+                    grouped[main]['Score'] = kpis[k]; // Default fallback
+                }
+            });
+
+            // Build the HTML Table
+            let tableHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; color: #000;">
+                <p>Hi ${agent.name},</p>
+                <p>Here is your KPI performance report for ${formattedMonth}:</p>
+                
+                <table style="border-collapse: collapse; width: 100%; border: 2px solid #000; text-align: center; margin-top: 15px; margin-bottom: 15px;">
+                    <thead>
+                        <tr>
+                            <th style="background-color: #4a86e8; color: white; border: 1px solid #000; padding: 10px; width: 40%;">Attribute</th>
+                            <th colspan="2" style="background-color: #c9daf8; color: black; border: 1px solid #000; padding: 10px; width: 60%;">${agent.name}</th>
+                        </tr>
+                        <tr>
+                            <th style="background-color: #0b5394; color: white; border: 1px solid #000; padding: 10px;"></th>
+                            <th style="background-color: #c9daf8; color: black; border: 1px solid #000; padding: 10px; width: 30%;">Score</th>
+                            <th style="background-color: #c9daf8; color: black; border: 1px solid #000; padding: 10px; width: 30%;">Weight</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            for (const [attr, vals] of Object.entries(grouped)) {
+                let score = vals['Score'] !== undefined ? vals['Score'] : (vals['Value'] !== undefined ? vals['Value'] : '-');
+                let weight = vals['Weight'] !== undefined ? vals['Weight'] : '-';
+                
+                tableHtml += `
+                    <tr>
+                        <td style="background-color: #1c4587; color: white; border: 1px solid #000; padding: 8px; font-weight: bold; text-align: center;">${attr}</td>
+                        <td style="border: 1px solid #000; padding: 8px; background-color: #e8f0fe;">${score}</td>
+                        <td style="border: 1px solid #000; padding: 8px; background-color: #ffffff;">${weight}</td>
+                    </tr>
+                `;
+            }
+
+            if (totalKpiRow) {
+                tableHtml += `
+                    <tr>
+                        <td style="background-color: #fbbc04; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; text-align: center;">${totalKpiRow.name}</td>
+                        <td colspan="2" style="background-color: #fce5cd; color: black; border: 1px solid #000; padding: 12px; font-weight: bold; font-size: 16px;">${totalKpiRow.val}</td>
+                    </tr>
+                `;
+            }
+
+            tableHtml += `
+                    </tbody>
+                </table>
+                <p>Please review these metrics. If you have any questions or need clarification, feel free to reach out.</p>
+                <br>
+                <p>Best regards,<br>Management Team</p>
+            </div>
+            `;
+
+            document.getElementById('email-preview-container').innerHTML = tableHtml;
+        }
+
+        function sendEmail() {
+            const email = document.getElementById('email-agent-address').value.trim();
+            const subject = document.getElementById('email-subject').value.trim();
+            
+            if (!email) {
+                showAlert('Please provide an email address for the agent.', 'error');
+                return;
+            }
+            
+            // 1. Copy the HTML to clipboard using a reliable fallback method
+            try {
+                const container = document.getElementById('email-preview-container');
+                const range = document.createRange();
+                range.selectNodeContents(container);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                document.execCommand('copy');
+                sel.removeAllRanges();
+                
+                // 2. Open email client with empty body (since they will paste)
+                const instructionBody = `[Please press Ctrl+V or right-click and select Paste to insert the KPI table here]`;
+                const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(instructionBody)}`;
+                
+                const a = document.createElement('a');
+                a.href = mailtoLink;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                closeModal('email-modal');
+                
+                // Show success prompt
+                setTimeout(() => {
+                    showAlert('Table copied to your clipboard! When your email client opens, just hit Paste (Ctrl+V) to insert the beautiful table.', 'success');
+                }, 500);
+
+            } catch (err) {
+                showAlert('Failed to copy to clipboard automatically. You can highlight the text and copy it manually.', 'error');
+            }
+        }
+        
+        function viewFullKpi(kpiData, name) {
+            // Reusing alert modal for a quick data dump view
+            if (!kpiData || Object.keys(kpiData).length === 0) return;
+            
+            const keys = Object.keys(kpiData).filter(k => !k.startsWith('_'));
+            let html = `<div class="text-left"><h4 class="font-bold border-b pb-2 mb-2">Data for: ${name}</h4><ul class="text-sm space-y-1">`;
+            keys.forEach(k => {
+                html += `<li><span class="font-semibold text-gray-700">${k}:</span> ${kpiData[k]}</li>`;
+            });
+            html += `</ul></div>`;
+            
+            const modal = document.getElementById('alert-modal');
+            const header = document.getElementById('alert-header');
+            const msgArea = document.getElementById('alert-message');
+            
+            header.className = 'p-4 text-white text-center font-bold text-lg flex items-center justify-center gap-2 bg-blue-600';
+            header.innerHTML = '<i class="fa-solid fa-list"></i> Full Data Details';
+            
+            msgArea.innerHTML = html;
+            
+            modal.classList.remove('hidden');
+        }
+
+        // --- History functions ---
+        function renderHistoryData() {
+             const month = document.getElementById('history-month-selector').value;
+             const container = document.getElementById('history-content');
+             
+             if (!month || !appState.kpiHistory[month]) {
+                 container.innerHTML = `
+                    <div class="text-center py-12 bg-gray-50">
+                        <i class="fa-solid fa-calendar-days text-4xl text-gray-300 mb-3"></i>
+                        <p class="text-gray-500">Select a month to view historical KPI data.</p>
+                    </div>`;
+                 return;
+             }
+             
+             const data = appState.kpiHistory[month];
+             
+             // Just render a simple table for history view
+             container.innerHTML = `<div class="p-4 bg-gray-50 border-b font-medium text-gray-700">Data Points: ${data.length}</div>`;
+             renderRawKpiList(data, container);
+        }
+        
+        function deleteHistoryMonth() {
+            const month = document.getElementById('history-month-selector').value;
+            if (!month) {
+                showAlert('Please select a month to delete.', 'error');
+                return;
+            }
+            
+            // Custom confirmation
+            const modal = document.getElementById('alert-modal');
+            const header = document.getElementById('alert-header');
+            const msgArea = document.getElementById('alert-message');
+            
+            header.className = 'p-4 text-white text-center font-bold text-lg flex items-center justify-center gap-2 bg-red-600';
+            header.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Confirm Deletion';
+            
+            msgArea.innerHTML = `
+                <p>Are you sure you want to delete all imported KPI data for <strong>${month}</strong>?</p>
+                <p class="text-xs text-red-500 mt-2">This action cannot be undone.</p>
+                <div class="flex gap-2 justify-center mt-6">
+                    <button id="btn-cancel-del" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancel</button>
+                    <button id="btn-confirm-del" class="px-4 py-2 bg-red-600 text-white rounded-lg shadow">Yes, Delete</button>
+                </div>
+            `;
+            
+            document.querySelector('#alert-modal .bg-gray-50').classList.add('hidden'); // Hide normal OK button
+            
+            modal.classList.remove('hidden');
+            
+            document.getElementById('btn-cancel-del').onclick = () => {
+                closeAlert();
+                document.querySelector('#alert-modal .bg-gray-50').classList.remove('hidden'); // restore OK btn
+            };
+            
+            document.getElementById('btn-confirm-del').onclick = () => {
+                delete appState.kpiHistory[month];
+                saveState();
+                updateMonthSelectors();
+                renderHistoryData();
+                
+                // If currently viewed in dashboard, clear it
+                if (document.getElementById('month-selector').value === month) {
+                     document.getElementById('month-selector').value = '';
+                     loadDashboardData();
+                }
+                
+                closeAlert();
+                document.querySelector('#alert-modal .bg-gray-50').classList.remove('hidden');
+                showAlert('Data deleted successfully.', 'success');
+            };
+        }
+
+        function clearAllData() {
+            // Confirmation modal
+             const modal = document.getElementById('alert-modal');
+            const header = document.getElementById('alert-header');
+            const msgArea = document.getElementById('alert-message');
+            
+            header.className = 'p-4 text-white text-center font-bold text-lg flex items-center justify-center gap-2 bg-red-700';
+            header.innerHTML = '<i class="fa-solid fa-skull"></i> Factory Reset';
+            
+            msgArea.innerHTML = `
+                <p>Are you absolutely sure you want to clear <strong>ALL</strong> data?</p>
+                <ul class="text-sm text-left list-disc pl-8 mt-2 mb-4 text-red-600 font-medium">
+                    <li>All Teams</li>
+                    <li>All Agents</li>
+                    <li>All KPI History</li>
+                </ul>
+                <div class="flex gap-2 justify-center mt-6">
+                    <button id="btn-cancel-reset" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg">Cancel</button>
+                    <button id="btn-confirm-reset" class="px-4 py-2 bg-red-700 text-white rounded-lg shadow">Yes, Nuke Everything</button>
+                </div>
+            `;
+            
+            document.querySelector('#alert-modal .bg-gray-50').classList.add('hidden');
+            modal.classList.remove('hidden');
+            
+            document.getElementById('btn-cancel-reset').onclick = () => {
+                closeAlert();
+                document.querySelector('#alert-modal .bg-gray-50').classList.remove('hidden');
+            };
+            
+            document.getElementById('btn-confirm-reset').onclick = () => {
+                localStorage.removeItem('kpiApp_state');
+                appState = {
+                    teams: [], agents: [], kpiHistory: {}, currentSelectedTeamId: null, currentEmailAgentData: null, currentEmailKpiData: null
+                };
+                
+                initApp();
+                closeAlert();
+                document.querySelector('#alert-modal .bg-gray-50').classList.remove('hidden');
+                showAlert('All data has been cleared.', 'success');
+            };
+        }
+
+        // Run on load
+        window.onload = initApp;
+
+    </script>
+</body>
+</html>
