@@ -38,7 +38,7 @@
                 <div>
                     <h1 class="text-lg font-bold text-gray-900 leading-tight">Retention MBR Dashboard</h1>
                     <div class="flex items-center gap-2">
-                        <p class="text-xs text-gray-500">Order Support Team Analytics</p>
+                        <p class="text-xs text-gray-500">WINS Team Analytics</p>
                         <span class="bg-green-100 text-green-700 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1 font-bold">
                             <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span> Live Sync
                         </span>
@@ -106,8 +106,8 @@
                 </div>
                 <div class="flex flex-col gap-2 pl-1">
                     <label class="flex items-center gap-2 cursor-pointer group">
-                        <input type="checkbox" value="Order Support" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
-                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">Order Support</span>
+                        <input type="checkbox" value="WINS Team" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
+                        <span class="text-xs text-gray-700 group-hover:text-gray-900 transition-colors">WINS Team</span>
                     </label>
                     <label class="flex items-center gap-2 cursor-pointer group">
                         <input type="checkbox" value="Mentors" class="team-filter-cb w-3.5 h-3.5 text-blue-600 rounded cursor-pointer border-gray-300" checked>
@@ -690,15 +690,20 @@
         let isAdmin = sessionStorage.getItem('retentionAdmin') === 'true';
 
         // Team Definitions
-        const TEAM_ORDER_SUPPORT = [
-            'mohamed.kheer@tempo.fit',
+        const TEAM_WINS_TEAM = [
+            'mostafa.hosny@tempo.fit',
             'rima.khaled@tempo.fit',
-            'santos.nyikang@tempo.fit',
-            'youkabed.farid@tempo.fit',
-            'ahmed.elsawy@tempo.fit',
-            'salma.ahmed@tempo.fit',
-            'shahd.emad@tempo.fit',
-            'marwan.hassan@tempo.fit'
+            'mohab.magdy@tempo.fit',
+            'hala.ayman@tempo.fit',
+            'ashraf.essam@tempo.fit',
+            'salma.atef@tempo.fit',
+            'ammar.ahmed@tempo.fit',
+            'howida.mattar@tempo.fit',
+            'rowan.ashour@tempo.fit',
+            'amr.eltorgman@tempo.fit',
+            'khaled.abbas@tempo.fit',
+            'mohamed.shebl@tempo.fit',
+            'alaa.mousa@tempo.fit'
         ];
         
         const TEAM_MENTORS = [
@@ -709,7 +714,7 @@
 
         function getAgentTeam(emailStr) {
             const email = String(emailStr).trim().toLowerCase();
-            if (TEAM_ORDER_SUPPORT.includes(email)) return 'Order Support';
+            if (TEAM_WINS_TEAM.includes(email)) return 'WINS Team';
             if (TEAM_MENTORS.includes(email)) return 'Mentors';
             return 'MX';
         }
@@ -1683,23 +1688,16 @@
             const selectedTeams = Array.from(document.querySelectorAll('.team-filter-cb:checked')).map(cb => cb.value);
             const selectedChannels = Array.from(document.querySelectorAll('.channel-filter-cb:checked')).map(cb => cb.value);
 
-            let start = null;
-            if (startDateStr) {
-                const [y, m, d] = startDateStr.split('-');
-                start = new Date(y, m - 1, d, 0, 0, 0); 
-            }
-            
-            let end = null;
-            if (endDateStr) {
-                const [y, m, d] = endDateStr.split('-');
-                end = new Date(y, m - 1, d, 23, 59, 59, 999); 
-            }
-
             let result = [];
             globalDataMap.forEach(row => {
-                // Date Filter
-                if (start && row._parsedDate < start) return;
-                if (end && row._parsedDate > end) return;
+                // Timezone-safe String-based Date Filter
+                const y = row._parsedDate.getFullYear();
+                const m = String(row._parsedDate.getMonth() + 1).padStart(2, '0');
+                const d = String(row._parsedDate.getDate()).padStart(2, '0');
+                const rowDateStr = `${y}-${m}-${d}`;
+
+                if (startDateStr && rowDateStr < startDateStr) return;
+                if (endDateStr && rowDateStr > endDateStr) return;
                 
                 // Reason Exclusions
                 if (excludedReasons.has(row._cleanReason)) return;
@@ -1752,7 +1750,7 @@
         }
 
         function getTeamBadge(teamName) {
-            if(teamName === 'Order Support') return '<span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">Order Support</span>';
+            if(teamName === 'WINS Team') return '<span class="bg-blue-100 text-blue-700 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">WINS Team</span>';
             if(teamName === 'Mentors') return '<span class="bg-purple-100 text-purple-700 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">Mentors</span>';
             return '<span class="bg-gray-100 text-gray-600 text-[9px] px-1.5 py-0.5 rounded font-bold ml-2">MX</span>';
         }
